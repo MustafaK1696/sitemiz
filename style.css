@@ -138,3 +138,115 @@ body {
     .cart-container { flex-direction: column; }
     .cart-items, .cart-summary { width: 100%; flex: auto; }
 }
+
+/* --- VİTRİN BÖLÜMÜ --- */
+.showcase-section {
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--dark-color);
+    margin-bottom: 5px;
+}
+.section-subtitle {
+    text-align: center;
+    color: #777;
+    margin-bottom: 30px;
+}
+
+/* --- MEGA FOOTER TASARIMI --- */
+.mega-footer {
+    background-color: #1a1a1a; /* Koyu antrasit renk */
+    color: #ccc;
+    padding: 60px 0 20px;
+    margin-top: 60px;
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 5%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive Kolonlar */
+    gap: 40px;
+}
+
+.footer-col h3 {
+    color: white;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+/* Başlık altı çizgi efekti */
+.footer-col h3::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 30px;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+.footer-logo img {
+    height: 40px;
+    filter: brightness(0) invert(1); /* Logoyu beyaza çevirir */
+    margin-bottom: 15px;
+}
+
+.footer-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.footer-links li {
+    margin-bottom: 10px;
+}
+
+.footer-links a {
+    color: #bbb;
+    text-decoration: none;
+    transition: 0.3s;
+    font-size: 0.9rem;
+}
+
+.footer-links a:hover {
+    color: var(--primary-color);
+    padding-left: 5px; /* Hover olunca hafif sağa kayma efekti */
+}
+
+.social-icons {
+    margin-top: 20px;
+    font-size: 1.5rem;
+    display: flex;
+    gap: 15px;
+}
+.social-icons a { text-decoration: none; }
+
+.footer-bottom {
+    text-align: center;
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 5%;
+    padding-right: 5%;
+}
+
+/* Mobil için Footer Düzeni */
+@media (max-width: 768px) {
+    .footer-container { grid-template-columns: 1fr; text-align: center; }
+    .footer-col h3::after { left: 50%; transform: translateX(-50%); } /* Çizgiyi ortala */
+    .social-icons { justify-content: center; }
+    .footer-bottom { flex-direction: column; gap: 10px; }
+}
