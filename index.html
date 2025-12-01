@@ -2,8 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ÖğrenciFy - Ana Sayfa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>ÖğrenciFy - Ana Sayfa</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
@@ -11,37 +10,37 @@
 
     <nav class="navbar">
         <a href="index.html" class="logo">
-    <img src="logo.png" alt="ÖğrenciFy Logo">
+            <img src="logo.png" alt="ÖğrenciFy Logo">
         </a>
-        
         <ul class="nav-links">
-            <li><a href="index.html" class="active">Ana Sayfa</a></li>
-            <li><a href="products.html">Ürünler</a></li>
+            <li><a href="index.html">Ana Sayfa</a></li>
+            <li><a href="seller.html" class="btn-seller">Satıcı Ol</a></li> <li class="dropdown">
+                <a href="products.html">Ürünler ▾</a>
+                <div class="dropdown-content">
+                    <a href="#">Gündelik Yaşam</a>
+                    <a href="#">Hediyelik Eşya</a>
+                    <a href="#">Teknoloji</a>
+                </div>
+            </li>
+            
             <li><a href="contact.html">İletişim</a></li>
-            <li class="cart-area">
-                <span>🛒 Sepetim</span>
-                <span id="cart-count" class="badge">0</span>
+            <li>
+                <a href="cart.html" class="cart-area">
+                    <span>🛒 Sepetim</span>
+                    <span id="cart-count" class="badge">0</span>
+                </a>
             </li>
         </ul>
     </nav>
 
     <header class="hero">
         <div class="hero-content">
-            <h1>Öğrencilerin El Emeği, <br>Geleceğin Değeri</h1>
-            <p>Öğrencilerin el emeği ürünlerini halkla buluşturan platform. İster kendi ürününüzü satın, ister birbirinden güzel el emeği ürünleri satın alarak öğrencilere destek olun.</p>
-            <div class="hero-buttons">
-                <a href="products.html" class="btn-primary">Alışverişe Başla</a>
-                <a href="contact.html" class="btn-secondary">Bize Ulaşın</a>
-            </div>
+            <h1>ÖğrenciFy Dünyasına Hoş Geldiniz</h1>
+            <p>Öğrencilerin el emeği ürünlerini halkla buluşturan platform.</p>
+            <a href="products.html" class="btn-primary">Alışverişe Başla</a>
         </div>
     </header>
-
-    <footer>
-        <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-    </footer>
 
     <script src="script.js"></script>
 </body>
 </html>
-
-
