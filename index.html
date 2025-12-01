@@ -3,43 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Öğrencilerin el emeği ürünlerini sattığı pazar yeri. En uygun fiyatları karşılaştırın.">
-    <meta name="keywords" content="öğrenci pazarı, el emeği, ucuz ürünler, tasarım">
-    <title>Öğrenci Pazarı & Fiyat Analizi</title>
+    <title>ÖğrenciFy - Ana Sayfa</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <nav class="navbar">
-        <div class="logo">🎓 ÖğrenciPazarı</div>
+        <div class="logo">🚀 ÖğrenciFy</div>
         <ul class="nav-links">
-            <li><a href="#">Ana Sayfa</a></li>
-            <li><a href="#">Ürünler</a></li>
-            <li><a href="#" class="btn-primary">Ürün Sat</a></li>
+            <li><a href="index.html" class="active">Ana Sayfa</a></li>
+            <li><a href="products.html">Ürünler</a></li>
+            <li><a href="contact.html">İletişim</a></li>
+            <li class="cart-area">
+                <span>🛒 Sepetim</span>
+                <span id="cart-count" class="badge">0</span>
+            </li>
         </ul>
     </nav>
 
     <header class="hero">
         <div class="hero-content">
-            <h1>Öğrencilerin El Emeği, <br>Ekonominin Geleceği</h1>
-            <p>Kendi ürününü sat veya piyasadaki en uygun fiyatları analiz et.</p>
-            <a href="#products" class="btn-secondary">Alışverişe Başla</a>
+            <h1>Öğrencilerin El Emeği, <br>Geleceğin Değeri</h1>
+            <p>Öğrencilerin el emeği ürünlerini halkla buluşturan platform. İster kendi ürününüzü satın, ister birbirinden güzel el emeği ürünleri satın alarak öğrencilere destek olun.</p>
+            <div class="hero-buttons">
+                <a href="products.html" class="btn-primary">Alışverişe Başla</a>
+                <a href="contact.html" class="btn-secondary">Bize Ulaşın</a>
+            </div>
         </div>
     </header>
 
-    <section id="products" class="container">
-        <h2>Vitrin</h2>
-        <div class="filter-bar">
-            <input type="text" id="searchBox" placeholder="Ürün ara...">
-        </div>
-        
-        <div id="product-list" class="product-grid">
-            </div>
-    </section>
-
     <footer>
-        <p>&copy; 2024 Öğrenci Pazarı. Tüm hakları saklıdır.</p>
+        <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
     </footer>
 
     <script src="script.js"></script>
