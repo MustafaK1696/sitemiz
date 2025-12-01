@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>ÖğrenciFy - Ana Sayfa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ÖğrenciFy - Öğrenci Pazarı</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
@@ -10,19 +12,19 @@
 
     <nav class="navbar">
         <a href="index.html" class="logo">
-            <img src="logo.png" alt="ÖğrenciFy Logo">
+            <img src="logo.png" alt="ÖğrenciFy">
         </a>
         <ul class="nav-links">
             <li><a href="index.html">Ana Sayfa</a></li>
-            <li><a href="seller.html" class="btn-seller">Satıcı Ol</a></li> <li class="dropdown">
+            <li><a href="seller.html" class="btn-seller">Satıcı Ol</a></li>
+            <li class="dropdown">
                 <a href="products.html">Ürünler ▾</a>
                 <div class="dropdown-content">
-                    <a href="#">Gündelik Yaşam</a>
-                    <a href="#">Hediyelik Eşya</a>
-                    <a href="#">Teknoloji</a>
+                    <a href="products.html">Giyim & Moda</a>
+                    <a href="products.html">Teknoloji</a>
+                    <a href="products.html">Ev & Yaşam</a>
                 </div>
             </li>
-            
             <li><a href="contact.html">İletişim</a></li>
             <li>
                 <a href="cart.html" class="cart-area">
@@ -32,7 +34,7 @@
             </li>
         </ul>
     </nav>
-  
+
     <header class="hero">
         <div class="hero-content">
             <h1>ÖğrenciFy Dünyasına Hoş Geldiniz</h1>
@@ -41,66 +43,48 @@
         </div>
     </header>
 
-    
     <section class="container showcase-section">
         <h2 class="section-title">✨ Vitrin Ürünler</h2>
-        <p class="section-subtitle">Haftanın en çok beğenilen el emeği ürünleri</p>
-        
-        <div id="showcase-grid" class="product-grid">
-            </div>
+        <div id="showcase-grid" class="product-grid"></div>
     </section>
 
     <footer class="mega-footer">
         <div class="footer-container">
-            
             <div class="footer-col">
-                <a href="index.html" class="footer-logo">
-                    <img src="logo.png" alt="Logo">
-                </a>
-                <p class="footer-desc">Öğrencilerin emeğini değere dönüştüren, Türkiye'nin en dinamik öğrenci pazarı.</p>
+                <a href="index.html" style="color:white; font-size:1.5rem; font-weight:bold; text-decoration:none;">ÖğrenciFy</a>
+                <p style="margin-top:10px;">Geleceğin emeği, bugünün değeri.</p>
+                
                 <div class="social-icons">
-                    <a href="#">📷</a> <a href="#">🐦</a> <a href="#">▶️</a> </div>
+                    <a href="https://instagram.com" target="_blank" title="Instagram">📷</a>
+                    <a href="https://x.com" target="_blank" title="X">🐦</a>
+                    <a href="https://youtube.com" target="_blank" title="Youtube">▶️</a>
+                </div>
             </div>
 
             <div class="footer-col">
                 <h3>Kurumsal</h3>
                 <ul class="footer-links">
                     <li><a href="about.html">Hakkımızda</a></li>
-                    <li><a href="about.html#vizyon">Vizyon & Misyon</a></li>
                     <li><a href="seller.html">Satıcı Ol</a></li>
                     <li><a href="contact.html">İletişim</a></li>
                 </ul>
             </div>
-
-            <div class="footer-col">
+            
+             <div class="footer-col">
                 <h3>Kategoriler</h3>
                 <ul class="footer-links">
-                    <li><a href="products.html">Giyim & Moda</a></li>
-                    <li><a href="products.html">Ev & Dekorasyon</a></li>
-                    <li><a href="products.html">Takı & Aksesuar</a></li>
-                    <li><a href="products.html">Kırtasiye</a></li>
+                    <li><a href="products.html">Giyim</a></li>
+                    <li><a href="products.html">Teknoloji</a></li>
+                    <li><a href="products.html">Aksesuar</a></li>
                 </ul>
             </div>
-
-            <div class="footer-col">
-                <h3>Yardım Merkezi</h3>
-                <ul class="footer-links">
-                    <li><a href="help.html">Sıkça Sorulan Sorular</a></li>
-                    <li><a href="help.html#kargo">Kargo ve Teslimat</a></li>
-                    <li><a href="help.html#iade">İade Koşulları</a></li>
-                    <li><a href="contact.html">Destek Talebi</a></li>
-                </ul>
-            </div>
-
         </div>
         
         <div class="footer-bottom">
             <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-            <div class="payment-icons">💳 💳 💳</div>
         </div>
     </footer>
 
     <script src="script.js"></script>
 </body>
 </html>
-
