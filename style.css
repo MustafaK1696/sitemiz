@@ -24,9 +24,15 @@ body {
 }
 
 .logo {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    text-decoration: none; /* Link alt çizgisini kaldırır */
+}
+
+/* Logonun yüksekliğini navbar'a göre ayarla */
+.logo img {
+    height: 60px; /* Logonu daha büyük veya küçük yapmak için bu sayıyı değiştir (örn: 50px veya 80px) */
+    width: auto;  /* Genişlik orantılı olarak ayarlanır */
 }
 
 .nav-links {
@@ -172,3 +178,4 @@ footer {
     color: white;
     font-size: 0.9rem;
 }
+
