@@ -29,10 +29,10 @@ body {
     text-decoration: none; /* Link alt çizgisini kaldırır */
 }
 
-/* Logonun yüksekliğini navbar'a göre ayarla */
+/* style.css dosyasındaki ilgili kısım */
 .logo img {
-    height: 60px; /* Logonu daha büyük veya küçük yapmak için bu sayıyı değiştir (örn: 50px veya 80px) */
-    width: auto;  /* Genişlik orantılı olarak ayarlanır */
+    height: 120px; /* 60px yerine 120px yaparak iki kat büyüttük */
+    width: auto;   /* Genişlik orantılı olarak otomatik artar */
 }
 
 .nav-links {
@@ -178,4 +178,5 @@ footer {
     color: white;
     font-size: 0.9rem;
 }
+
 
