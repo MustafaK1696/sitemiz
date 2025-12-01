@@ -112,3 +112,34 @@ function removeFromCart(index) {
     renderCartPage();
     updateCartBadge();
 }
+
+// Sayfa yüklendiğinde çalışacak fonksiyonlara ekle
+document.addEventListener('DOMContentLoaded', () => {
+    // ... eski kodların ...
+    
+    if (document.getElementById('showcase-grid')) {
+        renderShowcase();
+    }
+});
+
+// Vitrine Rastgele veya İlk 4 Ürünü Getir
+function renderShowcase() {
+    const showcaseGrid = document.getElementById('showcase-grid');
+    // Sadece ilk 4 ürünü alalım (veya products.slice(0,4) ile)
+    const featuredProducts = products.slice(0, 4); 
+
+    showcaseGrid.innerHTML = "";
+    featuredProducts.forEach(product => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <div class="card-img">${product.name}</div>
+            <div class="card-body">
+                <h3>${product.name}</h3>
+                <div class="price">${product.price} TL</div>
+                <button onclick="addToCart(this, ${product.id})" class="btn-add-cart">Sepete Ekle</button>
+            </div>
+        `;
+        showcaseGrid.appendChild(card);
+    });
+}
