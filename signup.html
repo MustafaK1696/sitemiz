@@ -1,6 +1,47 @@
 <!DOCTYPE html>
-<html lang="tr">
-<script type="module">
+<html lang="tr"> 
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol - ÖğrenciFy</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body style="background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
+
+    <div class="auth-container">
+        <div class="auth-box">
+            <a href="index.html" class="auth-logo">
+                <img src="logo.png" alt="ÖğrenciFy">
+            </a>
+            <div class="hamburger">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </div>
+            <h2>Aramıza Katıl 🚀</h2>
+            <p>ÖğrenciFy dünyasına adım at.</p>
+
+            <form id="signup-form">
+  <input type="text" id="signup-name" placeholder="Ad Soyad" required />
+  <input type="email" id="signup-email" placeholder="E-posta" required />
+  <input type="password" id="signup-password" placeholder="Şifre" required />
+  <button type="submit">Kayıt Ol</button>
+  <p id="signup-message"></p>
+</form>
+                
+                <button type="submit" class="btn-primary full-width">Kayıt Ol</button>
+            </form>
+
+            <p class="auth-footer">
+                Zaten hesabın var mı? <a href="login.html">Giriş Yap</a>
+            </p>
+            <div id="auth-message" class="message-box"></div>
+        </div>
+    </div>
+
+    <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import {
     getAuth,
@@ -17,7 +58,7 @@
   } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
 
   // ⬇⬇⬇ BURAYA kendi Firebase config’inizi yapıştırın ⬇⬇⬇
- const firebaseConfig = {
+  const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
   authDomain: "ogrencify.firebaseapp.com",
   projectId: "ogrencify",
@@ -126,51 +167,9 @@
     // Navbar’da “Giriş Yap” yerine “Çıkış Yap” göstermek vs. için burada DOM’u güncelleyebilirsiniz.
   });
 </script>
-    
-    <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kayıt Ol - ÖğrenciFy</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
-</head>
-<body style="background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
-
-    <div class="auth-container">
-        <div class="auth-box">
-            <a href="index.html" class="auth-logo">
-                <img src="logo.png" alt="ÖğrenciFy">
-            </a>
-            <div class="hamburger">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-    </div>
-            <h2>Aramıza Katıl 🚀</h2>
-            <p>ÖğrenciFy dünyasına adım at.</p>
-
-            <form id="signup-form">
-  <input type="text" id="signup-name" placeholder="Ad Soyad" required />
-  <input type="email" id="signup-email" placeholder="E-posta" required />
-  <input type="password" id="signup-password" placeholder="Şifre" required />
-  <button type="submit">Kayıt Ol</button>
-  <p id="signup-message"></p>
-</form>
-                
-                <button type="submit" class="btn-primary full-width">Kayıt Ol</button>
-            </form>
-
-            <p class="auth-footer">
-                Zaten hesabın var mı? <a href="login.html">Giriş Yap</a>
-            </p>
-            <div id="auth-message" class="message-box"></div>
-        </div>
-    </div>
-
-    <script type="module" src="script.js"></script>
 </body>
 
 </html>
+
 
 
