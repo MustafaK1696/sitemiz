@@ -9,15 +9,13 @@
 
 * { box-sizing: border-box; }
 
+/* --- CSS GÜNCELLEMESİ --- */
+
 body {
-    font-family: 'Poppins', sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: var(--light-color);
-    color: var(--dark-color);
+    /* ... eski kodlar ... */
+    padding-top: 100px; /* Menünün yüksekliği kadar boşluk bırakıyoruz */
 }
 
-/* --- NAVBAR --- */
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -25,8 +23,13 @@ body {
     padding: 0.5rem 5%;
     background: white;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    position: relative;
-    z-index: 1000;
+    
+    /* SABİTLEME KODLARI */
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 9999; /* Diğer her şeyin üstünde dursun */
 }
 
 /* Logo Alanı Genişletildi */
@@ -169,3 +172,4 @@ body {
 .message-box { margin-top: 15px; font-size: 0.9rem; padding: 10px; border-radius: 5px; display: none; }
 .message-box.error { background: #ffebeb; color: #e74c3c; }
 .message-box.success { background: #eafaf1; color: #2ecc71; }
+
