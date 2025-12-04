@@ -31,38 +31,46 @@ const products = [
     { id: 6, name: "Deri Cüzdan", price: 250, category: "aksesuar", description: "Hakiki deri." }
 ];
 
-// --- SAYFA YÜKLENDİĞİNDE ---
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuthState(); // Kullanıcı giriş yapmış mı kontrol et
-    updateCartBadge(); // Sepet sayısını güncelle
-    
-    // Sayfaya göre fonksiyonları çalıştır
-    if (document.getElementById('product-list')) renderProducts();
-    if (document.getElementById('showcase-grid')) renderShowcase();
-    if (document.getElementById('cart-items-container')) renderCartPage();
-    
-    // Auth Form Dinleyicileri
-    if (document.getElementById('signup-form')) setupSignup();
-    if (document.getElementById('login-form')) setupLogin();
-});
+/* --- YENİ MOBİL MENÜ MANTIĞI --- */
+const hamburger = document.querySelector(".hamburger");
+const mobileMenu = document.querySelector(".mobile-menu-container");
 
-// --- KULLANICI GİRİŞ KONTROLÜ ---
+if (hamburger && mobileMenu) {
+    hamburger.addEventListener("click", () => {
+        mobileMenu.classList.toggle("active");
+        // Hamburger ikonunu değiştir (X yapma efekti eklenebilir)
+    });
+
+    // Menü dışına tıklayınca kapatma (Opsiyonel)
+    document.addEventListener('click', (e) => {
+        if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+            mobileMenu.classList.remove("active");
+        }
+    });
+}
+
+/* --- AUTH GÜNCELLEMESİ (Giriş Yapınca Butonları Gizle) --- */
 function checkAuthState() {
     onAuthStateChanged(auth, (user) => {
-        const authLinks = document.getElementById('auth-links');
+        const desktopAuth = document.getElementById('desktop-auth');
+        const mobileAuth = document.getElementById('mobile-auth');
         const userArea = document.getElementById('user-area');
         const userNameSpan = document.getElementById('user-name-display');
 
         if (user) {
-            // Kullanıcı Giriş Yapmışsa
-            if(authLinks) authLinks.style.display = 'none'; // Giriş butonlarını gizle
+            // Giriş yapıldıysa butonları gizle, kullanıcı adını göster
+            if(desktopAuth) desktopAuth.style.display = 'none';
+            if(mobileAuth) mobileAuth.style.display = 'none';
+            
             if(userArea) {
-                userArea.style.display = 'flex'; // Profil alanını göster
-                userNameSpan.innerText = user.displayName || "Kullanıcı";
+                userArea.style.display = 'flex';
+                userNameSpan.innerText = user.displayName || "Üye";
             }
         } else {
-            // Kullanıcı Çıkış Yapmışsa
-            if(authLinks) authLinks.style.display = 'flex';
+            // Çıkış yapıldıysa butonları göster
+            if(desktopAuth) desktopAuth.style.display = 'flex';
+            if(mobileAuth) mobileAuth.style.display = 'flex'; // Mobilde flex-col css'te ayarlı
+            
             if(userArea) userArea.style.display = 'none';
         }
     });
@@ -386,4 +394,5 @@ window.createTestOrder = async () => {
         console.error("Hata:", e);
     }
 };
+
 
