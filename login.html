@@ -8,7 +8,38 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-<script type="module">
+
+    <body style="background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
+
+    <div class="auth-container">
+        <div class="auth-box">
+            <a href="index.html" class="auth-logo">
+                <img src="logo.png" alt="ÖğrenciFy">
+            </a>
+            <div class="hamburger">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </div>
+            <h2>Tekrar Hoşgeldin 👋</h2>
+            <p>Hesabına giriş yap ve alışverişe devam et.</p>
+
+            <form id="login-form">
+  <input type="email" id="login-email" placeholder="E-posta" required />
+  <input type="password" id="login-password" placeholder="Şifre" required />
+  <button type="submit">Giriş Yap</button>
+  <p id="login-message"></p>
+</form>
+
+
+            <p class="auth-footer">
+                Hesabın yok mu? <a href="signup.html">Kayıt Ol</a>
+            </p>
+            <div id="auth-message" class="message-box"></div>
+        </div>
+    </div>
+
+   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
   import {
     getAuth,
@@ -134,41 +165,9 @@
     // Navbar’da “Giriş Yap” yerine “Çıkış Yap” göstermek vs. için burada DOM’u güncelleyebilirsiniz.
   });
 </script>
-
-    
-    <body style="background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
-
-    <div class="auth-container">
-        <div class="auth-box">
-            <a href="index.html" class="auth-logo">
-                <img src="logo.png" alt="ÖğrenciFy">
-            </a>
-            <div class="hamburger">
-        <span class="bar"></span>
-        <span class="bar"></span>
-        <span class="bar"></span>
-    </div>
-            <h2>Tekrar Hoşgeldin 👋</h2>
-            <p>Hesabına giriş yap ve alışverişe devam et.</p>
-
-            <form id="login-form">
-  <input type="email" id="login-email" placeholder="E-posta" required />
-  <input type="password" id="login-password" placeholder="Şifre" required />
-  <button type="submit">Giriş Yap</button>
-  <p id="login-message"></p>
-</form>
-
-
-            <p class="auth-footer">
-                Hesabın yok mu? <a href="signup.html">Kayıt Ol</a>
-            </p>
-            <div id="auth-message" class="message-box"></div>
-        </div>
-    </div>
-
-    <script type="module" src="script.js"></script>
 </body>
 
 </html>
+
 
 
