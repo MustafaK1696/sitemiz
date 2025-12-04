@@ -150,3 +150,22 @@ body {
     .logo { margin: 0 0 15px 0; justify-content: center; }
     .nav-links { flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
 }
+
+/* --- GİRİŞ & KAYIT SAYFALARI --- */
+.auth-container { width: 100%; max-width: 400px; padding: 20px; }
+.auth-box { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+.auth-logo img { height: 50px; margin-bottom: 20px; }
+.auth-box h2 { color: var(--dark-color); margin-bottom: 10px; }
+.auth-box p { color: #777; margin-bottom: 30px; font-size: 0.9rem; }
+
+.input-group { margin-bottom: 15px; }
+.input-group input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.3s; }
+.input-group input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(255,107,107,0.1); }
+
+.full-width { width: 100%; cursor: pointer; }
+.auth-footer { margin-top: 20px; font-size: 0.9rem; }
+.auth-footer a { color: var(--primary-color); text-decoration: none; font-weight: bold; }
+
+.message-box { margin-top: 15px; font-size: 0.9rem; padding: 10px; border-radius: 5px; display: none; }
+.message-box.error { background: #ffebeb; color: #e74c3c; }
+.message-box.success { background: #eafaf1; color: #2ecc71; }
