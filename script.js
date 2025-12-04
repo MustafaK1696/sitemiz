@@ -255,3 +255,104 @@ function renderCartPage() {
         if(warningMsg) warningMsg.style.display = "none";
     }
 }
+
+/* --- ADMIN / MODERATÖR FONKSİYONLARI --- */
+
+// Admin sayfasındaysak çalıştır
+if (window.location.pathname.includes("admin.html")) {
+    // 1. Yetki Kontrolü: Giriş yapmış mı ve rolü 'admin' mi?
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists() && userDoc.data().role === "moderator") {
+                // Yetkili ise siparişleri getir
+                loadOrders();
+            } else {
+                alert("Bu sayfaya erişim yetkiniz yok!");
+                window.location.href = "index.html";
+            }
+        } else {
+            window.location.href = "login.html";
+        }
+    });
+}
+
+// Siparişleri Listeleme Fonksiyonu
+async function loadOrders() {
+    const list = document.getElementById('admin-orders-list');
+    list.innerHTML = "";
+    
+    // Firestore'dan 'orders' koleksiyonunu çek (Tarihe göre sıralı çekmek için query eklenebilir)
+    import { collection, getDocs, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    
+    const querySnapshot = await getDocs(collection(db, "orders"));
+    
+    if (querySnapshot.empty) {
+        list.innerHTML = "<p>Henüz sipariş yok.</p>";
+        return;
+    }
+
+    querySnapshot.forEach((docSnap) => {
+        const order = docSnap.data();
+        const orderId = docSnap.id;
+        
+        // Duruma göre renk belirle
+        let badgeClass = "status-pending";
+        if(order.status === "Onaylandı") badgeClass = "status-approved";
+        if(order.status === "Kargoda") badgeClass = "status-shipped";
+        if(order.status === "Teslim Edildi") badgeClass = "status-completed";
+
+        const card = document.createElement('div');
+        card.className = 'order-card';
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+                <h3>Sipariş #${orderId.slice(0,6)}...</h3>
+                <span class="status-badge ${badgeClass}">${order.status || 'Bekliyor'}</span>
+            </div>
+            <p><strong>Müşteri:</strong> ${order.customerName || 'Bilinmiyor'}</p>
+            <p><strong>Tutar:</strong> ${order.totalAmount} TL</p>
+            <p><strong>Ürünler:</strong> ${order.items.map(i => i.name).join(", ")}</p>
+            
+            <div class="admin-actions">
+                <button onclick="updateOrderStatus('${orderId}', 'Onaylandı')" class="btn-action" style="background:#3498db;">✅ Onayla</button>
+                <button onclick="updateOrderStatus('${orderId}', 'Kargoda')" class="btn-action" style="background:#9b59b6;">📦 Kargola</button>
+                <button onclick="updateOrderStatus('${orderId}', 'Teslim Edildi')" class="btn-action" style="background:#2ecc71;">🏁 Teslim Et</button>
+                <button onclick="updateOrderStatus('${orderId}', 'İptal')" class="btn-action" style="background:#e74c3c;">❌ İptal</button>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+// Sipariş Durumunu Güncelleme (Global erişim için window'a atıyoruz)
+window.updateOrderStatus = async (orderId, newStatus) => {
+    import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    try {
+        const orderRef = doc(db, "orders", orderId);
+        await updateDoc(orderRef, {
+            status: newStatus
+        });
+        alert(`Sipariş durumu '${newStatus}' olarak güncellendi!`);
+        loadOrders(); // Listeyi yenile
+    } catch (error) {
+        console.error("Hata:", error);
+        alert("Güncelleme yapılamadı.");
+    }
+};
+
+// TEST İÇİN: Rastgele Sipariş Oluşturma
+window.createTestOrder = async () => {
+    import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    try {
+        await addDoc(collection(db, "orders"), {
+            customerName: "Test Kullanıcı",
+            totalAmount: 450,
+            items: [{name: "El Örgüsü Atkı"}, {name: "Deri Cüzdan"}],
+            status: "Bekliyor",
+            createdAt: new Date()
+        });
+        loadOrders(); // Listeyi yenile
+    } catch (e) {
+        console.error("Hata:", e);
+    }
+};
