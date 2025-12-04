@@ -26,6 +26,17 @@
                 </div>
             </li>
             <li><a href="contact.html">İletişim</a></li>
+            
+            <div id="auth-links" style="display:flex; gap:10px; margin-left:10px;">
+                <li><a href="login.html" style="font-weight:bold;">Giriş</a></li>
+                <li><a href="signup.html" class="btn-primary" style="padding: 8px 15px; font-size:0.9rem;">Kayıt Ol</a></li>
+            </div>
+
+            <div id="user-area" style="display:none; align-items:center; gap:10px; margin-left:10px;">
+                <span style="font-weight:bold; color:var(--dark-color);">👋 <span id="user-name-display">Kullanıcı</span></span>
+                <button onclick="logoutUser()" style="background:none; border:none; color:red; cursor:pointer; font-size:0.9rem;">Çıkış</button>
+            </div>
+
             <li>
                 <a href="cart.html" class="cart-area">
                     <span>🛒 Sepetim</span>
@@ -34,7 +45,6 @@
             </li>
         </ul>
     </nav>
-
     <section class="container">
         <h2>Tüm Ürünler</h2>
         <div id="product-list" class="product-grid">
@@ -49,6 +59,7 @@
 </body>
 
 </html>
+
 
 
 
