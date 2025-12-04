@@ -84,73 +84,67 @@ window.logoutUser = () => {
 };
 
 // --- KAYIT OL (SIGN UP) GÜNCELLENMİŞ HALİ ---
+/* --- KAYIT OL (SIGN UP) --- */
 function setupSignup() {
     const form = document.getElementById('signup-form');
-    if (!form) return; // Form yoksa çık
+    if (!form) return;
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Form verilerini al
         const username = document.getElementById('signup-username').value;
         const phone = document.getElementById('signup-phone').value;
         const email = document.getElementById('signup-email').value;
         const password = document.getElementById('signup-password').value;
         const msgBox = document.getElementById('auth-message');
 
-        // --- YENİ ŞİFRE GÜVENLİK KONTROLÜ ---
-        // Regex Açıklaması: En az 1 küçük harf, 1 büyük harf, 1 rakam ve toplamda en az 8 karakter
+        // Şifre Güvenlik Kontrolü (İstersen burayı basitleştirebilirsin)
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-
         if (!passwordRegex.test(password)) {
-            msgBox.className = "message-box error";
-            msgBox.style.display = "block";
-            msgBox.innerText = "Güvenlik Uyarısı: Şifreniz en az 8 karakter olmalı, en az 1 büyük harf, 1 küçük harf ve 1 rakam içermelidir.";
-            return; // İşlemi durdur
+            showMsg(msgBox, "Şifre en az 8 karakter, 1 büyük harf, 1 küçük harf ve 1 rakam içermelidir.", "error");
+            return;
         }
-        // -------------------------------------
 
         try {
-            // Butonu pasif yap (Çift tıklamayı önle)
+            // Butonu kilitle (Çift tıklamayı önlemek için)
             const submitBtn = form.querySelector('button');
-            const originalBtnText = submitBtn.innerText;
             submitBtn.disabled = true;
-            submitBtn.innerText = "İşleniyor...";
+            submitBtn.innerText = "Kaydediliyor...";
 
-            // 1. Firebase Auth ile kullanıcı oluştur
+            // 1. Firebase Auth ile Kullanıcıyı Oluştur
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Kullanıcı Profilini Güncelle (İsim Ekle)
+            // 2. Profil ismini güncelle
             await updateProfile(user, { displayName: username });
 
-            // 3. Firestore Veritabanına Ek Bilgileri Kaydet
+            // 3. Firestore Veritabanına DETAYLARI KAYDET (Kritik Adım)
             await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
                 username: username,
                 phone: phone,
                 email: email,
-                role: "buyer", // Varsayılan: Alıcı
+                role: "buyer", // Varsayılan rol: Alıcı
                 createdAt: new Date()
             });
 
-            // 4. Doğrulama E-postası Gönder
-            await sendEmailVerification(user);
-
-            msgBox.className = "message-box success";
-            msgBox.style.display = "block";
-            msgBox.innerText = "Kayıt başarılı! Lütfen e-postanızı doğrulayın. Yönlendiriliyorsunuz...";
+            // 4. Başarılı Mesajı Ver ve Yönlendir
+            showMsg(msgBox, "🎉 Başarıyla kayıt oldunuz! Giriş sayfasına yönlendiriliyorsunuz...", "success");
             
-            setTimeout(() => window.location.href = "index.html", 3000);
+            // 2 Saniye sonra giriş sayfasına at
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 2000);
 
         } catch (error) {
-            msgBox.className = "message-box error";
-            msgBox.style.display = "block";
+            console.error("Kayıt Hatası:", error);
+            let hataMesaji = "Bir hata oluştu: " + error.message;
+            if (error.code === 'auth/email-already-in-use') hataMesaji = "Bu e-posta adresi zaten kullanılıyor.";
             
-            // Hata mesajlarını Türkçeleştirme
-            let errorMessage = "Bir hata oluştu: " + error.message;
-            if (error.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta adresi zaten kullanımda.";
+            showMsg(msgBox, hataMesaji, "error");
             
-            msgBox.innerText = errorMessage;
-            
-            // Butonu eski haline getir
+            // Butonu tekrar aç
             const submitBtn = form.querySelector('button');
             submitBtn.disabled = false;
             submitBtn.innerText = "Kayıt Ol";
@@ -158,9 +152,11 @@ function setupSignup() {
     });
 }
 
-// --- GİRİŞ YAP (LOGIN) ---
+/* --- GİRİŞ YAP (LOGIN) --- */
 function setupLogin() {
     const form = document.getElementById('login-form');
+    if (!form) return;
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email').value;
@@ -168,27 +164,41 @@ function setupLogin() {
         const msgBox = document.getElementById('auth-message');
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+            const submitBtn = form.querySelector('button');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Giriş Yapılıyor...";
 
-            if (!user.emailVerified) {
-                msgBox.className = "message-box error";
-                msgBox.style.display = "block";
-                msgBox.innerText = "Lütfen önce e-posta adresinizi doğrulayın!";
-                // signOut(auth); // İstersen doğrulamayanı içeri alma
-                return;
-            }
+            // Firebase ile giriş yap
+            await signInWithEmailAndPassword(auth, email, password);
 
-            window.location.href = "index.html";
+            showMsg(msgBox, "Giriş başarılı! Yönlendiriliyorsunuz...", "success");
+            
+            // Ana sayfaya yönlendir
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 1000);
 
         } catch (error) {
-            msgBox.className = "message-box error";
-            msgBox.style.display = "block";
-            msgBox.innerText = "Giriş başarısız. Bilgilerinizi kontrol edin.";
+            console.error("Giriş Hatası:", error);
+            let hataMesaji = "Giriş başarısız. E-posta veya şifre hatalı.";
+            if (error.code === 'auth/user-not-found') hataMesaji = "Böyle bir kullanıcı bulunamadı.";
+            if (error.code === 'auth/wrong-password') hataMesaji = "Şifre hatalı.";
+
+            showMsg(msgBox, hataMesaji, "error");
+            
+            const submitBtn = form.querySelector('button');
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Giriş Yap";
         }
     });
 }
 
+// Yardımcı Fonksiyon: Mesaj Göster
+function showMsg(element, message, type) {
+    element.style.display = "block";
+    element.className = "message-box " + type;
+    element.innerText = message;
+}
 // --- SEPET VE DİĞER FONKSİYONLAR (Eskisiyle Aynı) ---
 // Global erişim için window'a ekliyoruz
 window.addToCart = function(btnElement, productId) {
@@ -394,5 +404,6 @@ window.createTestOrder = async () => {
         console.error("Hata:", e);
     }
 };
+
 
 
