@@ -241,8 +241,3 @@ body {
 .social-icons a { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #333; color: white; border-radius: 50%; text-decoration: none; font-size: 1.2rem; transition: 0.3s; }
 .social-icons a:hover { background: var(--primary-color); transform: scale(1.1); }
 .footer-bottom { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #333; font-size: 0.8rem; }
-
-/* --- DİĞER CSS AYARLARI (Eski kodlarını koru) --- */
-.container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; }
-/* ... Footer, Ürün Kartları, Admin vb. kodları aynı kalabilir ... */
-
