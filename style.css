@@ -16,10 +16,10 @@ body {
     padding: 0;
     background-color: var(--light-color);
     color: var(--dark-color);
-    padding-top: 140px; /* Çift katlı menü olduğu için boşluğu artırdık */
+    padding-top: 140px; /* Header yüksekliği kadar boşluk */
 }
 
-/* --- YENİ NAVBAR YAPISI (HOBITU TARZI) --- */
+/* --- HEADER WRAPPER --- */
 .header-wrapper {
     position: fixed;
     top: 0;
@@ -30,7 +30,7 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
-/* ÜST KATMAN: Logo, Arama, Auth, Sepet */
+/* 1. ÜST KATMAN (Logo, Arama, Butonlar) */
 .navbar-top {
     display: flex;
     justify-content: space-between;
@@ -46,7 +46,7 @@ body {
 }
 .logo img { height: 60px; width: auto; }
 
-/* Arama Çubuğu (Hobitu gibi ortada) */
+/* Arama Çubuğu */
 .search-bar {
     flex: 1;
     max-width: 500px;
@@ -71,14 +71,13 @@ body {
     font-size: 1.2rem;
 }
 
-/* Sağ Taraf: Auth ve Sepet */
+/* Sağ Taraf Butonlar */
 .nav-actions {
     display: flex;
     align-items: center;
     gap: 15px;
 }
 
-/* YENİ BUTON STİLLERİ (Eşit ve Vurgulu) */
 .auth-buttons {
     display: flex;
     gap: 10px;
@@ -109,12 +108,11 @@ body {
 }
 .btn-signup:hover { background-color: var(--primary-dark); border-color: var(--primary-dark); }
 
-/* Sepet Alanı */
+/* Sepet */
 .cart-area {
     display: flex; flex-direction: column; align-items: center;
     text-decoration: none; color: var(--dark-color); font-size: 0.8rem;
-    position: relative;
-    margin-left: 10px;
+    position: relative; margin-left: 10px;
 }
 .cart-icon { font-size: 1.5rem; }
 .badge { 
@@ -123,18 +121,20 @@ body {
     border-radius: 50%; padding: 2px 6px; font-size: 0.7rem;
 }
 
-/* ALT KATMAN: Kategoriler */
+/* 2. ALT KATMAN (Kategoriler - Masaüstü) */
 .navbar-bottom {
     background: white;
     display: flex;
-    justify-content: center;
+    justify-content: center; /* Ortala */
     padding: 0;
-    height: 50px; /* İnce şerit */
+    height: 50px;
+    border-bottom: 1px solid #eee;
 }
 
 .category-menu {
-    list-style: none;
-    display: flex;
+    list-style: none; /* Maddeli işaretleri kaldır */
+    display: flex; /* YAN YANA DİZ */
+    flex-direction: row; /* Yatay sırala */
     gap: 30px;
     margin: 0;
     padding: 0;
@@ -142,7 +142,11 @@ body {
     height: 100%;
 }
 
-.category-menu li { height: 100%; display: flex; align-items: center; }
+.category-menu li { 
+    height: 100%; 
+    display: flex; 
+    align-items: center; 
+}
 
 .category-menu a {
     text-decoration: none;
@@ -157,50 +161,52 @@ body {
     align-items: center;
     border-bottom: 3px solid transparent;
 }
-
 .category-menu a:hover {
     color: var(--primary-color);
     border-bottom: 3px solid var(--primary-color);
 }
 
-/* Satıcı Ol Butonu (Menüde Farklı Dursun) */
-.menu-seller {
-    color: var(--seller-color) !important;
+.menu-seller { color: var(--seller-color) !important; }
+
+/* 3. MOBİL MENÜ (Varsayılan Olarak GİZLİ) */
+.mobile-menu-container {
+    display: none; /* Bilgisayarda asla görünmesin! */
+    position: fixed;
+    left: -100%;
+    top: 70px;
+    width: 80%;
+    height: 100vh;
+    background: white;
+    transition: 0.3s;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 10000;
 }
 
-/* --- HAMBURGER MENÜ (MOBİL) --- */
 .hamburger { display: none; cursor: pointer; font-size: 1.5rem; }
 
-/* --- RESPONSIVE (MOBİL UYUM) --- */
+/* --- RESPONSIVE (SADECE MOBİL/TABLET İÇİN KURALLAR) --- */
 @media (max-width: 900px) {
-    body { padding-top: 80px; } /* Mobilde tek satır olacağı için boşluk azalır */
+    body { padding-top: 80px; } 
 
-    .navbar-bottom, .search-bar { display: none; } /* Mobilde alt menüyü ve aramayı gizle (Hamburger içine alacağız) */
+    /* Masaüstü elemanlarını gizle */
+    .navbar-bottom, .search-bar, .navbar-top .auth-buttons { 
+        display: none; 
+    } 
     
     .navbar-top { padding: 10px 15px; height: 70px; }
-    
     .logo img { height: 40px; }
     
     .hamburger { display: block; margin-right: 15px; }
 
-    /* Mobilde Kategoriler ve Butonlar Hamburger İçine Girer */
+    /* Mobil Menüyü Görünür Yap (Ama solda saklı) */
     .mobile-menu-container {
-        position: fixed;
-        left: -100%;
-        top: 70px;
-        width: 80%;
-        height: 100vh;
-        background: white;
-        transition: 0.3s;
-        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        padding: 20px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+        display: flex; /* Artık flex olarak var olabilir */
     }
-
-    .mobile-menu-container.active { left: 0; }
+    .mobile-menu-container.active { left: 0; } /* Class eklenince açılacak */
 
     .mobile-auth { display: flex; flex-direction: column; gap: 10px; }
     .mobile-auth .btn-auth { width: 100%; }
@@ -211,11 +217,32 @@ body {
         display: block; padding: 15px 0; 
         text-decoration: none; color: var(--dark-color); font-weight: 600; 
     }
-
-    /* Mobilde Giriş/Kayıt butonlarını üst barda gizle, menüye koy */
-    .navbar-top .auth-buttons { display: none; }
 }
+
+/* --- DİĞER CSS AYARLARI --- */
+.container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+.card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.3s; }
+.card:hover { transform: translateY(-5px); }
+.card-img { height: 200px; background-color: #e0e0e0; display: flex; align-items: center; justify-content: center; color: #555; font-weight: bold; }
+.card-body { padding: 15px; }
+.category-tag { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.price { color: var(--primary-color); font-weight: bold; font-size: 1.2rem; margin: 5px 0 10px; }
+.btn-add-cart { width: 100%; padding: 10px; background-color: var(--dark-color); color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+.btn-add-cart.added { background-color: #2ecc71; pointer-events: none; }
+.mega-footer { background-color: #1a1a1a; color: #ccc; padding: 60px 0 20px; margin-top: 60px; }
+.footer-container { max-width: 1200px; margin: 0 auto; padding: 0 5%; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; }
+.footer-col h3 { color: white; border-bottom: 2px solid var(--primary-color); display: inline-block; padding-bottom: 10px; margin-bottom: 20px; }
+.footer-links { list-style: none; padding: 0; }
+.footer-links li { margin-bottom: 10px; }
+.footer-links a { color: #bbb; text-decoration: none; transition: 0.3s; }
+.footer-links a:hover { color: var(--primary-color); padding-left: 5px; }
+.social-icons { display: flex; gap: 15px; margin-top: 20px; }
+.social-icons a { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #333; color: white; border-radius: 50%; text-decoration: none; font-size: 1.2rem; transition: 0.3s; }
+.social-icons a:hover { background: var(--primary-color); transform: scale(1.1); }
+.footer-bottom { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #333; font-size: 0.8rem; }
 
 /* --- DİĞER CSS AYARLARI (Eski kodlarını koru) --- */
 .container { padding: 40px 5%; max-width: 1200px; margin: 0 auto; }
 /* ... Footer, Ürün Kartları, Admin vb. kodları aynı kalabilir ... */
+
