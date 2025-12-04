@@ -75,9 +75,11 @@ window.logoutUser = () => {
     });
 };
 
-// --- KAYIT OL (SIGN UP) ---
+// --- KAYIT OL (SIGN UP) GÜNCELLENMİŞ HALİ ---
 function setupSignup() {
     const form = document.getElementById('signup-form');
+    if (!form) return; // Form yoksa çık
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = document.getElementById('signup-username').value;
@@ -86,7 +88,25 @@ function setupSignup() {
         const password = document.getElementById('signup-password').value;
         const msgBox = document.getElementById('auth-message');
 
+        // --- YENİ ŞİFRE GÜVENLİK KONTROLÜ ---
+        // Regex Açıklaması: En az 1 küçük harf, 1 büyük harf, 1 rakam ve toplamda en az 8 karakter
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+        if (!passwordRegex.test(password)) {
+            msgBox.className = "message-box error";
+            msgBox.style.display = "block";
+            msgBox.innerText = "Güvenlik Uyarısı: Şifreniz en az 8 karakter olmalı, en az 1 büyük harf, 1 küçük harf ve 1 rakam içermelidir.";
+            return; // İşlemi durdur
+        }
+        // -------------------------------------
+
         try {
+            // Butonu pasif yap (Çift tıklamayı önle)
+            const submitBtn = form.querySelector('button');
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "İşleniyor...";
+
             // 1. Firebase Auth ile kullanıcı oluştur
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
@@ -94,7 +114,7 @@ function setupSignup() {
             // 2. Kullanıcı Profilini Güncelle (İsim Ekle)
             await updateProfile(user, { displayName: username });
 
-            // 3. Firestore Veritabanına Ek Bilgileri Kaydet (Telefon, Rol vb.)
+            // 3. Firestore Veritabanına Ek Bilgileri Kaydet
             await setDoc(doc(db, "users", user.uid), {
                 username: username,
                 phone: phone,
@@ -115,7 +135,17 @@ function setupSignup() {
         } catch (error) {
             msgBox.className = "message-box error";
             msgBox.style.display = "block";
-            msgBox.innerText = "Hata: " + error.message;
+            
+            // Hata mesajlarını Türkçeleştirme
+            let errorMessage = "Bir hata oluştu: " + error.message;
+            if (error.code === 'auth/email-already-in-use') errorMessage = "Bu e-posta adresi zaten kullanımda.";
+            
+            msgBox.innerText = errorMessage;
+            
+            // Butonu eski haline getir
+            const submitBtn = form.querySelector('button');
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Kayıt Ol";
         }
     });
 }
@@ -356,3 +386,4 @@ window.createTestOrder = async () => {
         console.error("Hata:", e);
     }
 };
+
