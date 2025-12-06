@@ -3,6 +3,64 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendEmailVerification, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+/* --- DİNAMİK MENÜ VE FOOTER YÜKLEYİCİ --- */
+async function loadComponents() {
+    try {
+        // 1. Navbar'ı yükle
+        const navResponse = await fetch('navbar.html');
+        const navHtml = await navResponse.text();
+        document.getElementById('navbar-placeholder').innerHTML = navHtml;
+
+        // 2. Footer'ı yükle
+        const footResponse = await fetch('footer.html');
+        const footHtml = await footResponse.text();
+        document.getElementById('footer-placeholder').innerHTML = footHtml;
+
+        // 3. YÜKLEME BİTTİKTEN SONRA ÇALIŞACAK FONKSİYONLAR
+        // Menü HTML'i artık sayfada olduğu için event listener'ları şimdi ekleyebiliriz
+        initializeMenuEvents(); 
+        checkAuthState(); // Giriş kontrolünü yap
+        updateCartBadge(); // Sepet sayısını güncelle
+
+    } catch (error) {
+        console.error("Menü yüklenirken hata oluştu:", error);
+    }
+}
+
+// Menü yüklendikten sonra çalışacak olaylar (Hamburger vb.)
+function initializeMenuEvents() {
+    const hamburger = document.querySelector(".hamburger");
+    const mobileMenu = document.querySelector(".mobile-menu-container");
+
+    if (hamburger && mobileMenu) {
+        hamburger.addEventListener("click", () => {
+            mobileMenu.classList.toggle("active");
+            // Menü açılınca hamburger ikonunu değiştirebilirsin istersen
+        });
+
+        // Menü dışına tıklayınca kapat
+        document.addEventListener('click', (e) => {
+            if (!mobileMenu.contains(e.target) && !hamburger.contains(e.target)) {
+                mobileMenu.classList.remove("active");
+            }
+        });
+    }
+}
+
+// --- SAYFA YÜKLENDİĞİNDE ÇALIŞACAKLAR ---
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // Önce bileşenleri yükle
+    loadComponents();
+
+    // Sayfaya özel diğer fonksiyonlar (Ürün listeleme vb.)
+    if (document.getElementById('product-list')) renderProducts();
+    if (document.getElementById('showcase-grid')) renderShowcase();
+    if (document.getElementById('cart-items-container')) renderCartPage();
+    if (document.getElementById('signup-form')) setupSignup();
+    if (document.getElementById('login-form')) setupLogin();
+});
+
 // BURAYA FIREBASE PANELİNDEN ALDIĞIN CONFIG GELECEK
 const firebaseConfig = {
     const firebaseConfig = {
@@ -404,6 +462,7 @@ window.createTestOrder = async () => {
         console.error("Hata:", e);
     }
 };
+
 
 
 
