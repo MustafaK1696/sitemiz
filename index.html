@@ -11,124 +11,21 @@
 
     <body>
 
-    <header class="header-wrapper">
-        
-        <div class="navbar-top">
-            
-            <div style="display:flex; align-items:center;">
-                <div class="hamburger">☰</div>
-                <a href="index.html" class="logo">
-                    <img src="logo.png" alt="ÖğrenciFy">
-                </a>
-            </div>
+    <!DOCTYPE html>
+<html lang="tr">
+<head>
+    </head>
+<body>
 
-            <div class="search-bar">
-                <input type="text" placeholder="Ürün, kategori veya satıcı ara...">
-                <button>🔍</button>
-            </div>
+    <div id="navbar-placeholder"></div>
 
-            <div class="nav-actions">
-                
-                <div id="desktop-auth" class="auth-buttons">
-                    <a href="login.html" class="btn-auth btn-login">Giriş Yap</a>
-                    <a href="signup.html" class="btn-auth btn-signup">Kayıt Ol</a>
-                </div>
+    <section class="container">
+        </section>
 
-                <div id="user-area" style="display:none; align-items:center; gap:10px;">
-                    <span style="font-weight:bold;">👋 <span id="user-name-display">Kullanıcı</span></span>
-                    <button onclick="logoutUser()" style="font-size:0.8rem; color:red; background:none; border:none; cursor:pointer;">Çıkış</button>
-                </div>
+    <div id="footer-placeholder"></div>
 
-                <a href="cart.html" class="cart-area">
-                    <span class="cart-icon">🛒</span>
-                    <span id="cart-count" class="badge">0</span>
-                    <span style="font-size:0.7rem; display:block; margin-top:-3px;">Sepetim</span>
-                </a>
-            </div>
-        </div>
-
-        <div class="navbar-bottom">
-            <ul class="category-menu">
-                <li><a href="seller.html" class="menu-seller">✨ Satıcı Ol</a></li>
-                <li><a href="products.html">Tüm Ürünler</a></li>
-                <li><a href="products.html">El Örgüsü</a></li>
-                <li><a href="products.html">Takı & Tasarım</a></li>
-                <li><a href="products.html">Ev & Dekorasyon</a></li>
-                <li><a href="products.html">Kırtasiye</a></li>
-                <li><a href="contact.html">İletişim</a></li>
-            </ul>
-        </div>
-
-        <div class="mobile-menu-container">
-            <div style="display:flex; margin-bottom:20px;">
-                <input type="text" placeholder="Ürün ara..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-            </div>
-
-            <div id="mobile-auth" class="mobile-auth">
-                <a href="login.html" class="btn-auth btn-login">Giriş Yap</a>
-                <a href="signup.html" class="btn-auth btn-signup">Kayıt Ol</a>
-            </div>
-
-            <ul class="mobile-links">
-                <li><a href="seller.html" style="color:var(--seller-color);">Satıcı Ol</a></li>
-                <li><a href="index.html">Ana Sayfa</a></li>
-                <li><a href="products.html">Giyim & Moda</a></li>
-                <li><a href="products.html">Takı & Aksesuar</a></li>
-                <li><a href="products.html">Ev & Yaşam</a></li>
-                <li><a href="products.html">Kırtasiye</a></li>
-                <li><a href="contact.html">İletişim</a></li>
-            </ul>
-        </div>
-    </header>
-    <header class="hero">
-        <div class="hero-content">
-            <h1>ÖğrenciFy Dünyasına Hoş Geldiniz</h1>
-            <p>Öğrencilerin el emeği ürünlerini halkla buluşturan platform.</p>
-            <a href="products.html" class="btn-primary">Alışverişe Başla</a>
-        </div>
-    </header>
-
-    <section class="container showcase-section">
-        <h2 class="section-title">✨ Vitrin Ürünler</h2>
-        <div id="showcase-grid" class="product-grid"></div>
-    </section>
-
-    <footer class="mega-footer">
-        <div class="footer-container">
-            <div class="footer-col">
-                <a href="index.html" style="color:white; font-size:1.5rem; font-weight:bold; text-decoration:none;">ÖğrenciFy</a>
-                <p style="margin-top:10px;">Geleceğin emeği, bugünün değeri.</p>
-                
-                <div class="social-icons">
-                    <a href="https://instagram.com" target="_blank" title="Instagram">📷</a>
-                    <a href="https://x.com" target="_blank" title="X">🐦</a>
-                    <a href="https://youtube.com" target="_blank" title="Youtube">▶️</a>
-                </div>
-            </div>
-
-            <div class="footer-col">
-                <h3>Kurumsal</h3>
-                <ul class="footer-links">
-                    <li><a href="about.html">Hakkımızda</a></li>
-                    <li><a href="seller.html">Satıcı Ol</a></li>
-                    <li><a href="contact.html">İletişim</a></li>
-                </ul>
-            </div>
-            
-             <div class="footer-col">
-                <h3>Kategoriler</h3>
-                <ul class="footer-links">
-                    <li><a href="products.html">Giyim</a></li>
-                    <li><a href="products.html">Teknoloji</a></li>
-                    <li><a href="products.html">Aksesuar</a></li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="footer-bottom">
-            <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-        </div>
-    </footer>
+    <script type="module" src="script.js"></script>
+</body>
 
     <script type="module">
        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
@@ -262,6 +159,7 @@
 </script>
 </body>
 </html>
+
 
 
 
