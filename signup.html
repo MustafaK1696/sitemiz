@@ -1,47 +1,46 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kayıt Ol - ÖğrenciFy</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <title>Kayıt Ol - ÖğrenciFy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body style="background:#f0f2f5; display:flex; justify-content:center; align-items:center; height:100vh;">
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <a href="index.html" class="auth-logo">
+        <img src="logo.png" alt="ÖğrenciFy" />
+      </a>
+      <h1>Aramıza katıl ✨</h1>
+      <p>El emeği ürünlerini satmak veya öğrencilerden alışveriş yapmak için hemen üye ol.</p>
 
-    <div class="auth-container">
-        <div class="auth-box">
-            <a href="index.html" class="auth-logo">
-                <img src="logo.png" alt="ÖğrenciFy">
-            </a>
-            <h2>Aramıza Katıl 🚀</h2>
-            <p>ÖğrenciFy dünyasına adım at.</p>
+      <form id="signup-form" class="auth-form">
+        <label for="signup-username">Ad Soyad</label>
+        <input type="text" id="signup-username" required />
 
-            <form id="signup-form">
-                <div class="input-group">
-                    <input type="text" id="signup-username" placeholder="Kullanıcı Adı" required>
-                </div>
-                <div class="input-group">
-                    <input type="tel" id="signup-phone" placeholder="Telefon Numarası (5XX...)" required>
-                </div>
-                <div class="input-group">
-                    <input type="email" id="signup-email" placeholder="E-Posta Adresi" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" id="signup-password" placeholder="Şifre (Min 6 karakter)" required>
-                </div>
-                
-                <button type="submit" class="btn-primary full-width">Kayıt Ol</button>
-            </form>
+        <label for="signup-phone">Telefon (opsiyonel)</label>
+        <input type="tel" id="signup-phone" />
 
-            <p class="auth-footer">
-                Zaten hesabın var mı? <a href="login.html">Giriş Yap</a>
-            </p>
-            <div id="auth-message" class="message-box"></div>
-        </div>
+        <label for="signup-email">E-posta</label>
+        <input type="email" id="signup-email" required />
+
+        <label for="signup-password">Şifre</label>
+        <input type="password" id="signup-password" required />
+
+        <button type="submit" class="btn-primary">Kayıt Ol</button>
+      </form>
+
+      <div id="signup-message" class="message-box" style="display:none;"></div>
+
+      <p class="auth-switch">
+        Zaten hesabın var mı?
+        <a href="login.html">Giriş Yap</a>
+      </p>
     </div>
+  </div>
 
-    <script type="module" src="script.js"></script>
+  <!-- Firebase + auth.js -->
+  <script type="module" src="auth.js"></script>
 </body>
 </html>
