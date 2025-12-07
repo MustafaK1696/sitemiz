@@ -10,15 +10,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
+<header class="site-header">
+  <div class="navbar">
+    <a href="index.html" class="logo">
+      Öğrenci<span>Fy</span>
+    </a>
 
-    <nav class="navbar">
-        <div class="logo">🎓 ÖğrenciPazarı</div>
-        <ul class="nav-links">
-            <li><a href="#">Ana Sayfa</a></li>
-            <li><a href="#">Ürünler</a></li>
-            <li><a href="#" class="btn-primary">Ürün Sat</a></li>
-        </ul>
+    <nav class="nav-main">
+      <ul class="nav-links">
+        <li><a href="index.html">Ana Sayfa</a></li>
+        <li><a href="products.html">Ürünler</a></li>
+        <li><a href="seller.html">Satıcı Ol</a></li>
+      </ul>
     </nav>
+
+    <div class="nav-auth">
+      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
+      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+    </div>
+
+    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
+      ☰
+    </button>
+  </div>
+
+  <!-- Mobil menü -->
+  <div class="nav-mobile-menu">
+    <a href="index.html">Ana Sayfa</a>
+    <a href="products.html">Ürünler</a>
+    <a href="seller.html">Satıcı Ol</a>
+    <a href="login.html">Giriş Yap</a>
+    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
+  </div>
+</header>
+
 
     <header class="hero">
         <div class="hero-content">
@@ -44,4 +69,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
