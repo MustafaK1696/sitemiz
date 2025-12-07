@@ -1,63 +1,33 @@
-<header class="header-wrapper">
-    <div class="navbar-top">
-        <div style="display:flex; align-items:center;">
-            <div class="hamburger">☰</div>
-            <a href="index.html" class="logo">
-                <img src="logo.png" alt="ÖğrenciFy">
-            </a>
-        </div>
+<header class="site-header">
+  <div class="navbar">
+    <a href="index.html" class="logo">
+      Öğrenci<span>Fy</span>
+    </a>
 
-        <div class="search-bar">
-            <input type="text" placeholder="Ürün, kategori veya satıcı ara...">
-            <button>🔍</button>
-        </div>
+    <nav class="nav-main">
+      <ul class="nav-links">
+        <li><a href="index.html">Ana Sayfa</a></li>
+        <li><a href="products.html">Ürünler</a></li>
+        <li><a href="seller.html">Satıcı Ol</a></li>
+      </ul>
+    </nav>
 
-        <div class="nav-actions">
-            <div id="desktop-auth" class="auth-buttons">
-                <a href="login.html" class="btn-auth btn-login">Giriş Yap</a>
-                <a href="signup.html" class="btn-auth btn-signup">Kayıt Ol</a>
-            </div>
-
-            <div id="user-area" style="display:none; align-items:center; gap:10px;">
-                <span style="font-weight:bold;">👋 <span id="user-name-display">Kullanıcı</span></span>
-                <button onclick="logoutUser()" style="font-size:0.8rem; color:red; background:none; border:none; cursor:pointer;">Çıkış</button>
-            </div>
-
-            <a href="cart.html" class="cart-area">
-                <span class="cart-icon">🛒</span>
-                <span id="cart-count" class="badge">0</span>
-                <span style="font-size:0.7rem; display:block; margin-top:-3px;">Sepetim</span>
-            </a>
-        </div>
+    <div class="nav-auth">
+      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
+      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
     </div>
 
-    <div class="navbar-bottom">
-        <ul class="category-menu">
-            <li><a href="seller.html" class="menu-seller">✨ Satıcı Ol</a></li>
-            <li><a href="products.html">Tüm Ürünler</a></li>
-            <li><a href="products.html">Giyim & Moda</a></li>
-            <li><a href="products.html">Takı & Aksesuar</a></li>
-            <li><a href="products.html">Ev & Yaşam</a></li>
-            <li><a href="products.html">Kırtasiye</a></li>
-            <li><a href="contact.html">İletişim</a></li>
-        </ul>
-    </div>
+    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
+      ☰
+    </button>
+  </div>
 
-    <div class="mobile-menu-container">
-        <div style="display:flex; margin-bottom:20px;">
-            <input type="text" placeholder="Ürün ara..." style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-        </div>
-        <div id="mobile-auth" class="mobile-auth">
-            <a href="login.html" class="btn-auth btn-login">Giriş Yap</a>
-            <a href="signup.html" class="btn-auth btn-signup">Kayıt Ol</a>
-        </div>
-        <ul class="mobile-links">
-            <li><a href="seller.html" style="color:var(--seller-color);">Satıcı Ol</a></li>
-            <li><a href="index.html">Ana Sayfa</a></li>
-            <li><a href="products.html">Giyim & Moda</a></li>
-            <li><a href="products.html">Takı & Aksesuar</a></li>
-            <li><a href="products.html">Ev & Yaşam</a></li>
-            <li><a href="contact.html">İletişim</a></li>
-        </ul>
-    </div>
+  <!-- Mobil menü -->
+  <div class="nav-mobile-menu">
+    <a href="index.html">Ana Sayfa</a>
+    <a href="products.html">Ürünler</a>
+    <a href="seller.html">Satıcı Ol</a>
+    <a href="login.html">Giriş Yap</a>
+    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
+  </div>
 </header>
