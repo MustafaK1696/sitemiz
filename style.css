@@ -120,4 +120,69 @@ body {
 
 .btn-compare:hover {
     background-color: #ddd;
+
+}
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f9fafb;
+  padding: 16px;
+}
+
+.auth-card {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 32px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.auth-form input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-primary {
+  padding: 12px;
+  border: none;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.message-box {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.message-box.success {
+  background: #e7f9f2;
+  color: #037b3f;
+}
+
+.message-box.error {
+  background: #ffe8e8;
+  color: #b42318;
+}
+
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 24px;
+  }
 }
