@@ -8,7 +8,7 @@
       <ul class="nav-links">
         <li><a href="index.html">Ana Sayfa</a></li>
         <li><a href="products.html">Ürünler</a></li>
-        <li><a href="seller.html">Satıcı Ol</a></li>
+        <li><a href="seller.html" class="nav-seller">Satıcı Ol</a></li>
         <li><a href="about.html">Hakkımızda</a></li>
         <li><a href="help.html">Yardım</a></li>
         <li><a href="contact.html">İletişim</a></li>
@@ -16,11 +16,37 @@
     </nav>
 
     <div class="nav-auth">
+      <!-- Sepet her zaman görünsün -->
       <a href="cart.html" class="nav-btn nav-cart">
         🛒 Sepetim <span id="cart-count" class="badge">0</span>
       </a>
-      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
-      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+
+      <!-- GİRİŞ YOKKEN -->
+      <div class="nav-auth-guest">
+        <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
+        <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+      </div>
+
+      <!-- GİRİŞ VARSA -->
+      <div class="nav-auth-user">
+        <button class="nav-user-button" id="nav-user-button">
+          <span class="nav-user-avatar" id="nav-user-avatar">M</span>
+          <span class="nav-user-name" id="nav-user-name">Kullanıcı</span>
+        </button>
+        <div class="nav-user-dropdown" id="nav-user-dropdown">
+          <div class="nav-user-dropdown-header">
+            <div class="nav-user-avatar" id="nav-user-avatar-big">M</div>
+            <div>
+              <div class="nav-user-name" id="nav-user-name-big">Kullanıcı</div>
+              <div class="nav-user-email" id="nav-user-email">mail@example.com</div>
+            </div>
+          </div>
+          <a href="#" class="nav-user-link">Profil ayarları (yakında)</a>
+          <button id="logout-btn" class="nav-user-link nav-user-logout">
+            Çıkış Yap
+          </button>
+        </div>
+      </div>
     </div>
 
     <button class="nav-toggle" aria-label="Menüyü aç/kapat">
@@ -32,12 +58,12 @@
   <div class="nav-mobile-menu">
     <a href="index.html">Ana Sayfa</a>
     <a href="products.html">Ürünler</a>
-    <a href="seller.html">Satıcı Ol</a>
+    <a href="seller.html" class="nav-seller-mobile">Satıcı Ol</a>
     <a href="about.html">Hakkımızda</a>
     <a href="help.html">Yardım</a>
     <a href="contact.html">İletişim</a>
     <a href="cart.html">🛒 Sepetim</a>
-    <a href="login.html">Giriş Yap</a>
+    <a href="login.html" class="nav-mobile-login">Giriş Yap</a>
     <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
   </div>
 </header>
