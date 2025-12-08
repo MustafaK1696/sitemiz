@@ -1,75 +1,41 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Öğrencilerin el emeği ürünlerini sattığı pazar yeri. En uygun fiyatları karşılaştırın.">
-    <meta name="keywords" content="öğrenci pazarı, el emeği, ucuz ürünler, tasarım">
-    <title>Öğrenci Pazarı & Fiyat Analizi</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ÖğrenciFy - Öğrencilerin El Emeği Pazarı</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-<header class="site-header">
-  <div class="navbar">
-    <a href="index.html" class="logo">
-      Öğrenci<span>Fy</span>
-    </a>
 
-    <nav class="nav-main">
-      <ul class="nav-links">
-        <li><a href="index.html">Ana Sayfa</a></li>
-        <li><a href="products.html">Ürünler</a></li>
-        <li><a href="seller.html">Satıcı Ol</a></li>
-      </ul>
-    </nav>
+  <div id="navbar-placeholder"></div>
 
-    <div class="nav-auth">
-      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
-      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+  <header class="hero">
+    <div class="hero-content">
+      <h1>Öğrencilerin El Emeği,<br> Ekonominin Geleceği</h1>
+      <p>Kendi ürününü sat, öğrencilerin el emeği ürünlerini keşfet.</p>
+      <a href="#products" class="btn-secondary">Alışverişe Başla</a>
     </div>
+  </header>
 
-    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
-      ☰
-    </button>
-  </div>
-
-  <!-- Mobil menü -->
-  <div class="nav-mobile-menu">
-    <a href="index.html">Ana Sayfa</a>
-    <a href="products.html">Ürünler</a>
-    <a href="seller.html">Satıcı Ol</a>
-    <a href="login.html">Giriş Yap</a>
-    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
-  </div>
-</header>
-
-
-
-    <header class="hero">
-        <div class="hero-content">
-            <h1>Öğrencilerin El Emeği, <br>Ekonominin Geleceği</h1>
-            <p>Kendi ürününü sat veya piyasadaki en uygun fiyatları analiz et.</p>
-            <a href="#products" class="btn-secondary">Alışverişe Başla</a>
-        </div>
-    </header>
-
+  <main>
     <section id="products" class="container">
+      <div class="section-header">
         <h2>Vitrin</h2>
-        <div class="filter-bar">
-            <input type="text" id="searchBox" placeholder="Ürün ara...">
-        </div>
-        
-        <div id="product-list" class="product-grid">
-            </div>
+        <p>En çok ilgi gören öğrenci ürünleri.</p>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="searchBox" placeholder="Ürün ara...">
+      </div>
+
+      <div id="product-list" class="product-grid"></div>
     </section>
+  </main>
 
-    <footer>
-        <p>&copy; 2024 Öğrenci Pazarı. Tüm hakları saklıdır.</p>
-    </footer>
+  <div id="footer-placeholder"></div>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
-
 </html>
-
