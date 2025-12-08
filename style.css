@@ -186,3 +186,153 @@ body {
     padding: 24px;
   }
 }
+
+/* === ORTAK HEADER / NAVBAR GÖRÜNÜMÜ === */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+}
+
+/* Ana navbar satırı */
+.navbar {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Logo */
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+.logo span {
+  color: var(--secondary-color);
+}
+
+/* Masaüstü menü */
+.nav-main {
+  flex: 1;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links li a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.nav-links li a:hover {
+  color: var(--primary-color);
+}
+
+/* Giriş / Kayıt butonları */
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-btn {
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.nav-login {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: #ffffff;
+}
+
+.nav-login:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.nav-signup {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.nav-signup:hover {
+  background: #4f46e5; /* primary'nin biraz koyusu */
+}
+
+/* Mobil buton (hamburger) */
+.nav-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* Mobil menü */
+.nav-mobile-menu {
+  display: none;
+  flex-direction: column;
+  padding: 0 5% 10px 5%;
+  gap: 8px;
+  border-top: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.nav-mobile-menu a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  padding: 8px 0;
+}
+
+.nav-mobile-menu .nav-signup-mobile {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* .open class'ı eklendiğinde gösterilsin */
+.nav-mobile-menu.open {
+  display: flex;
+}
+
+/* === MOBİL DÜZEN === */
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.6rem 5%;
+  }
+
+  .nav-main {
+    display: none; /* linkler masaüstünde ortada, mobilden gizliyoruz */
+  }
+
+  .nav-auth {
+    display: none; /* login / signup da üst satırda gizli */
+  }
+
+  .nav-toggle {
+    display: block; /* hamburger görünür */
+  }
+}
+
