@@ -9,18 +9,39 @@
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="logo">🚀 ÖğrenciFy</div>
-        <ul class="nav-links">
-            <li><a href="index.html">Ana Sayfa</a></li>
-            <li><a href="products.html" class="active">Ürünler</a></li>
-            <li><a href="contact.html">İletişim</a></li>
-            <li class="cart-area">
-                <span>🛒 Sepetim</span>
-                <span id="cart-count" class="badge">0</span>
-            </li>
-        </ul>
+   <header class="site-header">
+  <div class="navbar">
+    <a href="index.html" class="logo">
+      Öğrenci<span>Fy</span>
+    </a>
+
+    <nav class="nav-main">
+      <ul class="nav-links">
+        <li><a href="index.html">Ana Sayfa</a></li>
+        <li><a href="products.html">Ürünler</a></li>
+        <li><a href="seller.html">Satıcı Ol</a></li>
+      </ul>
     </nav>
+
+    <div class="nav-auth">
+      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
+      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+    </div>
+
+    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
+      ☰
+    </button>
+  </div>
+
+  <!-- Mobil menü -->
+  <div class="nav-mobile-menu">
+    <a href="index.html">Ana Sayfa</a>
+    <a href="products.html">Ürünler</a>
+    <a href="seller.html">Satıcı Ol</a>
+    <a href="login.html">Giriş Yap</a>
+    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
+  </div>
+</header>
 
     <section class="container">
         <h2>Tüm Ürünler</h2>
@@ -34,4 +55,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>
