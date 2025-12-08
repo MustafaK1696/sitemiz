@@ -1,60 +1,50 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sepetim - ÖğrenciFy</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sepetim - ÖğrenciFy</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <nav class="navbar">
-        <a href="index.html" class="logo"><img src="logo.png" alt="Logo"></a>
-        <ul class="nav-links">
-            <li><a href="index.html">Ana Sayfa</a></li>
-            <li><a href="seller.html" class="btn-seller">Satıcı Ol</a></li>
-            <li class="dropdown">
-                <a href="products.html">Ürünler ▾</a>
-                <div class="dropdown-content">
-                    <a href="#">Gündelik Yaşam</a>
-                    <a href="#">Hediyelik Eşya</a>
-                </div>
-            </li>
-            <li><a href="contact.html">İletişim</a></li>
-            <li><a href="cart.html" class="cart-area"><span>🛒 Sepetim</span><span id="cart-count" class="badge">0</span></a></li>
-        </ul>
-    </nav>
+  <div id="navbar-placeholder"></div>
 
-    <section class="container">
-        <h2>Sepetim</h2>
-        <div class="cart-container">
-            
-            <div class="cart-items" id="cart-items-container">
-                </div>
+  <main class="container cart-page">
+    <h1>Sepetim</h1>
 
-            <div class="cart-summary">
-                <h3>Sipariş Özeti</h3>
-                <div class="summary-row">
-                    <span>Ara Toplam</span>
-                    <span id="sub-total">-</span>
-                </div>
-                <div class="summary-row">
-                    <span>Kargo</span>
-                    <span>Bedava</span>
-                </div>
-                <div class="summary-row total-row">
-                    <span>Toplam</span>
-                    <span id="total-price">0 TL</span>
-                </div>
+    <div class="cart-container">
+      <div class="cart-items" id="cart-items-container">
+        <!-- script.js ile doldurulacak -->
+      </div>
 
-                <div id="limit-warning" class="warning-msg"></div>
-
-                <button id="checkout-btn" class="btn-checkout">Sepeti Onayla</button>
-            </div>
+      <aside class="cart-summary">
+        <h2>Sipariş Özeti</h2>
+        <div class="summary-row">
+          <span>Ara Toplam</span>
+          <span id="sub-total">0 TL</span>
         </div>
-    </section>
+        <div class="summary-row">
+          <span>Kargo</span>
+          <span>Bedava</span>
+        </div>
+        <div class="summary-row total-row">
+          <span>Toplam</span>
+          <span id="total-price">0 TL</span>
+        </div>
 
-    <script src="script.js"></script>
+        <div id="limit-warning" class="warning-msg"></div>
+
+        <button id="checkout-btn" class="btn-primary btn-checkout">
+          Sepeti Onayla
+        </button>
+      </aside>
+    </div>
+  </main>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>
