@@ -27,7 +27,7 @@
           type="tel"
           id="signup-phone"
           required
-          pattern="^\+?\d{10,15}$"
+          pattern="^\\+?\\d{10,15}$"
           placeholder="+905xxxxxxxxx"
         />
 
@@ -45,7 +45,7 @@
           id="signup-password"
           required
           minlength="8"
-          pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d\S]{8,}"
+          pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d\\S]{8,}"
           placeholder="En az 8 karakter, 1 büyük, 1 küçük harf ve 1 rakam"
         />
 
@@ -64,6 +64,6 @@
   <div id="footer-placeholder"></div>
 
   <script type="module" src="auth.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
