@@ -1,15 +1,13 @@
 // auth.js
-// Tüm giriş & kayıt işlemleri burada, Firebase ile konuşuyor.
+// Firebase ile kayıt / giriş işlemleri + form validasyonu
 
-// Firebase importları (modüler v10+)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
-  signOut,
-  onAuthStateChanged
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
   getFirestore,
@@ -17,7 +15,6 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-// 🔹 BURAYA KENDİ firebaseConfig'İNİ YAPIŞTIR 🔹
 const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
   authDomain: "ogrencify.firebaseapp.com",
@@ -27,12 +24,11 @@ const firebaseConfig = {
   appId: "1:467595249158:web:55373baf2ee993bee3a587",
   measurementId: "G-VS0KGRBLN0"
 };
-// Firebase başlat
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Küçük helper: mesaj kutusu göster
 function showMsg(element, message, type) {
   if (!element) return;
   element.style.display = "block";
@@ -40,24 +36,16 @@ function showMsg(element, message, type) {
   element.innerText = message;
 }
 
-// DOM hazır olduğunda
 document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const loginForm = document.getElementById("login-form");
 
-  if (signupForm) {
-    setupSignup(signupForm);
-  }
-
-  if (loginForm) {
-    setupLogin(loginForm);
-  }
-
-  // İstersen navbar için login state'i burada da takip edebiliriz
-  // onAuthStateChanged(auth, user => { ... });
+  if (signupForm) setupSignup(signupForm);
+  if (loginForm) setupLogin(loginForm);
 });
 
-// =============== KAYIT OL ===============
+// ---- Kayıt Ol ----
+
 function setupSignup(form) {
   const msgBox = document.getElementById("signup-message");
 
@@ -69,13 +57,35 @@ function setupSignup(form) {
     const email = document.getElementById("signup-email").value.trim();
     const password = document.getElementById("signup-password").value;
 
-    if (!username || !email || !password) {
-      showMsg(msgBox, "Lütfen zorunlu alanları doldurun.", "error");
+    // Zorunlu alan kontrolleri
+    if (!username || !phone || !email || !password) {
+      showMsg(msgBox, "Lütfen tüm alanları doldurun.", "error");
       return;
     }
 
-    if (password.length < 8) {
-      showMsg(msgBox, "Şifre en az 8 karakter olmalı.", "error");
+    const phonePattern = /^\+?\d{10,15}$/;
+    if (!phonePattern.test(phone)) {
+      showMsg(
+        msgBox,
+        "Telefon numarasını başında 0 olmadan ve boşluksuz girin. Örn: +905xxxxxxxxx",
+        "error"
+      );
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      showMsg(msgBox, "Geçerli bir e-posta adresi girin.", "error");
+      return;
+    }
+
+    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d\S]{8,}$/;
+    if (!strongPassword.test(password)) {
+      showMsg(
+        msgBox,
+        "Şifre en az 8 karakter olmalı ve en az 1 büyük harf, 1 küçük harf, 1 rakam içermelidir.",
+        "error"
+      );
       return;
     }
 
@@ -84,7 +94,6 @@ function setupSignup(form) {
     submitBtn.innerText = "Kaydediliyor...";
 
     try {
-      // Firebase Authentication ile kullanıcı oluştur
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -92,7 +101,6 @@ function setupSignup(form) {
       );
       const user = userCredential.user;
 
-      // Firestore'a da profil bilgilerini kaydet
       await setDoc(doc(db, "users", user.uid), {
         username,
         phone,
@@ -100,10 +108,7 @@ function setupSignup(form) {
         createdAt: new Date().toISOString()
       });
 
-      // E-posta doğrulama maili gönder
       await sendEmailVerification(user);
-
-      // Kullanıcıyı çıkışa zorlayalım ki maili doğrulamadan giriş yapamasın
       await signOut(auth);
 
       showMsg(
@@ -112,20 +117,21 @@ function setupSignup(form) {
         "success"
       );
 
-      // Bir süre sonra login sayfasına yönlendir
       setTimeout(() => {
         window.location.href = "login.html";
       }, 3000);
     } catch (error) {
       console.error(error);
       let msg = "Kayıt başarısız.";
+
       if (error.code === "auth/email-already-in-use") {
         msg = "Bu e-posta zaten kayıtlı.";
       } else if (error.code === "auth/invalid-email") {
         msg = "Geçersiz e-posta adresi.";
       } else if (error.code === "auth/weak-password") {
-        msg = "Şifre çok zayıf. En az 6-8 karakter olmalı.";
+        msg = "Şifre çok zayıf.";
       }
+
       showMsg(msgBox, msg, "error");
     } finally {
       submitBtn.disabled = false;
@@ -134,7 +140,8 @@ function setupSignup(form) {
   });
 }
 
-// =============== GİRİŞ YAP ===============
+// ---- Giriş Yap ----
+
 function setupLogin(form) {
   const msgBox = document.getElementById("login-message");
 
@@ -161,7 +168,6 @@ function setupLogin(form) {
       );
       const user = userCredential.user;
 
-      // E-posta doğrulanmış mı?
       if (!user.emailVerified) {
         await signOut(auth);
         showMsg(
@@ -172,8 +178,11 @@ function setupLogin(form) {
         return;
       }
 
-      // Başarılı giriş → ana sayfaya yönlendir
-      showMsg(msgBox, "Giriş başarılı, ana sayfaya yönlendiriliyorsun...", "success");
+      showMsg(
+        msgBox,
+        "Giriş başarılı, ana sayfaya yönlendiriliyorsun...",
+        "success"
+      );
 
       setTimeout(() => {
         window.location.href = "index.html";
@@ -181,7 +190,10 @@ function setupLogin(form) {
     } catch (error) {
       console.error(error);
       let msg = "Giriş başarısız.";
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password"
+      ) {
         msg = "E-posta veya şifre hatalı.";
       }
       showMsg(msgBox, msg, "error");
@@ -192,7 +204,8 @@ function setupLogin(form) {
   });
 }
 
-// =============== ÇIKIŞ YAP (isteğe bağlı) ===============
+// ---- Çıkış Yap (isteğe bağlı) ----
+
 export async function logoutUser() {
   try {
     await signOut(auth);
@@ -203,5 +216,4 @@ export async function logoutUser() {
   }
 }
 
-// HTML içinde <button onclick="logoutUser()">Çıkış</button> dersen çalışsın diye:
 window.logoutUser = logoutUser;
