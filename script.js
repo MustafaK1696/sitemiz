@@ -1,7 +1,27 @@
-// script.js
-// - navbar.html ve footer.html'i yükler
-// - ürün listesini doldurur
-// - sepeti localStorage'da tutar
+// script.js  (MODÜL)
+
+// Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
+  authDomain: "ogrencify.firebaseapp.com",
+  projectId: "ogrencify",
+  storageBucket: "ogrencify.firebasestorage.app",
+  messagingSenderId: "467595249158",
+  appId: "1:467595249158:web:55373baf2ee993bee3a587",
+  measurementId: "G-VS0KGRBLN0"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+let currentUser = null;
 
 // -------- Ortak yardımcılar --------
 
@@ -62,19 +82,10 @@ function addToCart(productId) {
   }
   saveCart(cart);
   updateCartCount();
-  alert("Ürün sepete eklendi.");
-}
-
-function removeFromCart(productId) {
-  let cart = getCart();
-  cart = cart.filter((item) => item.id !== productId);
-  saveCart(cart);
-  updateCartCount();
 }
 
 // -------- Ürünler --------
 
-// Örnek ürün verisi – sonra Firestore'dan doldurulabilir
 const PRODUCTS = [
   {
     id: 1,
@@ -98,6 +109,28 @@ const PRODUCTS = [
     description: "Gerçek deri, el dikimi minimalist cüzdan."
   }
 ];
+
+function handleAddToCart(productId, buttonEl) {
+  // giriş yoksa özel login sayfasına
+  if (!currentUser) {
+    window.location.href = "login-shop.html";
+    return;
+  }
+
+  addToCart(productId);
+
+  // 10 saniyelik görsel uyarı
+  const originalText = buttonEl.textContent;
+  buttonEl.textContent = "Sepete eklendi";
+  buttonEl.classList.add("btn-added");
+  buttonEl.disabled = true;
+
+  setTimeout(() => {
+    buttonEl.textContent = originalText;
+    buttonEl.classList.remove("btn-added");
+    buttonEl.disabled = false;
+  }, 10000);
+}
 
 function renderProducts() {
   const listEl = document.getElementById("product-list");
@@ -137,7 +170,7 @@ function renderProducts() {
   listEl.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = Number(btn.getAttribute("data-add-to-cart"));
-      addToCart(id);
+      handleAddToCart(id, btn);
     });
   });
 }
@@ -191,7 +224,6 @@ function renderCart() {
   if (subEl) subEl.textContent = `${subtotal.toFixed(2)} TL`;
   if (totalEl) totalEl.textContent = `${subtotal.toFixed(2)} TL`;
 
-  // Örnek limit uyarısı
   if (warningEl) {
     warningEl.textContent =
       subtotal > 0 && subtotal < 100
@@ -202,15 +234,18 @@ function renderCart() {
   container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = Number(btn.getAttribute("data-remove-from-cart"));
-      removeFromCart(id);
+      let cart = getCart();
+      cart = cart.filter((item) => item.id !== id);
+      saveCart(cart);
       renderCart();
+      updateCartCount();
     });
   });
 
   updateCartCount();
 }
 
-// -------- Navbar etkileşimleri --------
+// -------- NAVBAR: mobil menü + kullanıcı görünümü --------
 
 function setupNavbar() {
   const toggle = document.querySelector(".nav-toggle");
@@ -222,8 +257,81 @@ function setupNavbar() {
     });
   }
 
+  const userBtn = document.getElementById("nav-user-button");
+  const dropdown = document.getElementById("nav-user-dropdown");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (userBtn && dropdown) {
+    userBtn.addEventListener("click", () => {
+      dropdown.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target) && !userBtn.contains(e.target)) {
+        dropdown.classList.remove("open");
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  }
+
   updateCartCount();
+  updateNavbarForAuth(currentUser);
 }
+
+function updateNavbarForAuth(user) {
+  const guest = document.querySelector(".nav-auth-guest");
+  const userBox = document.querySelector(".nav-auth-user");
+  const nameSpan = document.getElementById("nav-user-name");
+  const nameBig = document.getElementById("nav-user-name-big");
+  const avatar = document.getElementById("nav-user-avatar");
+  const avatarBig = document.getElementById("nav-user-avatar-big");
+  const emailSpan = document.getElementById("nav-user-email");
+
+  const mobileLogin = document.querySelector(".nav-mobile-login");
+  const mobileSignup = document.querySelector(".nav-signup-mobile");
+
+  if (!guest || !userBox) return;
+
+  if (user) {
+    const displayName =
+      user.displayName || (user.email ? user.email.split("@")[0] : "Kullanıcı");
+    const firstLetter = displayName.charAt(0).toUpperCase();
+
+    if (nameSpan) nameSpan.textContent = displayName;
+    if (nameBig) nameBig.textContent = displayName;
+    if (avatar) avatar.textContent = firstLetter;
+    if (avatarBig) avatarBig.textContent = firstLetter;
+    if (emailSpan && user.email) emailSpan.textContent = user.email;
+
+    guest.style.display = "none";
+    userBox.style.display = "flex";
+
+    if (mobileLogin) mobileLogin.style.display = "none";
+    if (mobileSignup) mobileSignup.style.display = "none";
+  } else {
+    guest.style.display = "flex";
+    userBox.style.display = "none";
+
+    if (mobileLogin) mobileLogin.style.display = "";
+    if (mobileSignup) mobileSignup.style.display = "";
+  }
+}
+
+// -------- Firebase auth durumu --------
+
+onAuthStateChanged(auth, (user) => {
+  currentUser = user;
+  updateNavbarForAuth(user);
+});
 
 // -------- Sayfa yüklenince --------
 
@@ -231,20 +339,21 @@ document.addEventListener("DOMContentLoaded", () => {
   loadPartial("navbar-placeholder", "navbar.html", setupNavbar);
   loadPartial("footer-placeholder", "footer.html");
 
-  // Ürün listesi (index + products)
   const searchBox = document.getElementById("searchBox");
   if (searchBox) {
     searchBox.addEventListener("input", () => renderProducts());
   }
   renderProducts();
 
-  // Sepet sayfası
   renderCart();
 
-  // Sepeti onayla butonu
   const checkoutBtn = document.getElementById("checkout-btn");
   if (checkoutBtn) {
     checkoutBtn.addEventListener("click", () => {
+      if (!currentUser) {
+        window.location.href = "login-shop.html";
+        return;
+      }
       alert("Ödeme altyapısı eklendiğinde bu adım tamamlanacak.");
     });
   }
