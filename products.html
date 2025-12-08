@@ -1,59 +1,31 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ÖğrenciFy - Ürünler</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ürünler - ÖğrenciFy</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-   <header class="site-header">
-  <div class="navbar">
-    <a href="index.html" class="logo">
-      Öğrenci<span>Fy</span>
-    </a>
+  <div id="navbar-placeholder"></div>
 
-    <nav class="nav-main">
-      <ul class="nav-links">
-        <li><a href="index.html">Ana Sayfa</a></li>
-        <li><a href="products.html">Ürünler</a></li>
-        <li><a href="seller.html">Satıcı Ol</a></li>
-      </ul>
-    </nav>
-
-    <div class="nav-auth">
-      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
-      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
+  <main class="container">
+    <div class="section-header">
+      <h1>Tüm Ürünler</h1>
+      <p>Öğrencilerin el emeği ürünlerini kategori bağımsız listeleyin.</p>
     </div>
 
-    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
-      ☰
-    </button>
-  </div>
+    <div class="filter-bar">
+      <input type="text" id="searchBox" placeholder="Ürün ara...">
+    </div>
 
-  <!-- Mobil menü -->
-  <div class="nav-mobile-menu">
-    <a href="index.html">Ana Sayfa</a>
-    <a href="products.html">Ürünler</a>
-    <a href="seller.html">Satıcı Ol</a>
-    <a href="login.html">Giriş Yap</a>
-    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
-  </div>
-</header>
+    <div id="product-list" class="product-grid"></div>
+  </main>
 
-    <section class="container">
-        <h2>Tüm Ürünler</h2>
-        <div id="product-list" class="product-grid">
-            </div>
-    </section>
+  <div id="footer-placeholder"></div>
 
-    <footer>
-        <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-    </footer>
-
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
-
 </html>
