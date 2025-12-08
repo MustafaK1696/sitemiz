@@ -85,7 +85,7 @@ img {
 }
 
 .logo img {
-  height: 40px;
+  height: 80px; /* 2 katına çıkarıldı */
 }
 
 /* Masaüstü menü */
@@ -112,6 +112,20 @@ img {
 
 .nav-links a:hover {
   color: var(--primary-color);
+}
+
+/* Satıcı Ol vurgulu */
+
+.nav-seller {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 154, 31, 0.1);
+  color: var(--secondary-color) !important;
+  font-weight: 600;
+}
+
+.nav-seller:hover {
+  background: rgba(255, 154, 31, 0.2);
 }
 
 /* Giriş / Kayıt / Sepet */
@@ -168,6 +182,107 @@ img {
   font-size: 0.75rem;
 }
 
+/* Profil alanı */
+
+.nav-auth-guest {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-auth-user {
+  display: none; /* girişle açılacak */
+  position: relative;
+  align-items: center;
+}
+
+.nav-user-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.nav-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff9a1f, #7b3fe4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.nav-user-name {
+  font-size: 0.9rem;
+}
+
+/* Dropdown */
+
+.nav-user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  padding: 10px;
+  min-width: 210px;
+  display: none;
+  z-index: 1200;
+}
+
+.nav-user-dropdown.open {
+  display: block;
+}
+
+.nav-user-dropdown-header {
+  display: flex;
+  gap: 10px;
+  padding: 6px 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 6px;
+}
+
+#nav-user-avatar-big {
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+}
+
+.nav-user-email {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.nav-user-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #111827;
+  padding: 6px 6px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.nav-user-link:hover {
+  background: #f3f4ff;
+}
+
+.nav-user-logout {
+  color: #b91c1c;
+}
+
 /* Mobil buton */
 
 .nav-toggle {
@@ -198,6 +313,11 @@ img {
 
 .nav-mobile-menu.open {
   display: flex;
+}
+
+.nav-seller-mobile {
+  font-weight: 600;
+  color: var(--secondary-color);
 }
 
 /* BUTONLAR */
@@ -237,6 +357,13 @@ img {
 .btn-secondary:hover {
   background: #f3f4ff;
   transform: translateY(-1px);
+}
+
+/* Sepete eklendi görünümü */
+
+.btn-added {
+  background: #16a34a !important;
+  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.4);
 }
 
 /* ÜRÜN GRIDİ */
