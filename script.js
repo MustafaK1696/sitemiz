@@ -56,4 +56,17 @@ function comparePrice(productName) {
 }
 
 // Sayfa yüklendiğinde çalıştır
+
 document.addEventListener('DOMContentLoaded', renderProducts);
+
+// === NAVBAR: Mobil menü aç/kapa ===
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.querySelector(".nav-toggle");
+  const mobileMenu = document.querySelector(".nav-mobile-menu");
+
+  if (toggle && mobileMenu) {
+    toggle.addEventListener("click", () => {
+      mobileMenu.classList.toggle("open");
+    });
+  }
+});
