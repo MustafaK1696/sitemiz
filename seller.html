@@ -1,64 +1,43 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satıcı Ol - ÖğrenciFy</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Satıcı Ol - ÖğrenciFy</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-<header class="site-header">
-  <div class="navbar">
-    <a href="index.html" class="logo">
-      Öğrenci<span>Fy</span>
-    </a>
 
-    <nav class="nav-main">
-      <ul class="nav-links">
-        <li><a href="index.html">Ana Sayfa</a></li>
-        <li><a href="products.html">Ürünler</a></li>
-        <li><a href="seller.html">Satıcı Ol</a></li>
-      </ul>
-    </nav>
+  <div id="navbar-placeholder"></div>
 
-    <div class="nav-auth">
-      <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
-      <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
-    </div>
-
-    <button class="nav-toggle" aria-label="Menüyü aç/kapat">
-      ☰
-    </button>
-  </div>
-
-  <!-- Mobil menü -->
-  <div class="nav-mobile-menu">
-    <a href="index.html">Ana Sayfa</a>
-    <a href="products.html">Ürünler</a>
-    <a href="seller.html">Satıcı Ol</a>
-    <a href="login.html">Giriş Yap</a>
-    <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
-  </div>
-</header>
-
-    <section class="container">
-        <div style="text-align:center; margin-bottom: 30px;">
-            <h2>Ailemize Katılın 🚀</h2>
-            <p>Aşağıdaki formu doldurarak ürünlerinizi milyonlara ulaştırın.</p>
-        </div>
-
-        <div style="background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
-            
-            <p style="text-align:center; padding: 50px; color:#888;">
-                Google Form yüklenecek... <br>
-                (Formunuzu oluşturunca 'Gönder -> <> Yerleştir' kısmından kodu alıp buraya yapıştırın)
-            </p>
-
-        </div>
+  <main class="container seller-page">
+    <section class="seller-hero">
+      <h1>Ailemize Katılın 🚀</h1>
+      <p>Ürünlerinizi ÖğrenciFy üzerinde satarak hem kendinize hem de ekonomiye katkı sağlayın.</p>
     </section>
 
-    <script src="script.js"></script>
-</body>
+    <section class="seller-content">
+      <div class="seller-info">
+        <h2>Neler Kazanırsınız?</h2>
+        <ul>
+          <li>El emeği ürünlerinize görünürlük</li>
+          <li>Güvenli ödeme altyapısı</li>
+          <li>Öğrenciler arası dayanışma ve ağ</li>
+        </ul>
+      </div>
 
+      <div class="seller-form-embed">
+        <p class="seller-form-placeholder">
+          Buraya Google Form gömülecek.<br>
+          (Formu oluşturduktan sonra “Gönder → &lt;&gt; Yerleştir” kodunu buraya yapıştırabilirsiniz.)
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <div id="footer-placeholder"></div>
+
+  <script src="script.js"></script>
+</body>
 </html>
