@@ -1,133 +1,424 @@
 :root {
-    --primary-color: #6c63ff; /* Modern mor/mavi tonu */
-    --secondary-color: #fca311;
-    --bg-color: #f9f9f9;
-    --text-color: #333;
+  --primary-color: #7b3fe4;   /* logo moru */
+  --secondary-color: #ff9a1f; /* logo turuncusu */
+  --bg-color: #f8fafc;
+  --text-color: #1f2933;
+}
+
+/* GENEL */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: var(--bg-color);
-    color: var(--text-color);
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
-/* Navbar */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 5%;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.section-header h1,
+.section-header h2 {
+  margin: 0 0 8px;
+}
+
+/* HERO */
+
+.hero {
+  padding: 100px 5%;
+  background: linear-gradient(120deg, #ff9a1f 0%, #ff6a88 40%, #7b3fe4 100%);
+  color: #ffffff;
+  text-align: center;
+}
+
+.hero-content h1 {
+  font-size: 3rem;
+  margin: 0 0 12px;
+}
+
+.hero-content p {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.hero .btn-secondary {
+  margin-top: 1.5rem;
+}
+
+/* NAVBAR */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
 .navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 5%;
-    background: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.8rem 5%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.logo {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--primary-color);
+.logo img {
+  height: 40px;
+}
+
+/* Masaüstü menü */
+
+.nav-main {
+  flex: 1;
 }
 
 .nav-links {
-    list-style: none;
-    display: flex;
-    gap: 20px;
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
 }
 
 .nav-links a {
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 500;
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.nav-links a:hover {
+  color: var(--primary-color);
+}
+
+/* Giriş / Kayıt / Sepet */
+
+.nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-btn {
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.nav-login {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: #ffffff;
+}
+
+.nav-login:hover {
+  background: rgba(123, 63, 228, 0.06);
+}
+
+.nav-signup {
+  background: var(--primary-color);
+  color: #ffffff;
+}
+
+.nav-signup:hover {
+  background: #5f30c5;
+}
+
+/* Sepet butonu */
+
+.nav-cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(123, 63, 228, 0.06);
+  color: var(--primary-color);
+}
+
+.badge {
+  background: var(--primary-color);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+
+/* Mobil buton */
+
+.nav-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+/* Mobil menü */
+
+.nav-mobile-menu {
+  display: none;
+  flex-direction: column;
+  padding: 0 5% 10px;
+  gap: 8px;
+  border-top: 1px solid #f3f4f6;
+  background: #ffffff;
+}
+
+.nav-mobile-menu a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  padding: 8px 0;
+}
+
+.nav-mobile-menu.open {
+  display: flex;
+}
+
+/* BUTONLAR */
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.6rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .btn-primary {
-    background: var(--primary-color);
-    color: white !important;
-    padding: 8px 20px;
-    border-radius: 20px;
-    transition: 0.3s;
+  background: var(--primary-color);
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(123, 63, 228, 0.35);
 }
 
-/* Hero Section */
-.hero {
-    text-align: center;
-    padding: 100px 20px;
-    background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-    color: white;
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(123, 63, 228, 0.45);
 }
 
-.hero h1 {
-    font-size: 3rem;
-    margin-bottom: 10px;
+.btn-secondary {
+  background: #ffffff;
+  color: var(--primary-color) !important;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
 }
 
-/* Product Grid */
-.container {
-    padding: 40px 5%;
+.btn-secondary:hover {
+  background: #f3f4ff;
+  transform: translateY(-1px);
+}
+
+/* ÜRÜN GRIDİ */
+
+.filter-bar {
+  margin: 16px 0 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.filter-bar input {
+  max-width: 320px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
 }
 
 .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 30px;
-    margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 24px;
+  margin-top: 16px;
 }
 
 .card {
-    background: white;
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    transition: transform 0.3s;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:hover {
-    transform: translateY(-5px);
+  transform: translateY(-4px);
 }
 
 .card-img {
-    height: 200px;
-    background-color: #eee;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #888;
+  height: 180px;
+  background-color: #f3f4ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 0.9rem;
 }
 
 .card-body {
-    padding: 20px;
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.card-body p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4b5563;
 }
 
 .price {
-    color: var(--primary-color);
-    font-weight: bold;
-    font-size: 1.2rem;
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 4px;
 }
 
-.btn-compare {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    background-color: #eee;
-    color: #333;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9rem;
+/* Sepet butonu kart içinde */
+
+.card .btn-primary {
+  width: 100%;
+  margin-top: 10px;
 }
 
-.btn-compare:hover {
-    background-color: #ddd;
+/* SEPET SAYFASI */
 
+.cart-page h1 {
+  margin-top: 16px;
 }
+
+.cart-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.cart-items {
+  flex: 2 1 320px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.cart-summary {
+  flex: 1 1 260px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cart-item:last-child {
+  border-bottom: none;
+}
+
+.cart-item h4 {
+  margin: 0 0 4px;
+}
+
+.cart-item p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.cart-item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cart-item-total {
+  font-weight: 600;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+}
+
+.total-row {
+  margin-top: 10px;
+  font-weight: 700;
+}
+
+.warning-msg {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+}
+
+.btn-checkout {
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* AUTH SAYFALARI */
+
 .auth-page {
-  min-height: 100vh;
+  min-height: 80vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f9fafb;
   padding: 16px;
 }
 
@@ -153,17 +444,6 @@ body {
   border: 1px solid #e5e7eb;
 }
 
-.btn-primary {
-  padding: 12px;
-  border: none;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #ffffff;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
 .message-box {
   margin-top: 12px;
   padding: 10px 12px;
@@ -181,158 +461,148 @@ body {
   color: #b42318;
 }
 
-@media (max-width: 768px) {
-  .auth-card {
-    padding: 24px;
-  }
+.auth-switch {
+  margin-top: 16px;
+  font-size: 0.9rem;
+  text-align: center;
 }
 
-/* === ORTAK HEADER / NAVBAR GÖRÜNÜMÜ === */
+/* İLETİŞİM / YARDIM / HAKKIMIZDA */
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: #ffffff;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+.page-intro {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 32px;
 }
 
-/* Ana navbar satırı */
-.navbar {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.8rem 5%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
 }
 
-/* Logo */
-.logo {
-  font-size: 1.4rem;
-  font-weight: 700;
-  text-decoration: none;
+.contact-card {
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.contact-link {
   color: var(--primary-color);
+  text-decoration: none;
 }
 
-.logo span {
-  color: var(--secondary-color);
+.help-page .faq-item {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 8px;
 }
 
-/* Masaüstü menü */
-.nav-main {
-  flex: 1;
+/* SELLER */
+
+.seller-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
 }
 
-.nav-links {
+.seller-info,
+.seller-form-embed {
+  flex: 1 1 260px;
+}
+
+.seller-form-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #6b7280;
+}
+
+/* FOOTER */
+
+.mega-footer {
+  background: #111827;
+  color: #e5e7eb;
+  padding: 32px 5% 16px;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.footer-col {
+  flex: 1 1 220px;
+}
+
+.footer-logo img {
+  height: 40px;
+}
+
+.footer-tagline {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.footer-links {
   list-style: none;
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin: 0;
   padding: 0;
+  margin: 8px 0 0;
 }
 
-.nav-links li a {
-  text-decoration: none;
-  color: var(--text-color);
-  font-weight: 500;
-  font-size: 0.95rem;
+.footer-links li {
+  margin-bottom: 6px;
 }
 
-.nav-links li a:hover {
-  color: var(--primary-color);
-}
-
-/* Giriş / Kayıt butonları */
-.nav-auth {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.nav-btn {
+.footer-links a {
+  color: #d1d5db;
   text-decoration: none;
   font-size: 0.9rem;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid transparent;
 }
 
-.nav-login {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  background: #ffffff;
+.footer-links a:hover {
+  color: #f97316;
 }
 
-.nav-login:hover {
-  background: rgba(37, 99, 235, 0.06);
+.social-icons a {
+  margin-right: 8px;
+  font-size: 1.2rem;
 }
 
-.nav-signup {
-  background: var(--primary-color);
-  color: #ffffff;
+.footer-bottom {
+  border-top: 1px solid #374151;
+  padding-top: 10px;
+  text-align: center;
+  font-size: 0.85rem;
 }
 
-.nav-signup:hover {
-  background: #4f46e5; /* primary'nin biraz koyusu */
-}
-
-/* Mobil buton (hamburger) */
-.nav-toggle {
-  display: none;
-  border: none;
-  background: transparent;
-  font-size: 1.4rem;
-  cursor: pointer;
-}
-
-/* Mobil menü */
-.nav-mobile-menu {
-  display: none;
-  flex-direction: column;
-  padding: 0 5% 10px 5%;
-  gap: 8px;
-  border-top: 1px solid #f3f4f6;
-  background: #ffffff;
-}
-
-.nav-mobile-menu a {
-  text-decoration: none;
-  color: var(--text-color);
-  font-size: 0.95rem;
-  padding: 8px 0;
-}
-
-.nav-mobile-menu .nav-signup-mobile {
-  font-weight: 600;
-  color: var(--primary-color);
-}
-
-/* .open class'ı eklendiğinde gösterilsin */
-.nav-mobile-menu.open {
-  display: flex;
-}
-
-/* === MOBİL DÜZEN === */
+/* MOBİL */
 
 @media (max-width: 768px) {
   .navbar {
     padding: 0.6rem 5%;
   }
 
-  .nav-main {
-    display: none; /* linkler masaüstünde ortada, mobilden gizliyoruz */
-  }
-
+  .nav-main,
   .nav-auth {
-    display: none; /* login / signup da üst satırda gizli */
+    display: none;
   }
 
   .nav-toggle {
-    display: block; /* hamburger görünür */
+    display: block;
+  }
+
+  .hero-content h1 {
+    font-size: 2.1rem;
+  }
+
+  .cart-container {
+    flex-direction: column;
   }
 }
-
