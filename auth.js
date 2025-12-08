@@ -1,5 +1,4 @@
 // auth.js
-// Firebase ile kayıt / giriş işlemleri + form validasyonu
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
@@ -7,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
-  signOut
+  signOut,
+  updateProfile
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
   getFirestore,
@@ -57,7 +57,6 @@ function setupSignup(form) {
     const email = document.getElementById("signup-email").value.trim();
     const password = document.getElementById("signup-password").value;
 
-    // Zorunlu alan kontrolleri
     if (!username || !phone || !email || !password) {
       showMsg(msgBox, "Lütfen tüm alanları doldurun.", "error");
       return;
@@ -100,6 +99,8 @@ function setupSignup(form) {
         password
       );
       const user = userCredential.user;
+
+      await updateProfile(user, { displayName: username });
 
       await setDoc(doc(db, "users", user.uid), {
         username,
@@ -204,8 +205,7 @@ function setupLogin(form) {
   });
 }
 
-// ---- Çıkış Yap (isteğe bağlı) ----
-
+// ÇIKIŞ (isteyen isterse başka yerde de kullanabilir)
 export async function logoutUser() {
   try {
     await signOut(auth);
