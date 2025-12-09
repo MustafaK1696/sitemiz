@@ -2,7 +2,6 @@
   <nav class="navbar">
     <!-- Logo -->
     <a href="index.html" class="logo">
-      <!-- Buradaki src'yi kendi logo dosyana göre güncelleyebilirsin -->
       <img src="images/logo-ogrencify.png" alt="ÖğrenciFy">
     </a>
 
@@ -15,6 +14,7 @@
         <li><a href="about.html">Hakkımızda</a></li>
         <li><a href="contact.html">İletişim</a></li>
         <li><a href="help.html">Yardım</a></li>
+
         <!-- SADECE ADMİN İÇİN: Yönetici Paneli -->
         <li>
           <a href="admin.html"
@@ -62,9 +62,14 @@
           <button class="nav-user-link" onclick="window.location.href='profile.html'">
             Profil & Güvenlik
           </button>
-          <button class="nav-user-link" onclick="window.location.href='seller-dashboard.html'">
+
+          <!-- SADECE seller/admin için: Satıcı Panelim -->
+          <button class="nav-user-link nav-seller-panel-link"
+                  style="display:none;"
+                  onclick="window.location.href='seller-dashboard.html'">
             Satıcı Panelim
           </button>
+
           <button class="nav-user-link nav-user-logout" id="logout-btn">
             Çıkış Yap
           </button>
@@ -92,6 +97,13 @@
        class="nav-admin-link-mobile"
        style="display:none; font-weight:600; color:#7b3fe4;">
       Yönetici Paneli
+    </a>
+
+    <!-- SADECE seller/admin için: Satıcı Panelim (mobil) -->
+    <a href="seller-dashboard.html"
+       class="nav-seller-panel-mobile"
+       style="display:none;">
+      Satıcı Panelim
     </a>
 
     <!-- Mobil login/signup -->
