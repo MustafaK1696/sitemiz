@@ -20,7 +20,6 @@ import {
   addDoc,
   query,
   where,
-  getDocs,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
@@ -43,25 +42,25 @@ let currentUser = null;
 let currentUserRole = "customer";
 let currentTwoFactorEnabled = false;
 
-// Basit statik ürün listesi (istersen sonra products koleksiyonuna geçeriz)
+let adminPanelInitialized = false;
+let sellerPanelInitialized = false;
+
+// Örnek ürünler (ileride products koleksiyonuna geçebilirsin)
 const PRODUCTS = [
   { id: 1, name: "El Örgüsü Atkı", price: 150, category: "Giyim", description: "Tamamen yün, el yapımı sıcak atkı." },
   { id: 2, name: "Ahşap Kalemlik", price: 85, category: "Dekorasyon", description: "Doğal ahşaptan oyma masaüstü kalemlik." },
   { id: 3, name: "Deri Cüzdan", price: 250, category: "Aksesuar", description: "Gerçek deri, el dikimi minimalist cüzdan." }
 ];
 
-// ---------------- TEMA YÖNETİMİ ----------------
+// ---------------- TEMA ----------------
 
 const THEME_KEY = "ogrencify_theme";
 
 function applyTheme(theme) {
-  if (theme === "dark") {
-    document.body.classList.add("theme-dark");
-  } else {
-    document.body.classList.remove("theme-dark");
-  }
-  localStorage.setItem(THEME_KEY, theme);
+  if (theme === "dark") document.body.classList.add("theme-dark");
+  else document.body.classList.remove("theme-dark");
 
+  localStorage.setItem(THEME_KEY, theme);
   const toggleBtn = document.getElementById("theme-toggle");
   if (toggleBtn) {
     toggleBtn.textContent =
@@ -95,7 +94,7 @@ function loadPartial(placeholderId, url, callback) {
     });
 }
 
-// Sepet verisini localStorage'da tut
+// Sepet
 const CART_KEY = "ogrencify_cart";
 
 function getCart() {
@@ -190,14 +189,14 @@ async function refreshUserRole() {
   }
 }
 
+// Sayfa için rol kontrolü
 async function requireRole(allowedRoles) {
   if (!currentUser) {
-    window.location.href = "login.html";
+    // auth henüz gelmediyse yönlendirme yapma
     return false;
   }
   await refreshUserRole();
 
-  // 2FA e-posta zorunluluğu
   if (currentTwoFactorEnabled && !currentUser.emailVerified) {
     alert(
       "Bu sayfaya erişmek için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama e-postası gönderebilirsiniz."
@@ -405,9 +404,10 @@ function updateNavbarForAuth(user) {
   const mobileLogin = document.querySelector(".nav-mobile-login");
   const mobileSignup = document.querySelector(".nav-signup-mobile");
 
-  // Yalnızca adminlerin göreceği linkler
   const adminLink = document.querySelector(".nav-admin-link");
   const adminLinkMobile = document.querySelector(".nav-admin-link-mobile");
+  const sellerPanelLink = document.querySelector(".nav-seller-panel-link");
+  const sellerPanelMobile = document.querySelector(".nav-seller-panel-mobile");
 
   if (!guest || !userBox) return;
 
@@ -428,15 +428,14 @@ function updateNavbarForAuth(user) {
     if (mobileLogin) mobileLogin.style.display = "none";
     if (mobileSignup) mobileSignup.style.display = "none";
 
-    // --- BURASI ÖNEMLİ: admin mi? ---
     const isAdmin = currentUserRole === "admin";
+    const isSeller = currentUserRole === "seller" || isAdmin;
 
-    if (adminLink) {
-      adminLink.style.display = isAdmin ? "" : "none";
-    }
-    if (adminLinkMobile) {
-      adminLinkMobile.style.display = isAdmin ? "" : "none";
-    }
+    if (adminLink) adminLink.style.display = isAdmin ? "" : "none";
+    if (adminLinkMobile) adminLinkMobile.style.display = isAdmin ? "" : "none";
+
+    if (sellerPanelLink) sellerPanelLink.style.display = isSeller ? "" : "none";
+    if (sellerPanelMobile) sellerPanelMobile.style.display = isSeller ? "" : "none";
   } else {
     guest.style.display = "flex";
     userBox.style.display = "none";
@@ -446,6 +445,8 @@ function updateNavbarForAuth(user) {
 
     if (adminLink) adminLink.style.display = "none";
     if (adminLinkMobile) adminLinkMobile.style.display = "none";
+    if (sellerPanelLink) sellerPanelLink.style.display = "none";
+    if (sellerPanelMobile) sellerPanelMobile.style.display = "none";
   }
 }
 
@@ -559,8 +560,10 @@ function setupSellerRequest() {
 // ---------------- SATICI PANELİ ----------------
 
 async function setupSellerPanel() {
+  if (sellerPanelInitialized) return;
   const panel = document.getElementById("seller-panel");
   if (!panel) return;
+  sellerPanelInitialized = true;
 
   const ok = await requireRole(["seller", "admin"]);
   if (!ok) return;
@@ -640,8 +643,10 @@ async function setupSellerPanel() {
 // ---------------- ADMİN PANELİ ----------------
 
 async function setupAdminPanel() {
+  if (adminPanelInitialized) return;
   const panel = document.getElementById("admin-panel");
   if (!panel) return;
+  adminPanelInitialized = true;
 
   const ok = await requireRole(["admin"]);
   if (!ok) return;
@@ -650,7 +655,7 @@ async function setupAdminPanel() {
   const sellerBox = document.getElementById("admin-seller-requests");
   const productBox = document.getElementById("admin-product-requests");
 
-  // Kullanıcı listesi + roller
+  // Kullanıcı listesi & roller
   if (usersBox) {
     const usersCol = collection(db, "users");
     onSnapshot(usersCol, (snap) => {
@@ -688,8 +693,6 @@ async function setupAdminPanel() {
           const uid = tr.getAttribute("data-uid");
           const select = tr.querySelector(".admin-role-select");
           const newRole = select.value;
-
-          // (İstersen burada kendini admin'den customer'a çekmeyi engelleyen kontrol koyabilirsin.)
 
           const userRef = doc(db, "users", uid);
           try {
@@ -838,9 +841,26 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
   await ensureUserDoc(user);
   updateNavbarForAuth(user);
+
+  const path = window.location.pathname;
+
+  // Giriş yoksa admin/seller paneline erişmeye çalışıyorsa login'e yolla
+  if (!user) {
+    if (
+      path.endsWith("admin.html") ||
+      path.endsWith("seller-dashboard.html")
+    ) {
+      window.location.href = "login.html";
+    }
+    return;
+  }
+
+  // Giriş varsa ve DOM hazırsa ilgili panelleri kur
+  setupSellerPanel();
+  setupAdminPanel();
 });
 
-// ---------------- DOM YÜKLENİNCE ----------------
+// ---------------- DOM YÜKLENDİĞİNDE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
@@ -894,10 +914,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Sayfa bazlı kurulumlar
   setupProfilePage();
   setupSellerRequest();
-  setupSellerPanel();
-  setupAdminPanel();
 });
-
