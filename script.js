@@ -21,8 +21,16 @@ import {
   query,
   where,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
@@ -37,6 +45,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let currentUser = null;
 let currentUserRole = "customer";
@@ -45,12 +54,8 @@ let currentTwoFactorEnabled = false;
 let adminPanelInitialized = false;
 let sellerPanelInitialized = false;
 
-// Örnek ürünler (ileride products koleksiyonuna geçebilirsin)
-const PRODUCTS = [
-  { id: 1, name: "El Örgüsü Atkı", price: 150, category: "Giyim", description: "Tamamen yün, el yapımı sıcak atkı." },
-  { id: 2, name: "Ahşap Kalemlik", price: 85, category: "Dekorasyon", description: "Doğal ahşaptan oyma masaüstü kalemlik." },
-  { id: 3, name: "Deri Cüzdan", price: 250, category: "Aksesuar", description: "Gerçek deri, el dikimi minimalist cüzdan." }
-];
+// Firestore'dan gelen ürünler
+let PRODUCTS = [];
 
 // ---------------- TEMA ----------------
 
@@ -119,7 +124,7 @@ function getCartSubtotal() {
   let subtotal = 0;
   cart.forEach((item) => {
     const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) subtotal += product.price * item.qty;
+    if (product) subtotal += Number(product.price || 0) * item.qty;
   });
   return subtotal;
 }
@@ -191,10 +196,8 @@ async function refreshUserRole() {
 
 // Sayfa için rol kontrolü
 async function requireRole(allowedRoles) {
-  if (!currentUser) {
-    // auth henüz gelmediyse yönlendirme yapma
-    return false;
-  }
+  if (!currentUser) return false;
+
   await refreshUserRole();
 
   if (currentTwoFactorEnabled && !currentUser.emailVerified) {
@@ -212,7 +215,33 @@ async function requireRole(allowedRoles) {
   return true;
 }
 
-// ---------------- ÜRÜNLER ----------------
+// ---------------- ÜRÜNLERİ FIRESTORE'DAN YÜKLE ----------------
+
+function loadProductsFromFirestore() {
+  const productsCol = collection(db, "products");
+  onSnapshot(productsCol, (snap) => {
+    PRODUCTS = [];
+    snap.forEach((docSnap) => {
+      const d = docSnap.data();
+      PRODUCTS.push({
+        id: docSnap.id,
+        name: d.title,
+        price: d.price,
+        category: d.category || "",
+        description: d.description || "",
+        imageUrl: d.imageUrl || "",
+        sellerId: d.sellerId || "",
+        featured: !!d.featured
+      });
+    });
+
+    renderProducts();
+    renderCart();
+    renderFeatured();
+  });
+}
+
+// ---------------- ÜRÜNLER SAYFASI ----------------
 
 function handleAddToCart(productId, buttonEl) {
   if (!currentUser) {
@@ -243,18 +272,40 @@ function renderProducts() {
 
   listEl.innerHTML = "";
 
+  if (!PRODUCTS.length) {
+    listEl.innerHTML = "<p>Henüz ürün eklenmemiş.</p>";
+    return;
+  }
+
   PRODUCTS.filter((p) => {
     if (!queryText) return true;
     return (
-      p.name.toLowerCase().includes(queryText) ||
-      p.description.toLowerCase().includes(queryText) ||
+      (p.name || "").toLowerCase().includes(queryText) ||
+      (p.description || "").toLowerCase().includes(queryText) ||
       (p.category || "").toLowerCase().includes(queryText)
     );
   }).forEach((product) => {
+    // Görsel
+    let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
+    if (product.imageUrl) {
+      const urlLower = product.imageUrl.toLowerCase();
+      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
+        mediaHtml = `
+          <div class="card-img">
+            <img src="${product.imageUrl}" alt="${product.name}" />
+          </div>`;
+      } else if (urlLower.includes(".pdf")) {
+        mediaHtml = `
+          <div class="card-img pdf-icon">
+            PDF
+          </div>`;
+      }
+    }
+
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <div class="card-img">Ürün Görseli</div>
+      ${mediaHtml}
       <div class="card-body">
         <h3>${product.name}</h3>
         <p>${product.description}</p>
@@ -269,7 +320,64 @@ function renderProducts() {
 
   listEl.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const id = Number(btn.getAttribute("data-add-to-cart"));
+      const id = btn.getAttribute("data-add-to-cart");
+      handleAddToCart(id, btn);
+    });
+  });
+}
+
+// ---------------- VİTRİN ----------------
+
+function renderFeatured() {
+  const container = document.getElementById("featured-products");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  let featured = PRODUCTS.filter((p) => p.featured);
+  if (!featured.length) {
+    // hiç vitrin işaretli yoksa, son eklenenlerden 3 tane göster
+    featured = PRODUCTS.slice(-3);
+  }
+
+  if (!featured.length) {
+    container.innerHTML = "<p>Şu anda vitrin ürünü bulunmuyor.</p>";
+    return;
+  }
+
+  featured.forEach((product) => {
+    let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
+    if (product.imageUrl) {
+      const urlLower = product.imageUrl.toLowerCase();
+      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
+        mediaHtml = `
+          <div class="card-img">
+            <img src="${product.imageUrl}" alt="${product.name}" />
+          </div>`;
+      } else if (urlLower.includes(".pdf")) {
+        mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
+      }
+    }
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      ${mediaHtml}
+      <div class="card-body">
+        <h3>${product.name}</h3>
+        <p>${product.description}</p>
+        <div class="price">${product.price} TL</div>
+        <button class="btn-primary" data-add-to-cart="${product.id}">
+          Sepete Ekle
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  container.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-add-to-cart");
       handleAddToCart(id, btn);
     });
   });
@@ -301,7 +409,8 @@ function renderCart() {
   cart.forEach((item) => {
     const product = PRODUCTS.find((p) => p.id === item.id);
     if (!product) return;
-    const lineTotal = product.price * item.qty;
+    const price = Number(product.price || 0);
+    const lineTotal = price * item.qty;
     subtotal += lineTotal;
 
     const row = document.createElement("div");
@@ -309,7 +418,7 @@ function renderCart() {
     row.innerHTML = `
       <div>
         <h4>${product.name}</h4>
-        <p>${product.price} TL x ${item.qty} adet</p>
+        <p>${price} TL x ${item.qty} adet</p>
       </div>
       <div class="cart-item-actions">
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
@@ -338,7 +447,7 @@ function renderCart() {
 
   container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const id = Number(btn.getAttribute("data-remove-from-cart"));
+      const id = btn.getAttribute("data-remove-from-cart");
       let cartNow = getCart();
       cartNow = cartNow.filter((item) => item.id !== id);
       saveCart(cartNow);
@@ -578,22 +687,41 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = document.getElementById("sp-category").value.trim();
-      const img = document.getElementById("sp-image").value.trim();
       const desc = document.getElementById("sp-description").value.trim();
+      const fileInput = document.getElementById("sp-image-file");
+      const file = fileInput.files[0];
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0) {
-        msg.textContent = "Lütfen tüm alanları doğru doldurunuz.";
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !file) {
+        msg.textContent = "Lütfen tüm alanları ve dosya yüklemesini doğru doldurunuz.";
         return;
       }
 
+      const allowedExts = ["jpg", "jpeg", "png", "pdf"];
+      const nameParts = file.name.split(".");
+      const ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : "";
+
+      if (!allowedExts.includes(ext)) {
+        msg.textContent =
+          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yükleyebilirsiniz.";
+        return;
+      }
+
+      msg.textContent = "Dosya yükleniyor, lütfen bekleyiniz...";
+
       try {
+        const path = `productImages/${currentUser.uid}/${Date.now()}-${file.name}`;
+        const refFile = storageRef(storage, path);
+        await uploadBytes(refFile, file);
+        const downloadURL = await getDownloadURL(refFile);
+
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
-          imageUrl: img,
-          description: desc,
+          imageUrl: downloadURL,
+          fileName: file.name,
+          fileExt: ext,
           status: "pending",
           createdAt: serverTimestamp()
         });
@@ -602,7 +730,8 @@ async function setupSellerPanel() {
         form.reset();
       } catch (e2) {
         console.error(e2);
-        msg.textContent = "Kayıt sırasında hata oluştu.";
+        msg.textContent =
+          "Kayıt veya dosya yükleme sırasında hata oluştu. Lütfen tekrar deneyin.";
       }
     });
   }
@@ -654,6 +783,7 @@ async function setupAdminPanel() {
   const usersBox = document.getElementById("admin-users-list");
   const sellerBox = document.getElementById("admin-seller-requests");
   const productBox = document.getElementById("admin-product-requests");
+  const productsManageBox = document.getElementById("admin-products-list");
 
   // Kullanıcı listesi & roller
   if (usersBox) {
@@ -764,7 +894,7 @@ async function setupAdminPanel() {
     });
   }
 
-  // Ürün başvuruları
+  // Ürün başvuruları (onay/red)
   if (productBox) {
     const qProd = query(
       collection(db, "productRequests"),
@@ -812,6 +942,7 @@ async function setupAdminPanel() {
                 imageUrl: d.imageUrl || "",
                 description: d.description,
                 sellerId: d.sellerId,
+                featured: false,
                 createdAt: serverTimestamp()
               });
               await updateDoc(reqRef, {
@@ -828,6 +959,81 @@ async function setupAdminPanel() {
             }
           } catch (e) {
             console.error(e);
+          }
+        });
+      });
+    });
+  }
+
+  // Onaylanmış ürünler & vitrin yönetimi
+  if (productsManageBox) {
+    const prodCol = collection(db, "products");
+    onSnapshot(prodCol, (snap) => {
+      if (snap.empty) {
+        productsManageBox.innerHTML = "<p>Henüz onaylanmış ürün bulunmuyor.</p>";
+        return;
+      }
+      let html =
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        html += `<tr data-id="${docSnap.id}">
+          <td>${d.title}</td>
+          <td>
+            <input type="number" class="admin-prod-price" value="${d.price}" min="0" step="0.01">
+          </td>
+          <td>
+            <input type="text" class="admin-prod-cat" value="${d.category || ""}">
+          </td>
+          <td style="text-align:center;">
+            <input type="checkbox" class="admin-prod-featured" ${d.featured ? "checked" : ""}>
+          </td>
+          <td>
+            <button class="btn-secondary" data-action="save-product">Kaydet</button>
+            <button class="btn-link" data-action="delete-product">Sil</button>
+          </td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      productsManageBox.innerHTML = html;
+
+      productsManageBox.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const tr = btn.closest("tr");
+          const id = tr.getAttribute("data-id");
+          const action = btn.getAttribute("data-action");
+          const refProd = doc(db, "products", id);
+
+          if (action === "save-product") {
+            const priceInput = tr.querySelector(".admin-prod-price");
+            const catInput = tr.querySelector(".admin-prod-cat");
+            const featInput = tr.querySelector(".admin-prod-featured");
+            const price = Number(priceInput.value);
+            const cat = catInput.value.trim();
+            const feat = featInput.checked;
+
+            if (isNaN(price) || price < 0) {
+              alert("Geçerli bir fiyat giriniz.");
+              return;
+            }
+            try {
+              await updateDoc(refProd, {
+                price,
+                category: cat,
+                featured: feat
+              });
+            } catch (e) {
+              console.error(e);
+              alert("Ürün güncellenirken hata oluştu.");
+            }
+          } else if (action === "delete-product") {
+            if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+            try {
+              await deleteDoc(refProd);
+            } catch (e) {
+              console.error(e);
+              alert("Ürün silinirken hata oluştu.");
+            }
           }
         });
       });
@@ -871,9 +1077,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   loadPartial("footer-placeholder", "footer.html");
 
+  // Ürünleri Firestore'dan dinamik yükle
+  loadProductsFromFirestore();
+
   const searchBox = document.getElementById("searchBox");
   if (searchBox) searchBox.addEventListener("input", () => renderProducts());
-  renderProducts();
 
   renderCart();
 
