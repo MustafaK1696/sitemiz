@@ -1,4 +1,4 @@
-// script.js  (MODÜL)
+// script.js  (ES module)
 
 // Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
@@ -22,6 +22,31 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 let currentUser = null;
+
+// Örnek ürünler (ileride Firestore'a taşınabilir)
+const PRODUCTS = [
+  {
+    id: 1,
+    name: "El Örgüsü Atkı",
+    price: 150,
+    category: "Giyim",
+    description: "Tamamen yün, el yapımı sıcak atkı."
+  },
+  {
+    id: 2,
+    name: "Ahşap Kalemlik",
+    price: 85,
+    category: "Dekorasyon",
+    description: "Doğal ahşaptan oyma masaüstü kalemlik."
+  },
+  {
+    id: 3,
+    name: "Deri Cüzdan",
+    price: 250,
+    category: "Aksesuar",
+    description: "Gerçek deri, el dikimi minimalist cüzdan."
+  }
+];
 
 // -------- Ortak yardımcılar --------
 
@@ -64,12 +89,40 @@ function getCartCount() {
   return getCart().reduce((sum, item) => sum + item.qty, 0);
 }
 
+function getCartSubtotal() {
+  const cart = getCart();
+  let subtotal = 0;
+  cart.forEach((item) => {
+    const product = PRODUCTS.find((p) => p.id === item.id);
+    if (product) {
+      subtotal += product.price * item.qty;
+    }
+  });
+  return subtotal;
+}
+
+function updateCartProgress(subtotal) {
+  const bar = document.getElementById("cart-progress-fill");
+  if (!bar) return;
+  const LIMIT = 400;
+  const ratio = Math.max(0, Math.min(subtotal / LIMIT, 1));
+  bar.style.width = `${(ratio * 100).toFixed(0)}%`;
+  if (subtotal >= LIMIT) {
+    bar.classList.add("full");
+  } else {
+    bar.classList.remove("full");
+  }
+}
+
 function updateCartCount() {
   const count = getCartCount();
   const badgeEls = document.querySelectorAll("#cart-count, .cart-count");
   badgeEls.forEach((el) => {
     el.textContent = count;
   });
+
+  const subtotal = getCartSubtotal();
+  updateCartProgress(subtotal);
 }
 
 function addToCart(productId) {
@@ -85,30 +138,6 @@ function addToCart(productId) {
 }
 
 // -------- Ürünler --------
-
-const PRODUCTS = [
-  {
-    id: 1,
-    name: "El Örgüsü Atkı",
-    price: 150,
-    category: "Giyim",
-    description: "Tamamen yün, el yapımı sıcak atkı."
-  },
-  {
-    id: 2,
-    name: "Ahşap Kalemlik",
-    price: 85,
-    category: "Dekorasyon",
-    description: "Doğal ahşaptan oyma masaüstü kalemlik."
-  },
-  {
-    id: 3,
-    name: "Deri Cüzdan",
-    price: 250,
-    category: "Aksesuar",
-    description: "Gerçek deri, el dikimi minimalist cüzdan."
-  }
-];
 
 function handleAddToCart(productId, buttonEl) {
   // giriş yoksa özel login sayfasına
@@ -191,6 +220,7 @@ function renderCart() {
     if (subEl) subEl.textContent = "0 TL";
     if (totalEl) totalEl.textContent = "0 TL";
     if (warningEl) warningEl.textContent = "";
+    updateCartProgress(0);
     return;
   }
 
@@ -225,24 +255,29 @@ function renderCart() {
   if (totalEl) totalEl.textContent = `${subtotal.toFixed(2)} TL`;
 
   if (warningEl) {
-    warningEl.textContent =
-      subtotal > 0 && subtotal < 100
-        ? "100 TL altı siparişlerde bazı satıcılar ek kargo ücreti talep edebilir."
-        : "";
+    if (subtotal > 0 && subtotal < 400) {
+      warningEl.textContent =
+        "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
+    } else if (subtotal >= 400) {
+      warningEl.textContent = "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
+    } else {
+      warningEl.textContent = "";
+    }
   }
 
   container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const id = Number(btn.getAttribute("data-remove-from-cart"));
-      let cart = getCart();
-      cart = cart.filter((item) => item.id !== id);
-      saveCart(cart);
+      let cartNow = getCart();
+      cartNow = cartNow.filter((item) => item.id !== id);
+      saveCart(cartNow);
       renderCart();
       updateCartCount();
     });
   });
 
   updateCartCount();
+  updateCartProgress(subtotal);
 }
 
 // -------- NAVBAR: mobil menü + kullanıcı görünümü --------
@@ -350,11 +385,32 @@ document.addEventListener("DOMContentLoaded", () => {
   const checkoutBtn = document.getElementById("checkout-btn");
   if (checkoutBtn) {
     checkoutBtn.addEventListener("click", () => {
+      const subtotal = getCartSubtotal();
+
+      // Limit kontrolü
+      if (subtotal < 400) {
+        const warningEl = document.getElementById("limit-warning");
+        if (warningEl) {
+          warningEl.textContent =
+            "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
+        }
+        return;
+      }
+
+      // Giriş yoksa login sayfası
       if (!currentUser) {
         window.location.href = "login-shop.html";
         return;
       }
-      alert("Ödeme altyapısı eklendiğinde bu adım tamamlanacak.");
+
+      // WhatsApp yönlendirme
+      const phone = "905425029440"; // iletişim numarası
+      const message = encodeURIComponent(
+        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
+          2
+        )} TL`
+      );
+      window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
 });
