@@ -6,8 +6,24 @@ import {
   getAuth,
   onAuthStateChanged,
   signOut,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
@@ -21,32 +37,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 
 let currentUser = null;
+let currentUserRole = "customer";
+let currentTwoFactorEnabled = false;
 
-// Örnek ürün verisi (ileride Firestore'a taşınabilir)
+// Basit statik ürün listesi (istersen sonra products koleksiyonuna geçeriz)
 const PRODUCTS = [
-  {
-    id: 1,
-    name: "El Örgüsü Atkı",
-    price: 150,
-    category: "Giyim",
-    description: "Tamamen yün, el yapımı sıcak atkı."
-  },
-  {
-    id: 2,
-    name: "Ahşap Kalemlik",
-    price: 85,
-    category: "Dekorasyon",
-    description: "Doğal ahşaptan oyma masaüstü kalemlik."
-  },
-  {
-    id: 3,
-    name: "Deri Cüzdan",
-    price: 250,
-    category: "Aksesuar",
-    description: "Gerçek deri, el dikimi minimalist cüzdan."
-  }
+  { id: 1, name: "El Örgüsü Atkı", price: 150, category: "Giyim", description: "Tamamen yün, el yapımı sıcak atkı." },
+  { id: 2, name: "Ahşap Kalemlik", price: 85, category: "Dekorasyon", description: "Doğal ahşaptan oyma masaüstü kalemlik." },
+  { id: 3, name: "Deri Cüzdan", price: 250, category: "Aksesuar", description: "Gerçek deri, el dikimi minimalist cüzdan." }
 ];
 
 // ---------------- TEMA YÖNETİMİ ----------------
@@ -73,7 +74,7 @@ function initTheme() {
   applyTheme(stored);
 }
 
-// ---------------- COMMON HELPERS ----------------
+// ---------------- ORTAK YARDIMCILAR ----------------
 
 function loadPartial(placeholderId, url, callback) {
   const container = document.getElementById(placeholderId);
@@ -101,7 +102,7 @@ function getCart() {
   try {
     const raw = localStorage.getItem(CART_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -119,9 +120,7 @@ function getCartSubtotal() {
   let subtotal = 0;
   cart.forEach((item) => {
     const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) {
-      subtotal += product.price * item.qty;
-    }
+    if (product) subtotal += product.price * item.qty;
   });
   return subtotal;
 }
@@ -132,40 +131,91 @@ function updateCartProgress(subtotal) {
   const LIMIT = 400;
   const ratio = Math.max(0, Math.min(subtotal / LIMIT, 1));
   bar.style.width = `${(ratio * 100).toFixed(0)}%`;
-  if (subtotal >= LIMIT) {
-    bar.classList.add("full");
-  } else {
-    bar.classList.remove("full");
-  }
+  if (subtotal >= LIMIT) bar.classList.add("full");
+  else bar.classList.remove("full");
 }
 
 function updateCartCount() {
   const count = getCartCount();
-  const badgeEls = document.querySelectorAll("#cart-count, .cart-count");
-  badgeEls.forEach((el) => {
+  document.querySelectorAll("#cart-count, .cart-count").forEach((el) => {
     el.textContent = count;
   });
-
-  const subtotal = getCartSubtotal();
-  updateCartProgress(subtotal);
+  updateCartProgress(getCartSubtotal());
 }
 
 function addToCart(productId) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    cart.push({ id: productId, qty: 1 });
-  }
+  if (existing) existing.qty += 1;
+  else cart.push({ id: productId, qty: 1 });
   saveCart(cart);
   updateCartCount();
+}
+
+// ---------------- USER DOC & ROLLER ----------------
+
+async function ensureUserDoc(user) {
+  if (!user) return;
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      email: user.email || "",
+      role: "customer",
+      twoFactorEmailEnabled: false,
+      createdAt: serverTimestamp()
+    });
+    currentUserRole = "customer";
+    currentTwoFactorEnabled = false;
+  } else {
+    const d = snap.data();
+    currentUserRole = d.role || "customer";
+    currentTwoFactorEnabled = !!d.twoFactorEmailEnabled;
+  }
+  updateProfilePageUser(user);
+}
+
+async function refreshUserRole() {
+  if (!currentUser) {
+    currentUserRole = "customer";
+    currentTwoFactorEnabled = false;
+    return;
+  }
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const d = snap.data();
+    currentUserRole = d.role || "customer";
+    currentTwoFactorEnabled = !!d.twoFactorEmailEnabled;
+  }
+}
+
+async function requireRole(allowedRoles) {
+  if (!currentUser) {
+    window.location.href = "login.html";
+    return false;
+  }
+  await refreshUserRole();
+
+  // 2FA e-posta zorunluluğu
+  if (currentTwoFactorEnabled && !currentUser.emailVerified) {
+    alert(
+      "Bu sayfaya erişmek için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama e-postası gönderebilirsiniz."
+    );
+    window.location.href = "profile.html#security";
+    return false;
+  }
+
+  if (!allowedRoles.includes(currentUserRole)) {
+    window.location.href = "index.html";
+    return false;
+  }
+  return true;
 }
 
 // ---------------- ÜRÜNLER ----------------
 
 function handleAddToCart(productId, buttonEl) {
-  // giriş yoksa özel login sayfasına
   if (!currentUser) {
     window.location.href = "login-shop.html";
     return;
@@ -173,7 +223,6 @@ function handleAddToCart(productId, buttonEl) {
 
   addToCart(productId);
 
-  // 10 saniyelik görsel uyarı
   const originalText = buttonEl.textContent;
   buttonEl.textContent = "Sepete eklendi";
   buttonEl.classList.add("btn-added");
@@ -191,21 +240,20 @@ function renderProducts() {
   if (!listEl) return;
 
   const searchBox = document.getElementById("searchBox");
-  const query = searchBox ? searchBox.value.trim().toLowerCase() : "";
+  const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
   listEl.innerHTML = "";
 
   PRODUCTS.filter((p) => {
-    if (!query) return true;
+    if (!queryText) return true;
     return (
-      p.name.toLowerCase().includes(query) ||
-      p.description.toLowerCase().includes(query) ||
-      (p.category || "").toLowerCase().includes(query)
+      p.name.toLowerCase().includes(queryText) ||
+      p.description.toLowerCase().includes(queryText) ||
+      (p.category || "").toLowerCase().includes(queryText)
     );
   }).forEach((product) => {
     const card = document.createElement("div");
     card.className = "card";
-
     card.innerHTML = `
       <div class="card-img">Ürün Görseli</div>
       <div class="card-body">
@@ -217,7 +265,6 @@ function renderProducts() {
         </button>
       </div>
     `;
-
     listEl.appendChild(card);
   });
 
@@ -255,7 +302,6 @@ function renderCart() {
   cart.forEach((item) => {
     const product = PRODUCTS.find((p) => p.id === item.id);
     if (!product) return;
-
     const lineTotal = product.price * item.qty;
     subtotal += lineTotal;
 
@@ -303,7 +349,6 @@ function renderCart() {
   });
 
   updateCartCount();
-  updateCartProgress(subtotal);
 }
 
 // ---------------- NAVBAR & PROFİL ----------------
@@ -387,30 +432,32 @@ function updateNavbarForAuth(user) {
   }
 }
 
-// PROFİL SAYFASI İÇİN: e-posta ve şifre reset
+// PROFİL SAYFASI
 
 function updateProfilePageUser(user) {
   const emailSpan = document.getElementById("profile-email");
-  if (!emailSpan) return;
-  if (user && user.email) {
-    emailSpan.textContent = user.email;
-  } else {
-    emailSpan.textContent = "- (Giriş yapılmamış)";
+  const twoFactorToggle = document.getElementById("twofactor-toggle");
+  if (!emailSpan && !twoFactorToggle) return;
+
+  if (emailSpan) {
+    if (user && user.email) emailSpan.textContent = user.email;
+    else emailSpan.textContent = "- (Giriş yapılmamış)";
+  }
+
+  if (twoFactorToggle) {
+    twoFactorToggle.checked = currentTwoFactorEnabled;
   }
 }
 
 function setupProfilePage() {
-  // Tema butonu
   const themeToggle = document.getElementById("theme-toggle");
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {
       const isDark = document.body.classList.contains("theme-dark");
-      const next = isDark ? "light" : "dark";
-      applyTheme(next);
+      applyTheme(isDark ? "light" : "dark");
     });
   }
 
-  // Şifre sıfırlama
   const resetBtn = document.getElementById("password-reset-btn");
   const msgBox = document.getElementById("profile-message");
 
@@ -426,7 +473,7 @@ function setupProfilePage() {
       try {
         await sendPasswordResetEmail(auth, currentUser.email);
         msgBox.textContent =
-          "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen mail kutunuzu kontrol edin.";
+          "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.";
         msgBox.classList.add("success");
       } catch (err) {
         console.error(err);
@@ -436,44 +483,368 @@ function setupProfilePage() {
     });
   }
 
+  const tfToggle = document.getElementById("twofactor-toggle");
+  if (tfToggle) {
+    tfToggle.addEventListener("change", async () => {
+      if (!currentUser) {
+        alert("Bu ayarı değiştirmek için giriş yapmalısınız.");
+        tfToggle.checked = currentTwoFactorEnabled;
+        return;
+      }
+      const ref = doc(db, "users", currentUser.uid);
+      try {
+        await updateDoc(ref, { twoFactorEmailEnabled: tfToggle.checked });
+        currentTwoFactorEnabled = tfToggle.checked;
+        if (tfToggle.checked && !currentUser.emailVerified) {
+          alert(
+            "İki aşamalı koruma açıldı. Şimdi e-posta adresinizi doğrulamanız gerekiyor."
+          );
+          await sendEmailVerification(currentUser);
+        }
+      } catch (e) {
+        console.error(e);
+        tfToggle.checked = currentTwoFactorEnabled;
+      }
+    });
+  }
+
   updateProfilePageUser(currentUser);
+}
+
+// ---------------- SATICI OL SAYFASI: satıcı başvurusu ----------------
+
+function setupSellerRequest() {
+  const btn = document.getElementById("request-seller-btn");
+  const msg = document.getElementById("request-seller-message");
+  if (!btn || !msg) return;
+
+  btn.addEventListener("click", async () => {
+    if (!currentUser) {
+      msg.textContent = "Satıcı başvurusu yapmak için önce giriş yapmanız gerekiyor.";
+      return;
+    }
+    try {
+      await addDoc(collection(db, "sellerRequests"), {
+        uid: currentUser.uid,
+        email: currentUser.email || "",
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+      msg.textContent =
+        "Başvurunuz alındı. Yönetici onayı sonrasında hesabınıza satıcı yetkisi tanımlanacaktır.";
+    } catch (e) {
+      console.error(e);
+      msg.textContent = "Başvuru sırasında bir hata oluştu. Lütfen tekrar deneyin.";
+    }
+  });
+}
+
+// ---------------- SATICI PANELİ ----------------
+
+async function setupSellerPanel() {
+  const panel = document.getElementById("seller-panel");
+  if (!panel) return;
+
+  const ok = await requireRole(["seller", "admin"]);
+  if (!ok) return;
+
+  const form = document.getElementById("seller-product-form");
+  const msg = document.getElementById("seller-form-message");
+  const list = document.getElementById("seller-product-list");
+
+  if (form && msg) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = document.getElementById("sp-title").value.trim();
+      const price = Number(document.getElementById("sp-price").value);
+      const cat = document.getElementById("sp-category").value.trim();
+      const img = document.getElementById("sp-image").value.trim();
+      const desc = document.getElementById("sp-description").value.trim();
+
+      if (!title || !desc || !cat || isNaN(price) || price <= 0) {
+        msg.textContent = "Lütfen tüm alanları doğru doldurunuz.";
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "productRequests"), {
+          sellerId: currentUser.uid,
+          title,
+          price,
+          category: cat,
+          imageUrl: img,
+          description: desc,
+          status: "pending",
+          createdAt: serverTimestamp()
+        });
+        msg.textContent =
+          "Ürün başvurunuz alındı. Yönetici onayı sonrası yayına alınacaktır.";
+        form.reset();
+      } catch (e2) {
+        console.error(e2);
+        msg.textContent = "Kayıt sırasında hata oluştu.";
+      }
+    });
+  }
+
+  if (list) {
+    const qMy = query(
+      collection(db, "productRequests"),
+      where("sellerId", "==", currentUser.uid)
+    );
+
+    onSnapshot(qMy, (snap) => {
+      if (snap.empty) {
+        list.innerHTML = "<p>Henüz ürün başvurunuz bulunmuyor.</p>";
+        return;
+      }
+      let html =
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const statusText =
+          d.status === "approved"
+            ? "✅ Onaylandı"
+            : d.status === "rejected"
+            ? "❌ Reddedildi"
+            : "⏳ Beklemede";
+        html += `<tr>
+          <td>${d.title}</td>
+          <td>${d.price} TL</td>
+          <td>${statusText}</td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      list.innerHTML = html;
+    });
+  }
+}
+
+// ---------------- ADMİN PANELİ ----------------
+
+async function setupAdminPanel() {
+  const panel = document.getElementById("admin-panel");
+  if (!panel) return;
+
+  const ok = await requireRole(["admin"]);
+  if (!ok) return;
+
+  const usersBox = document.getElementById("admin-users-list");
+  const sellerBox = document.getElementById("admin-seller-requests");
+  const productBox = document.getElementById("admin-product-requests");
+
+  // Kullanıcı listesi + roller
+  if (usersBox) {
+    const usersCol = collection(db, "users");
+    onSnapshot(usersCol, (snap) => {
+      if (snap.empty) {
+        usersBox.innerHTML = "<p>Kayıtlı kullanıcı bulunamadı.</p>";
+        return;
+      }
+      let html =
+        '<table class="simple-table"><thead><tr><th>E-posta</th><th>UID</th><th>Rol</th><th>İşlem</th></tr></thead><tbody>';
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        const uid = docSnap.id;
+        const role = d.role || "customer";
+        html += `<tr data-uid="${uid}">
+          <td>${d.email || "-"}</td>
+          <td style="font-size:0.8rem;">${uid}</td>
+          <td>
+            <select class="admin-role-select">
+              <option value="customer" ${role === "customer" ? "selected" : ""}>customer</option>
+              <option value="seller" ${role === "seller" ? "selected" : ""}>seller</option>
+              <option value="admin" ${role === "admin" ? "selected" : ""}>admin</option>
+            </select>
+          </td>
+          <td>
+            <button class="btn-secondary" data-action="save-role">Kaydet</button>
+          </td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      usersBox.innerHTML = html;
+
+      usersBox.querySelectorAll("button[data-action='save-role']").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const tr = btn.closest("tr");
+          const uid = tr.getAttribute("data-uid");
+          const select = tr.querySelector(".admin-role-select");
+          const newRole = select.value;
+
+          // (İstersen burada kendini admin'den customer'a çekmeyi engelleyen kontrol koyabilirsin.)
+
+          const userRef = doc(db, "users", uid);
+          try {
+            await updateDoc(userRef, { role: newRole });
+          } catch (e) {
+            console.error(e);
+            alert("Rol güncellenirken hata oluştu (rules kontrol edin).");
+          }
+        });
+      });
+    });
+  }
+
+  // Satıcı başvuruları
+  if (sellerBox) {
+    const qSel = query(
+      collection(db, "sellerRequests"),
+      where("status", "==", "pending")
+    );
+    onSnapshot(qSel, (snap) => {
+      if (snap.empty) {
+        sellerBox.innerHTML = "<p>Bekleyen satıcı başvurusu yok.</p>";
+        return;
+      }
+      let html =
+        '<table class="simple-table"><thead><tr><th>E-posta</th><th>İşlem</th></tr></thead><tbody>';
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        html += `<tr data-id="${docSnap.id}" data-uid="${d.uid}">
+          <td>${d.email}</td>
+          <td>
+            <button class="btn-secondary" data-action="approve-seller">Satıcı olarak yetkilendir</button>
+            <button class="btn-link" data-action="reject-seller">Reddet</button>
+          </td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      sellerBox.innerHTML = html;
+
+      sellerBox.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const tr = btn.closest("tr");
+          const id = tr.getAttribute("data-id");
+          const uid = tr.getAttribute("data-uid");
+          const action = btn.getAttribute("data-action");
+          const reqRef = doc(db, "sellerRequests", id);
+          const userRef = doc(db, "users", uid);
+
+          try {
+            if (action === "approve-seller") {
+              await updateDoc(reqRef, {
+                status: "approved",
+                processedAt: serverTimestamp(),
+                processedBy: currentUser.uid
+              });
+              await updateDoc(userRef, { role: "seller" });
+            } else {
+              await updateDoc(reqRef, {
+                status: "rejected",
+                processedAt: serverTimestamp(),
+                processedBy: currentUser.uid
+              });
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      });
+    });
+  }
+
+  // Ürün başvuruları
+  if (productBox) {
+    const qProd = query(
+      collection(db, "productRequests"),
+      where("status", "==", "pending")
+    );
+    onSnapshot(qProd, (snap) => {
+      if (snap.empty) {
+        productBox.innerHTML = "<p>Bekleyen ürün başvurusu yok.</p>";
+        return;
+      }
+      let html =
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Satıcı ID</th><th>İşlem</th></tr></thead><tbody>';
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        html += `<tr data-id="${docSnap.id}">
+          <td>${d.title}</td>
+          <td>${d.price} TL</td>
+          <td style="font-size:0.8rem;">${d.sellerId}</td>
+          <td>
+            <button class="btn-secondary" data-action="approve-product">Onayla</button>
+            <button class="btn-link" data-action="reject-product">Reddet</button>
+          </td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      productBox.innerHTML = html;
+
+      productBox.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const tr = btn.closest("tr");
+          const id = tr.getAttribute("data-id");
+          const action = btn.getAttribute("data-action");
+          const reqRef = doc(db, "productRequests", id);
+
+          const snapOne = await getDoc(reqRef);
+          if (!snapOne.exists()) return;
+          const d = snapOne.data();
+
+          try {
+            if (action === "approve-product") {
+              await addDoc(collection(db, "products"), {
+                title: d.title,
+                price: d.price,
+                category: d.category,
+                imageUrl: d.imageUrl || "",
+                description: d.description,
+                sellerId: d.sellerId,
+                createdAt: serverTimestamp()
+              });
+              await updateDoc(reqRef, {
+                status: "approved",
+                processedAt: serverTimestamp(),
+                processedBy: currentUser.uid
+              });
+            } else {
+              await updateDoc(reqRef, {
+                status: "rejected",
+                processedAt: serverTimestamp(),
+                processedBy: currentUser.uid
+              });
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        });
+      });
+    });
+  }
 }
 
 // ---------------- AUTH DURUMU ----------------
 
-onAuthStateChanged(auth, (user) => {
-  currentUser = user;
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user || null;
+  await ensureUserDoc(user);
   updateNavbarForAuth(user);
-  updateProfilePageUser(user);
 });
 
-// ---------------- DOM YÜKLENDİĞİNDE ----------------
+// ---------------- DOM YÜKLENİNCE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
 
   loadPartial("navbar-placeholder", "navbar.html", () => {
     setupNavbar();
-    // navbar yüklendikten sonra da tema buton yazısını güncelle
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
   });
   loadPartial("footer-placeholder", "footer.html");
 
   const searchBox = document.getElementById("searchBox");
-  if (searchBox) {
-    searchBox.addEventListener("input", () => renderProducts());
-  }
+  if (searchBox) searchBox.addEventListener("input", () => renderProducts());
   renderProducts();
 
   renderCart();
 
-  // Sepeti Onayla
+  // Sepeti onayla
   const checkoutBtn = document.getElementById("checkout-btn");
   if (checkoutBtn) {
-    checkoutBtn.addEventListener("click", () => {
+    checkoutBtn.addEventListener("click", async () => {
       const subtotal = getCartSubtotal();
-
-      // Limit kontrolü
       if (subtotal < 400) {
         const warningEl = document.getElementById("limit-warning");
         if (warningEl) {
@@ -483,14 +854,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Giriş yoksa login sayfası
       if (!currentUser) {
         window.location.href = "login-shop.html";
         return;
       }
+      await refreshUserRole();
+      if (currentTwoFactorEnabled && !currentUser.emailVerified) {
+        alert(
+          "Siparişi tamamlamak için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama maili gönderebilirsiniz."
+        );
+        window.location.href = "profile.html#security";
+        return;
+      }
 
-      // WhatsApp yönlendirme
-      const phone = "905425029440"; // iletişim numarası
+      const phone = "905425029440";
       const message = encodeURIComponent(
         `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
           2
@@ -500,8 +877,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Profil sayfasında mıyız? (id'ler üzerinden anlarız)
-  if (document.getElementById("appearance") || document.getElementById("security")) {
-    setupProfilePage();
-  }
+  // Sayfa bazlı kurulumlar
+  setupProfilePage();
+  setupSellerRequest();
+  setupSellerPanel();
+  setupAdminPanel();
 });
+
