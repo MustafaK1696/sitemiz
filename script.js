@@ -405,6 +405,10 @@ function updateNavbarForAuth(user) {
   const mobileLogin = document.querySelector(".nav-mobile-login");
   const mobileSignup = document.querySelector(".nav-signup-mobile");
 
+  // Yalnızca adminlerin göreceği linkler
+  const adminLink = document.querySelector(".nav-admin-link");
+  const adminLinkMobile = document.querySelector(".nav-admin-link-mobile");
+
   if (!guest || !userBox) return;
 
   if (user) {
@@ -423,12 +427,25 @@ function updateNavbarForAuth(user) {
 
     if (mobileLogin) mobileLogin.style.display = "none";
     if (mobileSignup) mobileSignup.style.display = "none";
+
+    // --- BURASI ÖNEMLİ: admin mi? ---
+    const isAdmin = currentUserRole === "admin";
+
+    if (adminLink) {
+      adminLink.style.display = isAdmin ? "" : "none";
+    }
+    if (adminLinkMobile) {
+      adminLinkMobile.style.display = isAdmin ? "" : "none";
+    }
   } else {
     guest.style.display = "flex";
     userBox.style.display = "none";
 
     if (mobileLogin) mobileLogin.style.display = "";
     if (mobileSignup) mobileSignup.style.display = "";
+
+    if (adminLink) adminLink.style.display = "none";
+    if (adminLinkMobile) adminLinkMobile.style.display = "none";
   }
 }
 
@@ -883,3 +900,4 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSellerPanel();
   setupAdminPanel();
 });
+
