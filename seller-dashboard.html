@@ -24,8 +24,25 @@
         <input type="text" id="sp-title" placeholder="Ürün adı" required>
         <input type="number" id="sp-price" placeholder="Fiyat (TL)" min="0" step="0.01" required>
         <input type="text" id="sp-category" placeholder="Kategori (ör. Giyim, Dekorasyon)" required>
-        <input type="url" id="sp-image" placeholder="Ürün görseli URL (opsiyonel)">
-        <textarea id="sp-description" rows="4" placeholder="Ürün açıklaması" required></textarea>
+
+        <!-- ZORUNLU DOSYA YÜKLEME -->
+        <label for="sp-image-file" class="file-label">
+          Ürün Görseli / Dokümanı (.jpg / .jpeg / .png / .pdf)
+        </label>
+        <input
+          type="file"
+          id="sp-image-file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          required
+        >
+
+        <textarea
+          id="sp-description"
+          rows="4"
+          placeholder="Ürün açıklaması"
+          required
+        ></textarea>
+
         <button type="submit" class="btn-primary">Ürün Başvurusu Gönder</button>
       </form>
       <p id="seller-form-message" class="warning-msg" style="margin-top:10px;"></p>
