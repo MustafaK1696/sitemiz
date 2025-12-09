@@ -13,27 +13,36 @@
   <main class="container profile-page">
     <h1>Profil Ayarları</h1>
     <p class="page-intro">
-      Buradan görünüm ve güvenlik tercihlerinizi yönetebilirsiniz. Bu sayfa şimdilik tasarım ve
-      planlama amaçlıdır, fonksiyonlar kademeli olarak aktif edilecektir.
+      Buradan görünüm ve güvenlik tercihlerinizi yönetebilirsiniz.
     </p>
 
-    <section id="appearance">
+    <section id="appearance" class="profile-section">
       <h2>Görünüm Tercihleri</h2>
-      <p>Uygulamanın tema ve görünüm seçenekleri burada yer alacaktır.</p>
-      <ul>
-        <li>☑ Açık / Koyu tema (yakında)</li>
-        <li>☑ Yazı boyutu tercihleri (yakında)</li>
-      </ul>
+      <p>Uygulamanın tema ve görünüm seçeneklerini buradan değiştirebilirsiniz.</p>
+      <button id="theme-toggle" class="btn-secondary">
+        Koyu tema: Kapalı
+      </button>
     </section>
 
-    <section id="security">
+    <section id="security" class="profile-section">
       <h2>Güvenlik</h2>
-      <p>Hesap güvenliğiniz için aşağıdaki ayarlar planlanmaktadır.</p>
-      <ul>
-        <li>🔑 Şifre değiştirme (Firebase üzerinden reset maili gönderilerek)</li>
-        <li>🛡️ İki aşamalı doğrulama (telefon veya uygulama ile) – planlama aşamasında</li>
-      </ul>
-      <p>Bu özellikler devreye alındığında buradan yönetebileceksiniz.</p>
+      <p>
+        Şifreni unutmamak için zorlayıcı ama hatırlaması kolay bir şifre kullanmanı tavsiye ederiz.
+      </p>
+      <p>
+        Bu hesapta kayıtlı e-posta:
+        <strong id="profile-email">-</strong>
+      </p>
+      <button id="password-reset-btn" class="btn-primary">
+        Şifre sıfırlama e-postası gönder
+      </button>
+      <p class="warning-msg" id="profile-message" style="margin-top:12px;"></p>
+
+      <h3>İki Aşamalı Doğrulama (2FA)</h3>
+      <p>
+        İki aşamalı doğrulama (telefon veya doğrulama uygulaması ile kod girme) özelliği için
+        alt yapı çalışmaları sürüyor. Devreye alındığında bu bölümden yönetebileceksiniz.
+      </p>
     </section>
   </main>
 
