@@ -883,4 +883,3 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSellerPanel();
   setupAdminPanel();
 });
-
