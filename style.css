@@ -5,6 +5,12 @@
   --text-color: #1f2933;
 }
 
+/* DARK TEMA DEĞİŞKENLERİ */
+body.theme-dark {
+  --bg-color: #020617;
+  --text-color: #e5e7eb;
+}
+
 /* GENEL */
 
 *,
@@ -622,6 +628,24 @@ img {
   text-align: center;
 }
 
+/* PROFİL SAYFASI */
+
+.profile-page h1 {
+  margin-top: 0;
+}
+
+.profile-section {
+  margin-bottom: 32px;
+}
+
+.profile-section h2 {
+  margin-bottom: 8px;
+}
+
+.profile-section p {
+  margin-top: 0;
+}
+
 /* İLETİŞİM / YARDIM / HAKKIMIZDA */
 
 .page-intro {
@@ -732,6 +756,34 @@ img {
   padding-top: 10px;
   text-align: center;
   font-size: 0.85rem;
+}
+
+/* DARK THEME ÖZEL AYARLAR */
+
+body.theme-dark .site-header {
+  background: #020617;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.9);
+}
+
+body.theme-dark .nav-links a {
+  color: #e5e7eb;
+}
+
+body.theme-dark .nav-user-button {
+  background: #020617;
+}
+
+body.theme-dark .card,
+body.theme-dark .cart-items,
+body.theme-dark .cart-summary,
+body.theme-dark .auth-card,
+body.theme-dark .contact-card {
+  background: #020617;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.7);
+}
+
+body.theme-dark .mega-footer {
+  background: #000000;
 }
 
 /* MOBİL */
