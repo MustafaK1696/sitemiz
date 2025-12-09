@@ -5,7 +5,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/fireba
 import {
   getAuth,
   onAuthStateChanged,
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -23,7 +24,7 @@ const auth = getAuth(app);
 
 let currentUser = null;
 
-// Örnek ürünler (ileride Firestore'a taşınabilir)
+// Örnek ürün verisi (ileride Firestore'a taşınabilir)
 const PRODUCTS = [
   {
     id: 1,
@@ -48,7 +49,31 @@ const PRODUCTS = [
   }
 ];
 
-// -------- Ortak yardımcılar --------
+// ---------------- TEMA YÖNETİMİ ----------------
+
+const THEME_KEY = "ogrencify_theme";
+
+function applyTheme(theme) {
+  if (theme === "dark") {
+    document.body.classList.add("theme-dark");
+  } else {
+    document.body.classList.remove("theme-dark");
+  }
+  localStorage.setItem(THEME_KEY, theme);
+
+  const toggleBtn = document.getElementById("theme-toggle");
+  if (toggleBtn) {
+    toggleBtn.textContent =
+      theme === "dark" ? "Koyu tema: Açık" : "Koyu tema: Kapalı";
+  }
+}
+
+function initTheme() {
+  const stored = localStorage.getItem(THEME_KEY) || "light";
+  applyTheme(stored);
+}
+
+// ---------------- COMMON HELPERS ----------------
 
 function loadPartial(placeholderId, url, callback) {
   const container = document.getElementById(placeholderId);
@@ -137,7 +162,7 @@ function addToCart(productId) {
   updateCartCount();
 }
 
-// -------- Ürünler --------
+// ---------------- ÜRÜNLER ----------------
 
 function handleAddToCart(productId, buttonEl) {
   // giriş yoksa özel login sayfasına
@@ -204,7 +229,7 @@ function renderProducts() {
   });
 }
 
-// -------- Sepet görüntüleme --------
+// ---------------- SEPET ----------------
 
 function renderCart() {
   const container = document.getElementById("cart-items-container");
@@ -259,7 +284,8 @@ function renderCart() {
       warningEl.textContent =
         "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
     } else if (subtotal >= 400) {
-      warningEl.textContent = "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
+      warningEl.textContent =
+        "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
     } else {
       warningEl.textContent = "";
     }
@@ -280,7 +306,7 @@ function renderCart() {
   updateCartProgress(subtotal);
 }
 
-// -------- NAVBAR: mobil menü + kullanıcı görünümü --------
+// ---------------- NAVBAR & PROFİL ----------------
 
 function setupNavbar() {
   const toggle = document.querySelector(".nav-toggle");
@@ -361,17 +387,76 @@ function updateNavbarForAuth(user) {
   }
 }
 
-// -------- Firebase auth durumu --------
+// PROFİL SAYFASI İÇİN: e-posta ve şifre reset
+
+function updateProfilePageUser(user) {
+  const emailSpan = document.getElementById("profile-email");
+  if (!emailSpan) return;
+  if (user && user.email) {
+    emailSpan.textContent = user.email;
+  } else {
+    emailSpan.textContent = "- (Giriş yapılmamış)";
+  }
+}
+
+function setupProfilePage() {
+  // Tema butonu
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.body.classList.contains("theme-dark");
+      const next = isDark ? "light" : "dark";
+      applyTheme(next);
+    });
+  }
+
+  // Şifre sıfırlama
+  const resetBtn = document.getElementById("password-reset-btn");
+  const msgBox = document.getElementById("profile-message");
+
+  if (resetBtn && msgBox) {
+    resetBtn.addEventListener("click", async () => {
+      if (!currentUser || !currentUser.email) {
+        msgBox.textContent =
+          "Şifre sıfırlama için önce hesabınıza giriş yapmalısınız.";
+        msgBox.classList.remove("success");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, currentUser.email);
+        msgBox.textContent =
+          "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen mail kutunuzu kontrol edin.";
+        msgBox.classList.add("success");
+      } catch (err) {
+        console.error(err);
+        msgBox.textContent = "İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.";
+        msgBox.classList.remove("success");
+      }
+    });
+  }
+
+  updateProfilePageUser(currentUser);
+}
+
+// ---------------- AUTH DURUMU ----------------
 
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   updateNavbarForAuth(user);
+  updateProfilePageUser(user);
 });
 
-// -------- Sayfa yüklenince --------
+// ---------------- DOM YÜKLENDİĞİNDE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadPartial("navbar-placeholder", "navbar.html", setupNavbar);
+  initTheme();
+
+  loadPartial("navbar-placeholder", "navbar.html", () => {
+    setupNavbar();
+    // navbar yüklendikten sonra da tema buton yazısını güncelle
+    applyTheme(localStorage.getItem(THEME_KEY) || "light");
+  });
   loadPartial("footer-placeholder", "footer.html");
 
   const searchBox = document.getElementById("searchBox");
@@ -382,6 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderCart();
 
+  // Sepeti Onayla
   const checkoutBtn = document.getElementById("checkout-btn");
   if (checkoutBtn) {
     checkoutBtn.addEventListener("click", () => {
@@ -412,5 +498,10 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
+  }
+
+  // Profil sayfasında mıyız? (id'ler üzerinden anlarız)
+  if (document.getElementById("appearance") || document.getElementById("security")) {
+    setupProfilePage();
   }
 });
