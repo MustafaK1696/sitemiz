@@ -718,12 +718,15 @@ function setupSellerRequest() {
 
 // ---------------- SATICI PANELİ ----------------
 
+// ---------------- SATICI PANELİ ----------------
+
 async function setupSellerPanel() {
   if (sellerPanelInitialized) return;
   const panel = document.getElementById("seller-panel");
   if (!panel) return;
   sellerPanelInitialized = true;
 
+  // Sadece seller veya admin girebilsin
   const ok = await requireRole(["seller", "admin"]);
   if (!ok) return;
 
@@ -731,61 +734,75 @@ async function setupSellerPanel() {
   const msg = document.getElementById("seller-form-message");
   const list = document.getElementById("seller-product-list");
 
+  // === ÜRÜN BAŞVURU FORMU ===
   if (form && msg) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = document.getElementById("sp-category").value.trim();
+      const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
-      const fileInput = document.getElementById("sp-image-file");
-      const file = fileInput.files[0];
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !file) {
-        msg.textContent = "Lütfen tüm alanları ve dosya yüklemesini doğru doldurunuz.";
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
+        msg.textContent =
+          "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+        msg.style.color = "red";
         return;
       }
 
+      // URL kontrolü (opsiyonel ama faydalı)
+      if (!img.startsWith("http://") && !img.startsWith("https://")) {
+        msg.textContent = "Lütfen http veya https ile başlayan geçerli bir URL girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      // Uzantı kontrolü (.jpg/.jpeg/.png/.pdf)
       const allowedExts = ["jpg", "jpeg", "png", "pdf"];
-      const nameParts = file.name.split(".");
-      const ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : "";
+      const urlWithoutQuery = img.split("?")[0].split("#")[0];
+      const parts = urlWithoutQuery.split(".");
+      const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
 
       if (!allowedExts.includes(ext)) {
         msg.textContent =
-          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yükleyebilirsiniz.";
+          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosya URL'lerine izin verilmektedir.";
+        msg.style.color = "red";
         return;
       }
 
-      msg.textContent = "Dosya yükleniyor, lütfen bekleyiniz...";
+      msg.style.color = "black";
+      msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
-        const path = `productImages/${currentUser.uid}/${Date.now()}-${file.name}`;
-        const refFile = storageRef(storage, path);
-        await uploadBytes(refFile, file);
-        const downloadURL = await getDownloadURL(refFile);
-
+        // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
-          imageUrl: downloadURL,
-          fileName: file.name,
-          fileExt: ext,
+          imageUrl: img,
+          description: desc,
           status: "pending",
           createdAt: serverTimestamp()
         });
+
+        msg.style.color = "green";
         msg.textContent =
           "Ürün başvurunuz alındı. Yönetici onayı sonrası yayına alınacaktır.";
         form.reset();
       } catch (e2) {
         console.error(e2);
+        msg.style.color = "red";
         msg.textContent =
-          "Kayıt veya dosya yükleme sırasında hata oluştu. Lütfen tekrar deneyin.";
+          "Ürün başvurusu kaydedilirken bir hata oluştu: " +
+          (e2.message || e2);
       }
     });
   }
 
+  // === SATICININ KENDİ BAŞVURULARI LİSTESİ ===
   if (list) {
     const qMy = query(
       collection(db, "productRequests"),
@@ -797,8 +814,10 @@ async function setupSellerPanel() {
         list.innerHTML = "<p>Henüz ürün başvurunuz bulunmuyor.</p>";
         return;
       }
+
       let html =
         '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
+
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         const statusText =
@@ -807,17 +826,20 @@ async function setupSellerPanel() {
             : d.status === "rejected"
             ? "❌ Reddedildi"
             : "⏳ Beklemede";
+
         html += `<tr>
           <td>${d.title}</td>
           <td>${d.price} TL</td>
           <td>${statusText}</td>
         </tr>`;
       });
+
       html += "</tbody></table>";
       list.innerHTML = html;
     });
   }
 }
+
 
 // ---------------- ADMİN PANELİ ----------------
 
@@ -1175,4 +1197,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
 
