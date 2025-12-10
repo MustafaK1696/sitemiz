@@ -755,7 +755,7 @@ async function setupSellerPanel() {
 
       try {
         // !!! BURASI ÖNEMLİ: Artık db.collection DEĞİL, addDoc + collection(db, ...) !!!
-        await addDoc(collection(db, "productRequests"), {
+        await add(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
