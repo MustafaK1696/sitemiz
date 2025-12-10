@@ -77,7 +77,7 @@ if (addProductForm) {
     }
 
     try {
-      await addDoc(collection(db, "productRequests")add({
+      await db.collection('productRequests').add({
         name,
         price,
         description,
@@ -1174,6 +1174,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
 
 
 
