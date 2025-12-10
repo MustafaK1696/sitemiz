@@ -272,35 +272,33 @@ function renderProducts() {
 
   listEl.innerHTML = "";
 
-  if (!PRODUCTS.length) {
-    listEl.innerHTML = "<p>Henüz ürün eklenmemiş.</p>";
-    return;
+ if (!PRODUCTS.length) {
+  listEl.innerHTML = "<p>Henüz ürün eklenmemiş.</p>";
+  return;
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const catParam = (urlParams.get("cat") || "").toLowerCase();
+
+PRODUCTS.filter((p) => {
+  // URL'den kategori geldiyse, sadece o kategori gösterilsin
+  if (catParam && (p.category || "").toLowerCase() !== catParam) {
+    return false;
   }
 
-  PRODUCTS.filter((p) => {
-    if (!queryText) return true;
-    return (
-      (p.name || "").toLowerCase().includes(queryText) ||
-      (p.description || "").toLowerCase().includes(queryText) ||
-      (p.category || "").toLowerCase().includes(queryText)
-    );
-  }).forEach((product) => {
-    // Görsel
-    let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
-    if (product.imageUrl) {
-      const urlLower = product.imageUrl.toLowerCase();
-      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
-        mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
-      } else if (urlLower.includes(".pdf")) {
-        mediaHtml = `
-          <div class="card-img pdf-icon">
-            PDF
-          </div>`;
-      }
-    }
+  // Arama kutusu boşsa buraya kadar olan filtre yeterli
+  if (!queryText) return true;
+
+  // Arama: ad, açıklama veya kategori içinde geçiyorsa göster
+  return (
+    (p.name || "").toLowerCase().includes(queryText) ||
+    (p.description || "").toLowerCase().includes(queryText) ||
+    (p.category || "").toLowerCase().includes(queryText)
+  );
+}).forEach((product) => {
+  ...
+});
+
 
     const card = document.createElement("div");
     card.className = "card";
@@ -1147,6 +1145,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
 
 
 
