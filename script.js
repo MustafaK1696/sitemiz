@@ -47,56 +47,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Satıcı panelinde ürün başvurusu (Storage YOK, sadece URL)
-const addProductForm = document.getElementById('addProductForm');
-
-if (addProductForm) {
-  addProductForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const user = auth.currentUser;
-    if (!user) {
-      alert('Ürün eklemek için önce giriş yapmalısınız.');
-      return;
-    }
-
-    const name = document.getElementById('productName').value.trim();
-    const price = parseFloat(document.getElementById('productPrice').value);
-    const description = document.getElementById('productDescription').value.trim();
-    const imageUrl = document.getElementById('productImageUrl').value.trim();
-
-    if (!name || isNaN(price) || !description || !imageUrl) {
-      alert('Lütfen tüm alanları doldurun.');
-      return;
-    }
-
-    // Çok basit bir URL kontrolü
-    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-      alert('Lütfen geçerli bir URL girin (http veya https ile başlamalı).');
-      return;
-    }
-
-    try {
-      await db.collection('productRequests').add({
-        name,
-        price,
-        description,
-        imageUrl,             // 🔴 BURADA URL’Yİ KAYDEDİYORUZ
-        sellerId: user.uid,
-        status: 'pending',    // admin onayı bekliyor
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      addProductForm.reset();
-      alert('Ürün başvurunuz iletildi. Admin onayından sonra listelenecektir.');
-    } catch (err) {
-      console.error('Ürün başvurusu kaydedilirken hata:', err);
-      alert('Ürün başvurusu kaydedilirken bir hata oluştu: ' + err.message);
-    }
-  });
-}
-
-
 let currentUser = null;
 let currentUserRole = "customer";
 let currentTwoFactorEnabled = false;
@@ -1197,5 +1147,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
 
 
