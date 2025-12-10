@@ -87,37 +87,76 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-}
-
-.logo img {
-  height: 80px; /* 2 katına çıkarıldı */
-}
-
-/* Masaüstü menü */
-
-.nav-main {
-  flex: 1;
+  gap: 24px; /* 16 → 24: logo–menü arası açıldı */
 }
 
 .nav-links {
   list-style: none;
   display: flex;
   justify-content: center;
-  gap: 18px;
+  gap: 28px;         /* 18 → 28: menü başlıkları arası açıldı */
   margin: 0;
   padding: 0;
 }
 
 .nav-links a {
+  position: relative;
+  display: inline-block;
   text-decoration: none;
   color: var(--text-color);
   font-weight: 500;
   font-size: 0.95rem;
+  padding: 4px 2px;
+  transition: color 0.18s ease, transform 0.18s ease;
 }
 
 .nav-links a:hover {
   color: var(--primary-color);
+  transform: scale(1.06);  /* Hover’da hafif yakınlaşma */
+}
+
+/* ÜRÜNLER DROPDOWN */
+
+.nav-dropdown {
+  position: relative;
+}
+
+.nav-dropdown > a::after {
+  content: "▾";
+  margin-left: 4px;
+  font-size: 0.75rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 8px 0;
+  list-style: none;
+  min-width: 190px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16);
+  display: none;
+  z-index: 50;
+}
+
+.nav-dropdown:hover .dropdown-menu {
+  display: block;
+}
+
+.dropdown-menu li a {
+  display: block;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  transform: none;
+}
+
+.dropdown-menu li a:hover {
+  background: rgba(123, 63, 228, 0.06);
+  color: var(--primary-color);
+  transform: translateX(2px);
 }
 
 /* Satıcı Ol vurgulu */
@@ -810,3 +849,4 @@ body.theme-dark .mega-footer {
     flex-direction: column;
   }
 }
+
