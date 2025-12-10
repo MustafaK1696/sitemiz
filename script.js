@@ -47,56 +47,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Satıcı panelinde ürün başvurusu (Storage YOK, sadece URL)
-const addProductForm = document.getElementById('addProductForm');
-
-if (addProductForm) {
-  addProductForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const user = auth.currentUser;
-    if (!user) {
-      alert('Ürün eklemek için önce giriş yapmalısınız.');
-      return;
-    }
-
-    const name = document.getElementById('productName').value.trim();
-    const price = parseFloat(document.getElementById('productPrice').value);
-    const description = document.getElementById('productDescription').value.trim();
-    const imageUrl = document.getElementById('productImageUrl').value.trim();
-
-    if (!name || isNaN(price) || !description || !imageUrl) {
-      alert('Lütfen tüm alanları doldurun.');
-      return;
-    }
-
-    // Çok basit bir URL kontrolü
-    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-      alert('Lütfen geçerli bir URL girin (http veya https ile başlamalı).');
-      return;
-    }
-
-    try {
-      await db.collection('productRequests').add({
-        name,
-        price,
-        description,
-        imageUrl,             // 🔴 BURADA URL’Yİ KAYDEDİYORUZ
-        sellerId: user.uid,
-        status: 'pending',    // admin onayı bekliyor
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      addProductForm.reset();
-      alert('Ürün başvurunuz iletildi. Admin onayından sonra listelenecektir.');
-    } catch (err) {
-      console.error('Ürün başvurusu kaydedilirken hata:', err);
-      alert('Ürün başvurusu kaydedilirken bir hata oluştu: ' + err.message);
-    }
-  });
-}
-
-
 let currentUser = null;
 let currentUserRole = "customer";
 let currentTwoFactorEnabled = false;
@@ -118,45 +68,79 @@ function applyTheme(theme) {
   localStorage.setItem(THEME_KEY, theme);
   const toggleBtn = document.getElementById("theme-toggle");
   if (toggleBtn) {
-    toggleBtn.textContent =
-      theme === "dark" ? "Koyu tema: Açık" : "Koyu tema: Kapalı";
+    toggleBtn.textContent = theme === "dark" ? "☀️ Aydınlık Tema" : "🌙 Karanlık Tema";
   }
 }
 
 function initTheme() {
-  const stored = localStorage.getItem(THEME_KEY) || "light";
-  applyTheme(stored);
+  const saved = localStorage.getItem(THEME_KEY) || "light";
+  applyTheme(saved);
 }
 
-// ---------------- ORTAK YARDIMCILAR ----------------
+// ---------------- ORTAK HELPERS ----------------
 
-function loadPartial(placeholderId, url, callback) {
-  const container = document.getElementById(placeholderId);
-  if (!container) {
-    if (callback) callback();
-    return;
-  }
-
+function loadPartial(id, url, callback) {
+  const el = document.getElementById(id);
+  if (!el) return;
   fetch(url)
-    .then((res) => res.text())
+    .then((r) => r.text())
     .then((html) => {
-      container.innerHTML = html;
+      el.innerHTML = html;
       if (callback) callback();
     })
-    .catch((err) => {
-      console.error("Partial yüklenemedi:", url, err);
-      if (callback) callback();
-    });
+    .catch((e) => console.error("Partial yüklenirken hata:", e));
 }
 
-// Sepet
+function formatPrice(value) {
+  return (value || 0).toFixed(2) + " TL";
+}
+
+// ---------------- NAVBAR ----------------
+
+function setupNavbar() {
+  const themeToggle = document.getElementById("theme-toggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const newTheme = document.body.classList.contains("theme-dark") ? "light" : "dark";
+      applyTheme(newTheme);
+    });
+  }
+
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+      } catch (e) {
+        console.error("Çıkış hatası:", e);
+      }
+    });
+  }
+}
+
+function updateNavbarForAuth(user) {
+  const loginLinks = document.querySelectorAll(".nav-login-only");
+  const logoutLinks = document.querySelectorAll(".nav-logout-only");
+
+  if (!user) {
+    loginLinks.forEach((el) => (el.style.display = "inline-block"));
+    logoutLinks.forEach((el) => (el.style.display = "none"));
+  } else {
+    loginLinks.forEach((el) => (el.style.display = "none"));
+    logoutLinks.forEach((el) => (el.style.display = "inline-block"));
+  }
+}
+
+// ---------------- CART (LOCALSTORAGE) ----------------
+
 const CART_KEY = "ogrencify_cart";
 
 function getCart() {
   try {
     const raw = localStorage.getItem(CART_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (e) {
+    console.error("Cart parse error:", e);
     return [];
   }
 }
@@ -165,45 +149,120 @@ function saveCart(cart) {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
 }
 
-function getCartCount() {
-  return getCart().reduce((sum, item) => sum + item.qty, 0);
+function addToCart(productId) {
+  const cart = getCart();
+  const existing = cart.find((item) => item.id === productId);
+  if (existing) {
+    existing.qty += 1;
+  } else {
+    cart.push({ id: productId, qty: 1 });
+  }
+  saveCart(cart);
+  updateCartCount();
+  renderCart();
+}
+
+function removeFromCart(productId) {
+  let cart = getCart();
+  cart = cart.filter((item) => item.id !== productId);
+  saveCart(cart);
+  updateCartCount();
+  renderCart();
+}
+
+function changeCartQuantity(productId, delta) {
+  const cart = getCart();
+  const item = cart.find((i) => i.id === productId);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    const idx = cart.indexOf(item);
+    cart.splice(idx, 1);
+  }
+  saveCart(cart);
+  updateCartCount();
+  renderCart();
 }
 
 function getCartSubtotal() {
   const cart = getCart();
-  let subtotal = 0;
-  cart.forEach((item) => {
-    const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) subtotal += Number(product.price || 0) * item.qty;
-  });
-  return subtotal;
-}
-
-function updateCartProgress(subtotal) {
-  const bar = document.getElementById("cart-progress-fill");
-  if (!bar) return;
-  const LIMIT = 400;
-  const ratio = Math.max(0, Math.min(subtotal / LIMIT, 1));
-  bar.style.width = `${(ratio * 100).toFixed(0)}%`;
-  if (subtotal >= LIMIT) bar.classList.add("full");
-  else bar.classList.remove("full");
+  let sum = 0;
+  for (const item of cart) {
+    const prod = PRODUCTS.find((p) => p.id === item.id);
+    if (prod) {
+      sum += prod.price * item.qty;
+    }
+  }
+  return sum;
 }
 
 function updateCartCount() {
-  const count = getCartCount();
-  document.querySelectorAll("#cart-count, .cart-count").forEach((el) => {
-    el.textContent = count;
-  });
-  updateCartProgress(getCartSubtotal());
+  const cart = getCart();
+  const count = cart.reduce((acc, item) => acc + item.qty, 0);
+  const el = document.getElementById("cart-count");
+  if (el) el.textContent = count;
 }
 
-function addToCart(productId) {
+function renderCart() {
+  const cartContainer = document.getElementById("cart-items");
+  if (!cartContainer) return;
+
   const cart = getCart();
-  const existing = cart.find((item) => item.id === productId);
-  if (existing) existing.qty += 1;
-  else cart.push({ id: productId, qty: 1 });
-  saveCart(cart);
-  updateCartCount();
+  if (!cart.length) {
+    cartContainer.innerHTML = "<p>Sepetiniz boş.</p>";
+    const subtotalEl = document.getElementById("cart-subtotal");
+    if (subtotalEl) subtotalEl.textContent = "0.00 TL";
+    const limitWarning = document.getElementById("limit-warning");
+    if (limitWarning) limitWarning.textContent = "";
+    return;
+  }
+
+  let html = "";
+  cart.forEach((item) => {
+    const prod = PRODUCTS.find((p) => p.id === item.id);
+    if (!prod) return;
+    html += `
+      <div class="cart-item">
+        <img src="${prod.imageUrl}" alt="${prod.name}" class="cart-item-image" />
+        <div class="cart-item-info">
+          <h3>${prod.name}</h3>
+          <p>${formatPrice(prod.price)} x ${item.qty}</p>
+          <div class="cart-actions">
+            <button class="btn-sm" data-action="dec" data-id="${prod.id}">-</button>
+            <button class="btn-sm" data-action="inc" data-id="${prod.id}">+</button>
+            <button class="btn-sm btn-danger" data-action="remove" data-id="${prod.id}">
+              Sil
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  cartContainer.innerHTML = html;
+
+  const subtotal = getCartSubtotal();
+  const subtotalEl = document.getElementById("cart-subtotal");
+  if (subtotalEl) subtotalEl.textContent = subtotal.toFixed(2) + " TL";
+
+  const limitWarning = document.getElementById("limit-warning");
+  if (limitWarning) {
+    if (subtotal < 400) {
+      limitWarning.textContent =
+        "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
+    } else {
+      limitWarning.textContent = "";
+    }
+  }
+
+  cartContainer.querySelectorAll("button[data-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action = btn.getAttribute("data-action");
+      const id = btn.getAttribute("data-id");
+      if (action === "inc") changeCartQuantity(id, 1);
+      else if (action === "dec") changeCartQuantity(id, -1);
+      else if (action === "remove") removeFromCart(id);
+    });
+  });
 }
 
 // ---------------- USER DOC & ROLLER ----------------
@@ -216,31 +275,20 @@ async function ensureUserDoc(user) {
     await setDoc(ref, {
       email: user.email || "",
       role: "customer",
-      twoFactorEmailEnabled: false,
-      createdAt: serverTimestamp()
+      createdAt: serverTimestamp(),
+      twoFactorEnabled: false
     });
-    currentUserRole = "customer";
-    currentTwoFactorEnabled = false;
-  } else {
-    const d = snap.data();
-    currentUserRole = d.role || "customer";
-    currentTwoFactorEnabled = !!d.twoFactorEmailEnabled;
   }
-  updateProfilePageUser(user);
 }
 
 async function refreshUserRole() {
-  if (!currentUser) {
-    currentUserRole = "customer";
-    currentTwoFactorEnabled = false;
-    return;
-  }
+  if (!currentUser) return;
   const ref = doc(db, "users", currentUser.uid);
   const snap = await getDoc(ref);
   if (snap.exists()) {
-    const d = snap.data();
-    currentUserRole = d.role || "customer";
-    currentTwoFactorEnabled = !!d.twoFactorEmailEnabled;
+    const data = snap.data();
+    currentUserRole = data.role || "customer";
+    currentTwoFactorEnabled = !!data.twoFactorEnabled;
   }
 }
 
@@ -284,7 +332,6 @@ function loadProductsFromFirestore() {
         featured: !!d.featured
       });
     });
-
     renderProducts();
     renderCart();
     renderFeatured();
@@ -301,78 +348,61 @@ function handleAddToCart(productId, buttonEl) {
 
   addToCart(productId);
 
-  const originalText = buttonEl.textContent;
-  buttonEl.textContent = "Sepete eklendi";
-  buttonEl.classList.add("btn-added");
-  buttonEl.disabled = true;
-
-  setTimeout(() => {
-    buttonEl.textContent = originalText;
-    buttonEl.classList.remove("btn-added");
-    buttonEl.disabled = false;
-  }, 10000);
+  if (buttonEl) {
+    buttonEl.disabled = true;
+    buttonEl.textContent = "Eklendi";
+    setTimeout(() => {
+      buttonEl.disabled = false;
+      buttonEl.textContent = "Sepete Ekle";
+    }, 1000);
+  }
 }
 
 function renderProducts() {
-  const listEl = document.getElementById("product-list");
-  if (!listEl) return;
+  const grid = document.getElementById("products-grid");
+  if (!grid) return;
 
   const searchBox = document.getElementById("searchBox");
-  const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
+  const filterCat = document.getElementById("filter-category");
 
-  listEl.innerHTML = "";
+  let filtered = [...PRODUCTS];
 
-  if (!PRODUCTS.length) {
-    listEl.innerHTML = "<p>Henüz ürün eklenmemiş.</p>";
+  if (searchBox && searchBox.value.trim()) {
+    const q = searchBox.value.trim().toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q)
+    );
+  }
+
+  if (filterCat && filterCat.value !== "all") {
+    filtered = filtered.filter((p) => p.category === filterCat.value);
+  }
+
+  if (!filtered.length) {
+    grid.innerHTML = "<p>Bu kriterlere uygun ürün bulunamadı.</p>";
     return;
   }
 
-  PRODUCTS.filter((p) => {
-    if (!queryText) return true;
-    return (
-      (p.name || "").toLowerCase().includes(queryText) ||
-      (p.description || "").toLowerCase().includes(queryText) ||
-      (p.category || "").toLowerCase().includes(queryText)
-    );
-  }).forEach((product) => {
-    // Görsel
-    let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
-    if (product.imageUrl) {
-      const urlLower = product.imageUrl.toLowerCase();
-      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
-        mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
-      } else if (urlLower.includes(".pdf")) {
-        mediaHtml = `
-          <div class="card-img pdf-icon">
-            PDF
-          </div>`;
-      }
-    }
-
+  grid.innerHTML = "";
+  filtered.forEach((p) => {
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = "product-card";
     card.innerHTML = `
-      ${mediaHtml}
-      <div class="card-body">
-        <h3>${product.name}</h3>
-        <p>${product.description}</p>
-        <div class="price">${product.price} TL</div>
-        <button class="btn-primary" data-add-to-cart="${product.id}">
-          Sepete Ekle
-        </button>
+      <img src="${p.imageUrl}" alt="${p.name}" class="product-image" />
+      <div class="product-body">
+        <h3>${p.name}</h3>
+        <p class="product-category">${p.category || ""}</p>
+        <p class="product-description">${p.description}</p>
+        <p class="product-price">${formatPrice(p.price)}</p>
+        <button class="btn-primary" data-id="${p.id}">Sepete Ekle</button>
       </div>
     `;
-    listEl.appendChild(card);
-  });
-
-  listEl.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-add-to-cart");
-      handleAddToCart(id, btn);
-    });
+    const btn = card.querySelector("button");
+    btn.addEventListener("click", () => handleAddToCart(p.id, btn));
+    grid.appendChild(card);
   });
 }
 
@@ -382,328 +412,121 @@ function renderFeatured() {
   const container = document.getElementById("featured-products");
   if (!container) return;
 
-  container.innerHTML = "";
-
-  let featured = PRODUCTS.filter((p) => p.featured);
+  const featured = PRODUCTS.filter((p) => p.featured);
   if (!featured.length) {
-    // hiç vitrin işaretli yoksa, son eklenenlerden 3 tane göster
-    featured = PRODUCTS.slice(-3);
-  }
-
-  if (!featured.length) {
-    container.innerHTML = "<p>Şu anda vitrin ürünü bulunmuyor.</p>";
+    container.innerHTML = "<p>Şu anda vitrin ürünü bulunmamaktadır.</p>";
     return;
   }
 
-  featured.forEach((product) => {
-    let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
-    if (product.imageUrl) {
-      const urlLower = product.imageUrl.toLowerCase();
-      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
-        mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
-      } else if (urlLower.includes(".pdf")) {
-        mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
-      }
-    }
-
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML = `
-      ${mediaHtml}
-      <div class="card-body">
-        <h3>${product.name}</h3>
-        <p>${product.description}</p>
-        <div class="price">${product.price} TL</div>
-        <button class="btn-primary" data-add-to-cart="${product.id}">
-          Sepete Ekle
-        </button>
+  let html = "";
+  featured.forEach((p) => {
+    html += `
+      <div class="featured-card">
+        <img src="${p.imageUrl}" alt="${p.name}" class="featured-image" />
+        <div class="featured-body">
+          <h3>${p.name}</h3>
+          <p>${p.description}</p>
+          <p class="featured-price">${formatPrice(p.price)}</p>
+          <button class="btn-primary" data-id="${p.id}">Sepete Ekle</button>
+        </div>
       </div>
     `;
-    container.appendChild(card);
   });
+  container.innerHTML = html;
 
-  container.querySelectorAll("[data-add-to-cart]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-add-to-cart");
-      handleAddToCart(id, btn);
-    });
+  container.querySelectorAll("button[data-id]").forEach((btn) => {
+    const id = btn.getAttribute("data-id");
+    btn.addEventListener("click", () => handleAddToCart(id, btn));
   });
 }
 
-// ---------------- SEPET ----------------
-
-function renderCart() {
-  const container = document.getElementById("cart-items-container");
-  if (!container) return;
-
-  const subEl = document.getElementById("sub-total");
-  const totalEl = document.getElementById("total-price");
-  const warningEl = document.getElementById("limit-warning");
-
-  const cart = getCart();
-  if (!cart.length) {
-    container.innerHTML = `<p class="empty-cart">Sepetiniz boş.</p>`;
-    if (subEl) subEl.textContent = "0 TL";
-    if (totalEl) totalEl.textContent = "0 TL";
-    if (warningEl) warningEl.textContent = "";
-    updateCartProgress(0);
-    return;
-  }
-
-  container.innerHTML = "";
-  let subtotal = 0;
-
-  cart.forEach((item) => {
-    const product = PRODUCTS.find((p) => p.id === item.id);
-    if (!product) return;
-    const price = Number(product.price || 0);
-    const lineTotal = price * item.qty;
-    subtotal += lineTotal;
-
-    const row = document.createElement("div");
-    row.className = "cart-item";
-    row.innerHTML = `
-      <div>
-        <h4>${product.name}</h4>
-        <p>${price} TL x ${item.qty} adet</p>
-      </div>
-      <div class="cart-item-actions">
-        <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${product.id}">
-          Kaldır
-        </button>
-      </div>
-    `;
-    container.appendChild(row);
-  });
-
-  if (subEl) subEl.textContent = `${subtotal.toFixed(2)} TL`;
-  if (totalEl) totalEl.textContent = `${subtotal.toFixed(2)} TL`;
-
-  if (warningEl) {
-    if (subtotal > 0 && subtotal < 400) {
-      warningEl.textContent =
-        "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
-    } else if (subtotal >= 400) {
-      warningEl.textContent =
-        "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
-    } else {
-      warningEl.textContent = "";
-    }
-  }
-
-  container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-remove-from-cart");
-      let cartNow = getCart();
-      cartNow = cartNow.filter((item) => item.id !== id);
-      saveCart(cartNow);
-      renderCart();
-      updateCartCount();
-    });
-  });
-
-  updateCartCount();
-}
-
-// ---------------- NAVBAR & PROFİL ----------------
-
-function setupNavbar() {
-  const toggle = document.querySelector(".nav-toggle");
-  const mobileMenu = document.querySelector(".nav-mobile-menu");
-
-  if (toggle && mobileMenu) {
-    toggle.addEventListener("click", () => {
-      mobileMenu.classList.toggle("open");
-    });
-  }
-
-  const userBtn = document.getElementById("nav-user-button");
-  const dropdown = document.getElementById("nav-user-dropdown");
-  const logoutBtn = document.getElementById("logout-btn");
-
-  if (userBtn && dropdown) {
-    userBtn.addEventListener("click", () => {
-      dropdown.classList.toggle("open");
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!dropdown.contains(e.target) && !userBtn.contains(e.target)) {
-        dropdown.classList.remove("open");
-      }
-    });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-      } catch (err) {
-        console.error(err);
-      }
-    });
-  }
-
-  updateCartCount();
-  updateNavbarForAuth(currentUser);
-}
-
-function updateNavbarForAuth(user) {
-  const guest = document.querySelector(".nav-auth-guest");
-  const userBox = document.querySelector(".nav-auth-user");
-  const nameSpan = document.getElementById("nav-user-name");
-  const nameBig = document.getElementById("nav-user-name-big");
-  const avatar = document.getElementById("nav-user-avatar");
-  const avatarBig = document.getElementById("nav-user-avatar-big");
-  const emailSpan = document.getElementById("nav-user-email");
-
-  const mobileLogin = document.querySelector(".nav-mobile-login");
-  const mobileSignup = document.querySelector(".nav-signup-mobile");
-
-  const adminLink = document.querySelector(".nav-admin-link");
-  const adminLinkMobile = document.querySelector(".nav-admin-link-mobile");
-  const sellerPanelLink = document.querySelector(".nav-seller-panel-link");
-  const sellerPanelMobile = document.querySelector(".nav-seller-panel-mobile");
-
-  if (!guest || !userBox) return;
-
-  if (user) {
-    const displayName =
-      user.displayName || (user.email ? user.email.split("@")[0] : "Kullanıcı");
-    const firstLetter = displayName.charAt(0).toUpperCase();
-
-    if (nameSpan) nameSpan.textContent = displayName;
-    if (nameBig) nameBig.textContent = displayName;
-    if (avatar) avatar.textContent = firstLetter;
-    if (avatarBig) avatarBig.textContent = firstLetter;
-    if (emailSpan && user.email) emailSpan.textContent = user.email;
-
-    guest.style.display = "none";
-    userBox.style.display = "flex";
-
-    if (mobileLogin) mobileLogin.style.display = "none";
-    if (mobileSignup) mobileSignup.style.display = "none";
-
-    const isAdmin = currentUserRole === "admin";
-    const isSeller = currentUserRole === "seller" || isAdmin;
-
-    if (adminLink) adminLink.style.display = isAdmin ? "" : "none";
-    if (adminLinkMobile) adminLinkMobile.style.display = isAdmin ? "" : "none";
-
-    if (sellerPanelLink) sellerPanelLink.style.display = isSeller ? "" : "none";
-    if (sellerPanelMobile) sellerPanelMobile.style.display = isSeller ? "" : "none";
-  } else {
-    guest.style.display = "flex";
-    userBox.style.display = "none";
-
-    if (mobileLogin) mobileLogin.style.display = "";
-    if (mobileSignup) mobileSignup.style.display = "";
-
-    if (adminLink) adminLink.style.display = "none";
-    if (adminLinkMobile) adminLinkMobile.style.display = "none";
-    if (sellerPanelLink) sellerPanelLink.style.display = "none";
-    if (sellerPanelMobile) sellerPanelMobile.style.display = "none";
-  }
-}
-
-// PROFİL SAYFASI
-
-function updateProfilePageUser(user) {
-  const emailSpan = document.getElementById("profile-email");
-  const twoFactorToggle = document.getElementById("twofactor-toggle");
-  if (!emailSpan && !twoFactorToggle) return;
-
-  if (emailSpan) {
-    if (user && user.email) emailSpan.textContent = user.email;
-    else emailSpan.textContent = "- (Giriş yapılmamış)";
-  }
-
-  if (twoFactorToggle) {
-    twoFactorToggle.checked = currentTwoFactorEnabled;
-  }
-}
+// ---------------- PROFİL SAYFASI ----------------
 
 function setupProfilePage() {
-  const themeToggle = document.getElementById("theme-toggle");
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      const isDark = document.body.classList.contains("theme-dark");
-      applyTheme(isDark ? "light" : "dark");
-    });
+  const profileSection = document.getElementById("profile-page");
+  if (!profileSection) return;
+
+  const emailField = document.getElementById("profile-email");
+  const roleField = document.getElementById("profile-role");
+  const twoFactorCheckbox = document.getElementById("twofactor-checkbox");
+  const twoFactorStatus = document.getElementById("twofactor-status");
+  const resendVerifyBtn = document.getElementById("resend-verify-btn");
+
+  if (!currentUser) {
+    window.location.href = "login.html";
+    return;
   }
 
-  const resetBtn = document.getElementById("password-reset-btn");
-  const msgBox = document.getElementById("profile-message");
+  refreshUserRole().then(() => {
+    if (emailField) emailField.textContent = currentUser.email || "-";
+    if (roleField) roleField.textContent = currentUserRole;
+    if (twoFactorCheckbox)
+      twoFactorCheckbox.checked = currentTwoFactorEnabled;
+    if (twoFactorStatus) {
+      twoFactorStatus.textContent = currentTwoFactorEnabled
+        ? "Etkin"
+        : "Kapalı";
+    }
+  });
 
-  if (resetBtn && msgBox) {
-    resetBtn.addEventListener("click", async () => {
-      if (!currentUser || !currentUser.email) {
-        msgBox.textContent =
-          "Şifre sıfırlama için önce hesabınıza giriş yapmalısınız.";
-        msgBox.classList.remove("success");
-        return;
-      }
-
-      try {
-        await sendPasswordResetEmail(auth, currentUser.email);
-        msgBox.textContent =
-          "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.";
-        msgBox.classList.add("success");
-      } catch (err) {
-        console.error(err);
-        msgBox.textContent = "İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.";
-        msgBox.classList.remove("success");
-      }
-    });
-  }
-
-  const tfToggle = document.getElementById("twofactor-toggle");
-  if (tfToggle) {
-    tfToggle.addEventListener("change", async () => {
-      if (!currentUser) {
-        alert("Bu ayarı değiştirmek için giriş yapmalısınız.");
-        tfToggle.checked = currentTwoFactorEnabled;
-        return;
-      }
+  if (twoFactorCheckbox) {
+    twoFactorCheckbox.addEventListener("change", async () => {
+      const newVal = twoFactorCheckbox.checked;
       const ref = doc(db, "users", currentUser.uid);
       try {
-        await updateDoc(ref, { twoFactorEmailEnabled: tfToggle.checked });
-        currentTwoFactorEnabled = tfToggle.checked;
-        if (tfToggle.checked && !currentUser.emailVerified) {
-          alert(
-            "İki aşamalı koruma açıldı. Şimdi e-posta adresinizi doğrulamanız gerekiyor."
-          );
-          await sendEmailVerification(currentUser);
+        await updateDoc(ref, { twoFactorEnabled: newVal });
+        currentTwoFactorEnabled = newVal;
+        if (twoFactorStatus) {
+          twoFactorStatus.textContent = newVal ? "Etkin" : "Kapalı";
         }
       } catch (e) {
         console.error(e);
-        tfToggle.checked = currentTwoFactorEnabled;
+        twoFactorCheckbox.checked = !newVal;
       }
     });
   }
 
-  updateProfilePageUser(currentUser);
+  if (resendVerifyBtn) {
+    resendVerifyBtn.addEventListener("click", async () => {
+      if (!currentUser) return;
+      try {
+        await sendEmailVerification(currentUser);
+        alert("Doğrulama e-postası gönderildi. Lütfen e-posta kutunuzu kontrol edin.");
+      } catch (e) {
+        console.error(e);
+        alert("E-posta gönderilirken hata oluştu.");
+      }
+    });
+  }
 }
 
-// ---------------- SATICI OL SAYFASI: satıcı başvurusu ----------------
+// ---------------- SATICI OL BAŞVURUSU ----------------
 
 function setupSellerRequest() {
-  const btn = document.getElementById("request-seller-btn");
-  const msg = document.getElementById("request-seller-message");
-  if (!btn || !msg) return;
+  const form = document.getElementById("seller-request-form");
+  if (!form) return;
 
-  btn.addEventListener("click", async () => {
+  const msg = document.getElementById("seller-request-message");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
     if (!currentUser) {
-      msg.textContent = "Satıcı başvurusu yapmak için önce giriş yapmanız gerekiyor.";
+      window.location.href = "login.html";
+      retu
+      rn;
+    }
+
+    const reason = document.getElementById("seller-reason").value.trim();
+    if (!reason) {
+      msg.textContent = "Lütfen satıcı olmak istemenizin nedenini açıklayın.";
       return;
     }
+
     try {
       await addDoc(collection(db, "sellerRequests"), {
         uid: currentUser.uid,
         email: currentUser.email || "",
+        reason,
         status: "pending",
         createdAt: serverTimestamp()
       });
@@ -738,39 +561,40 @@ async function setupSellerPanel() {
       const price = Number(document.getElementById("sp-price").value);
       const cat = document.getElementById("sp-category").value.trim();
       const desc = document.getElementById("sp-description").value.trim();
-      const fileInput = document.getElementById("sp-image-file");
-      const file = fileInput.files[0];
+      const imageUrl = document.getElementById("sp-image-url").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !file) {
-        msg.textContent = "Lütfen tüm alanları ve dosya yüklemesini doğru doldurunuz.";
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imageUrl) {
+        msg.textContent = "Lütfen tüm alanları eksiksiz doldurunuz.";
+        return;
+      }
+
+      if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+        msg.textContent =
+          "Lütfen geçerli bir URL giriniz (http veya https ile başlamalı).";
         return;
       }
 
       const allowedExts = ["jpg", "jpeg", "png", "pdf"];
-      const nameParts = file.name.split(".");
-      const ext = nameParts.length > 1 ? nameParts.pop().toLowerCase() : "";
+      const urlWithoutQuery = imageUrl.split("?")[0].split("#")[0];
+      const parts = urlWithoutQuery.split(".");
+      const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
 
       if (!allowedExts.includes(ext)) {
         msg.textContent =
-          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yükleyebilirsiniz.";
+          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosya URL'lerine izin verilmektedir.";
         return;
       }
 
-      msg.textContent = "Dosya yükleniyor, lütfen bekleyiniz...";
+      msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
-        const path = `productImages/${currentUser.uid}/${Date.now()}-${file.name}`;
-        const refFile = storageRef(storage, path);
-        await uploadBytes(refFile, file);
-        const downloadURL = await getDownloadURL(refFile);
-
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
-          imageUrl: downloadURL,
-          fileName: file.name,
+          description: desc,
+          imageUrl,
           fileExt: ext,
           status: "pending",
           createdAt: serverTimestamp()
@@ -781,7 +605,7 @@ async function setupSellerPanel() {
       } catch (e2) {
         console.error(e2);
         msg.textContent =
-          "Kayıt veya dosya yükleme sırasında hata oluştu. Lütfen tekrar deneyin.";
+          "Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.";
       }
     });
   }
@@ -902,9 +726,9 @@ async function setupAdminPanel() {
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}" data-uid="${d.uid}">
-          <td>${d.email}</td>
+          <td>${d.email || "-"}</td>
           <td>
-            <button class="btn-secondary" data-action="approve-seller">Satıcı olarak yetkilendir</button>
+            <button class="btn-secondary" data-action="approve-seller">Onayla</button>
             <button class="btn-link" data-action="reject-seller">Reddet</button>
           </td>
         </tr>`;
@@ -918,6 +742,7 @@ async function setupAdminPanel() {
           const id = tr.getAttribute("data-id");
           const uid = tr.getAttribute("data-uid");
           const action = btn.getAttribute("data-action");
+
           const reqRef = doc(db, "sellerRequests", id);
           const userRef = doc(db, "users", uid);
 
@@ -1017,14 +842,14 @@ async function setupAdminPanel() {
 
   // Onaylanmış ürünler & vitrin yönetimi
   if (productsManageBox) {
-    const prodCol = collection(db, "products");
-    onSnapshot(prodCol, (snap) => {
+    const qAll = collection(db, "products");
+    onSnapshot(qAll, (snap) => {
       if (snap.empty) {
         productsManageBox.innerHTML = "<p>Henüz onaylanmış ürün bulunmuyor.</p>";
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
@@ -1036,7 +861,11 @@ async function setupAdminPanel() {
             <input type="text" class="admin-prod-cat" value="${d.category || ""}">
           </td>
           <td style="text-align:center;">
-            <input type="checkbox" class="admin-prod-featured" ${d.featured ? "checked" : ""}>
+            <input
+              type="checkbox"
+              class="admin-prod-featured"
+              ${d.featured ? "checked" : ""}
+            >
           </td>
           <td>
             <button class="btn-secondary" data-action="save-product">Kaydet</button>
@@ -1052,20 +881,18 @@ async function setupAdminPanel() {
           const tr = btn.closest("tr");
           const id = tr.getAttribute("data-id");
           const action = btn.getAttribute("data-action");
+
           const refProd = doc(db, "products", id);
 
           if (action === "save-product") {
             const priceInput = tr.querySelector(".admin-prod-price");
             const catInput = tr.querySelector(".admin-prod-cat");
             const featInput = tr.querySelector(".admin-prod-featured");
+
             const price = Number(priceInput.value);
             const cat = catInput.value.trim();
             const feat = featInput.checked;
 
-            if (isNaN(price) || price < 0) {
-              alert("Geçerli bir fiyat giriniz.");
-              return;
-            }
             try {
               await updateDoc(refProd, {
                 price,
@@ -1091,7 +918,7 @@ async function setupAdminPanel() {
   }
 }
 
-// ---------------- AUTH DURUMU ----------------
+// ---------------- AUTH DURUMU --------------------------
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
@@ -1156,7 +983,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await refreshUserRole();
       if (currentTwoFactorEnabled && !currentUser.emailVerified) {
         alert(
-          "Siparişi tamamlamak için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama maili gönderebilirsiniz."
+          "Sepeti onaylamak için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama e-postası gönderebilirsiniz."
         );
         window.location.href = "profile.html#security";
         return;
@@ -1175,4 +1002,3 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
-
