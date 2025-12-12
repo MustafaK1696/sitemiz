@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Satıcı Paneli - ÖğrenciFy</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
   <div id="navbar-placeholder"></div>
 
   <main class="container" id="seller-panel">
@@ -17,11 +16,10 @@
       Ürünleriniz yönetici onayı sonrası sitede listelenecektir.
     </p>
 
-    <!-- YENİ ÜRÜN BAŞVURU FORMU -->
     <section class="profile-section">
       <h2>Yeni Ürün Başvurusu</h2>
 
-      <form id="seller-product-form">
+      <form id="seller-product-form" class="auth-form">
         <div class="form-group">
           <label for="sp-title">Ürün Adı</label>
           <input type="text" id="sp-title" required />
@@ -34,7 +32,23 @@
 
         <div class="form-group">
           <label for="sp-category">Kategori</label>
-          <input type="text" id="sp-category" placeholder="Defter, kitap, kırtasiye..." required />
+          <select id="sp-category" required>
+            <option value="" selected disabled>Seçiniz...</option>
+            <option value="ev">Ev</option>
+            <option value="dekorasyon">Dekorasyon</option>
+            <option value="aksesuar">Aksesuar</option>
+            <option value="elektronik">Elektronik</option>
+            <option value="hediyelik">Hediyelik</option>
+          </select>
+          <small>Sadece bu kategoriler kullanılabilir.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="sp-image">
+            Ürün Görseli / PDF URL’si
+            <small>(https://... .jpg / .jpeg / .png / .pdf)</small>
+          </label>
+          <input type="url" id="sp-image" placeholder="https://..." required />
         </div>
 
         <div class="form-group">
@@ -42,26 +56,15 @@
           <textarea id="sp-description" rows="3" required></textarea>
         </div>
 
-        <div class="form-group">
-          <label for="sp-image">
-            Ürün Görseli / PDF URL’si
-            <small>(Örn: https://... .jpg, .png veya .pdf)</small>
-          </label>
-          <input type="url" id="sp-image" required />
-        </div>
-
-        <p id="seller-form-message" class="form-message"></p>
-
         <button type="submit" class="btn-primary">Ürün Başvurusu Gönder</button>
+
+        <div id="seller-form-message" class="message-box" style="margin-top:10px;"></div>
       </form>
     </section>
 
-    <!-- Satıcının tüm başvuruları -->
     <section class="profile-section">
       <h2>Ürün Başvurularım</h2>
-      <div id="seller-product-list">
-        Yükleniyor...
-      </div>
+      <div id="seller-product-list">Yükleniyor...</div>
     </section>
   </main>
 
