@@ -3,57 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profil Ayarları - ÖğrenciFy</title>
+  <title>Profil - ÖğrenciFy</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
   <div id="navbar-placeholder"></div>
 
   <main class="container profile-page">
     <h1>Profil Ayarları</h1>
-    <p class="page-intro">
-      Buradan görünüm ve güvenlik tercihlerinizi yönetebilirsiniz.
-    </p>
-
-    <section id="appearance" class="profile-section">
-      <h2>Görünüm Tercihleri</h2>
-      <p>Uygulamanın tema ve görünüm seçeneklerini buradan değiştirebilirsiniz.</p>
-      <button id="theme-toggle" class="btn-secondary">
-        Koyu tema: Kapalı
-      </button>
-    </section>
-
-    <section id="security" class="profile-section">
-      <h2>Güvenlik</h2>
-      <p>
-        Şifreni unutmamak için zorlayıcı ama hatırlaması kolay bir şifre kullanmanı tavsiye ederiz.
-      </p>
-      <p>
-        Bu hesapta kayıtlı e-posta:
-        <strong id="profile-email">-</strong>
-      </p>
-      <button id="password-reset-btn" class="btn-primary">
-        Şifre sıfırlama e-postası gönder
-      </button>
-      <p class="warning-msg" id="profile-message" style="margin-top:12px;"></p>
-
-      <h3 style="margin-top:24px;">E-posta ile İkinci Adım</h3>
-<p>
-  Bu özellik açıkken satıcı / yönetici panelleri ve sipariş tamamlama için
-  e-posta adresinizin doğrulanmış olması zorunlu olur.
-</p>
-<label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-  <input type="checkbox" id="twofactor-toggle">
-  <span>Hesabım için e-posta ile ikinci adımı (2 aşamalı doğrulama) zorunlu yap</span>
-</label>
-
+    <p>Kayıtlı e-posta: <strong id="profile-email">-</strong></p>
+    
+    <section class="profile-section">
+      <button id="password-reset-btn" class="btn-primary">Şifre Sıfırlama E-postası Gönder</button>
+      <p id="profile-message" class="message-box" style="display:none;"></p>
     </section>
   </main>
 
   <div id="footer-placeholder"></div>
-
   <script type="module" src="script.js"></script>
 </body>
 </html>
-
