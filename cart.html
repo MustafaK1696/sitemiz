@@ -2,47 +2,24 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sepetim - ÖğrenciFy</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
   <div id="navbar-placeholder"></div>
-
   <main class="container cart-page">
     <h1>Sepetim</h1>
-
     <div class="cart-container">
       <div class="cart-items" id="cart-items-container"></div>
-
       <aside class="cart-summary">
         <h2>Sipariş Özeti</h2>
-        <div class="summary-row">
-          <span>Ara Toplam</span>
-          <span id="sub-total">0 TL</span>
-        </div>
-        <div class="summary-row">
-          <span>Kargo</span>
-          <span>Bedava</span>
-        </div>
-        <div class="summary-row total-row">
-          <span>Toplam</span>
-          <span id="total-price">0 TL</span>
-        </div>
-
+        <div class="summary-row"><span>Toplam</span><span id="total-price">0 TL</span></div>
         <div id="limit-warning" class="warning-msg"></div>
-
-        <button id="checkout-btn" class="btn-primary btn-checkout">
-          Sepeti Onayla
-        </button>
+        <button id="checkout-btn" class="btn-primary btn-checkout">Sepeti Onayla</button>
       </aside>
     </div>
   </main>
-
   <div id="footer-placeholder"></div>
-
   <script type="module" src="script.js"></script>
 </body>
 </html>
