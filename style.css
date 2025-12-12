@@ -92,3 +92,64 @@
   .nav-links{ display:none; }
   .nav-toggle{ display:inline-flex; }
 }
+
+/* Logo görünmüyorsa çoğu zaman yükseklik/overflow yüzündendir */
+.logo img{
+  height: 44px;
+  width: auto;
+  display:block;
+}
+
+/* Sağ taraf (sepet + user) */
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+}
+
+/* Dropdown */
+.nav-item.dropdown{
+  position: relative;
+}
+
+.dropdown-menu{
+  position:absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+  padding: 8px;
+  display:none;
+  z-index: 2000;
+}
+
+.dropdown-menu li{
+  list-style:none;
+}
+
+.dropdown-menu a{
+  width:100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  justify-content: flex-start;
+}
+
+.nav-item.dropdown:hover .dropdown-menu{
+  display:block;
+}
+
+/* Mobil menü dropdown */
+.mobile-dropdown summary{
+  cursor:pointer;
+  padding: 10px 0;
+}
+
+/* Çok dar ekranlarda menüyü biraz daha toparla */
+@media (max-width: 980px){
+  .nav-links{ display:none; }
+  .nav-toggle{ display:inline-flex; }
+}
+
