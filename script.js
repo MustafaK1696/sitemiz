@@ -80,17 +80,6 @@ function initTheme() {
 
 // ---------------- ORTAK YARDIMCILAR ----------------
 
-
-
-// ---------------- DOSYA YARDIMCILARI ----------------
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Dosya okunamadı"));
-    reader.readAsDataURL(file);
-  });
-}
 function loadPartial(placeholderId, url, callback) {
   const container = document.getElementById(placeholderId);
   if (!container) {
@@ -98,18 +87,60 @@ function loadPartial(placeholderId, url, callback) {
     return;
   }
 
+  // Bazı ortamlarda (ör. dosyayı file:// ile açmak) fetch çalışmayabilir.
+  // Bu durumda navbar/footer için güvenli bir "fallback" HTML basıyoruz.
   fetch(url)
-    .then((res) => res.text())
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    })
     .then((html) => {
       container.innerHTML = html;
       if (callback) callback();
     })
     .catch((err) => {
       console.error("Partial yüklenemedi:", url, err);
+
+      // Fallback: Navbar
+      if (placeholderId === "navbar-placeholder") {
+        container.innerHTML = `
+          <header class="site-header">
+            <nav class="navbar">
+              <a class="logo" href="index.html" aria-label="ÖğrenciFy">
+                <img src="logo.png" alt="ÖğrenciFy Logo">
+              </a>
+              <ul class="nav-links">
+                <li><a href="index.html">Ana Sayfa</a></li>
+                <li><a href="products.html">Ürünler</a></li>
+                <li><a href="seller.html">Satıcı Ol</a></li>
+                <li><a href="help.html">Yardım</a></li>
+                <li><a href="admin.html" id="admin-panel-link" style="display:none">Yönetici Paneli</a></li>
+                <li><a href="seller-dashboard.html" id="seller-dashboard-link" style="display:none">Satıcı Panelim</a></li>
+                <li><a href="cart.html" class="cart-btn">Sepetim <span id="cart-count" class="cart-count">0</span></a></li>
+              </ul>
+            </nav>
+          </header>
+        `;
+        if (callback) callback();
+        return;
+      }
+
+      // Fallback: Footer (minimal)
+      if (placeholderId === "footer-placeholder") {
+        container.innerHTML = `
+          <footer class="footer">
+            <div class="container">
+              <p>© ${new Date().getFullYear()} ÖğrenciFy</p>
+            </div>
+          </footer>
+        `;
+        if (callback) callback();
+        return;
+      }
+
       if (callback) callback();
     });
 }
-
 // Sepet
 const CART_KEY = "ogrencify_cart";
 
@@ -693,51 +724,6 @@ async function setupSellerPanel() {
 
   const form = document.getElementById("seller-product-form");
   const msg = document.getElementById("seller-form-message");
-  // Dosya önizleme
-  const mediaInput = document.getElementById("sp-media-file");
-  const videoInput = document.getElementById("sp-video-file");
-  const previewBox = document.getElementById("sp-media-preview");
-
-  function renderPreview() {
-    if (!previewBox) return;
-    previewBox.innerHTML = "";
-
-    const mediaFile = mediaInput && mediaInput.files ? mediaInput.files[0] : null;
-    const videoFile = videoInput && videoInput.files ? videoInput.files[0] : null;
-
-    if (!mediaFile && !videoFile) {
-      previewBox.textContent = "Dosya seçilmedi";
-      return;
-    }
-
-    if (mediaFile) {
-      const name = (mediaFile.name || "").toLowerCase();
-      if (name.endsWith(".pdf")) {
-        const pill = document.createElement("div");
-        pill.className = "upload-pill";
-        pill.textContent = `PDF seçildi: ${mediaFile.name}`;
-        previewBox.appendChild(pill);
-      } else {
-        const img = document.createElement("img");
-        img.className = "upload-preview-img";
-        img.alt = "Ürün görseli önizleme";
-        img.src = URL.createObjectURL(mediaFile);
-        previewBox.appendChild(img);
-      }
-    }
-
-    if (videoFile) {
-      const video = document.createElement("video");
-      video.className = "upload-preview-video";
-      video.controls = true;
-      video.src = URL.createObjectURL(videoFile);
-      previewBox.appendChild(video);
-    }
-  }
-
-  if (mediaInput) mediaInput.addEventListener("change", renderPreview);
-  if (videoInput) videoInput.addEventListener("change", renderPreview);
-
   const list = document.getElementById("seller-product-list");
 
   // === ÜRÜN BAŞVURU FORMU ===
@@ -747,48 +733,33 @@ async function setupSellerPanel() {
 
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
-      const cat = (document.getElementById("sp-category").value || "").trim();
+      const cat = document.getElementById("sp-category").value.trim();
+      const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
 
-      const mediaInput = document.getElementById("sp-media-file");
-      const videoInput = document.getElementById("sp-video-file");
-
-      const mediaFile = mediaInput && mediaInput.files ? mediaInput.files[0] : null;
-      const videoFile = videoInput && videoInput.files ? videoInput.files[0] : null;
-
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !mediaFile || !videoFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve 1 görsel/PDF + 1 video dosyası yükleyin.";
-        msg.style.color = "red";
-        return;
-      }
-
-      const allowedCats = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
-      if (!allowedCats.includes(cat)) {
-        msg.textContent = "Kategori geçersiz. Lütfen listeden seçim yapın.";
-        msg.style.color = "red";
-        return;
-      }
-
-      const mediaName = (mediaFile.name || "").toLowerCase();
-      const okMedia =
-        mediaName.endsWith(".jpg") || mediaName.endsWith(".jpeg") || mediaName.endsWith(".png") || mediaName.endsWith(".pdf");
-      if (!okMedia) {
-        msg.textContent = "Görsel/PDF dosyası sadece .jpg / .jpeg / .png / .pdf olabilir.";
-        msg.style.color = "red";
-        return;
-      }
-
-      if (!videoFile.type || !videoFile.type.startsWith("video/")) {
-        msg.textContent = "Video dosyası geçersiz. Lütfen bir video dosyası seçin.";
-        msg.style.color = "red";
-        return;
-      }
-
-      // Firestore doküman limiti için video boyut sınırı (Storage yok)
-      const MAX_VIDEO_BYTES = 800 * 1024; // 800KB
-      if (videoFile.size > MAX_VIDEO_BYTES) {
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
         msg.textContent =
-          "Video dosyası çok büyük. (Storage kullanılmadığı için) lütfen 800KB altında bir video yükleyin.";
+          "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      // URL kontrolü (opsiyonel ama faydalı)
+      if (!img.startsWith("http://") && !img.startsWith("https://")) {
+        msg.textContent = "Lütfen http veya https ile başlayan geçerli bir URL girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      // Uzantı kontrolü (.jpg/.jpeg/.png/.pdf)
+      const allowedExts = ["jpg", "jpeg", "png", "pdf"];
+      const urlWithoutQuery = img.split("?")[0].split("#")[0];
+      const parts = urlWithoutQuery.split(".");
+      const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
+
+      if (!allowedExts.includes(ext)) {
+        msg.textContent =
+          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosya URL'lerine izin verilmektedir.";
         msg.style.color = "red";
         return;
       }
@@ -797,41 +768,18 @@ async function setupSellerPanel() {
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
-        const mediaDataUrl = await readFileAsDataURL(mediaFile);
-        const videoDataUrl = await readFileAsDataURL(videoFile);
-
+        // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
+          imageUrl: img,
           description: desc,
-
-          // medya
-          mediaDataUrl,
-          mediaMime: mediaFile.type || "",
-          mediaName: mediaFile.name || "",
-
-          videoDataUrl,
-          videoMime: videoFile.type || "",
-          videoName: videoFile.name || "",
-
           status: "pending",
           createdAt: serverTimestamp()
         });
 
-        msg.textContent = "Başvuru alındı. Yönetici onayı sonrası ürünler sayfasında görünecektir.";
-        msg.style.color = "green";
-        form.reset();
-
-        const preview = document.getElementById("sp-media-preview");
-        if (preview) preview.textContent = "Dosya seçilmedi";
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Ürün başvurusu kaydedilirken bir hata oluştu.";
-        msg.style.color = "red";
-      }
-    });
         msg.style.color = "green";
         msg.textContent =
           "Ürün başvurunuz alındı. Yönetici onayı sonrası yayına alınacaktır.";
