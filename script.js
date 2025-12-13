@@ -18,7 +18,6 @@ import {
   updateDoc,
   collection,
   addDoc,
-  getDocs,
   query,
   where,
   onSnapshot,
@@ -47,18 +46,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-
-
-// ---------------- ÜRÜN KODU ÜRETİMİ ----------------
-function generateProductCode() {
-  // Örn: OGF-20251213-AB12
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "X");
-  return `OGF-${y}${m}${day}-${rand}`;
-}
 
 let currentUser = null;
 let currentUserRole = "customer";
@@ -114,6 +101,17 @@ function loadPartial(placeholderId, url, callback) {
 
 // Sepet
 const CART_KEY = "ogrencify_cart";
+
+function generateProductCode(seed) {
+  const now = new Date();
+  const y = String(now.getFullYear()).slice(-2);
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  const base = (seed || "").toString().replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `OGF-${y}${m}${d}-${base || rand}`;
+}
+
 
 function getCart() {
   try {
@@ -244,7 +242,8 @@ function loadProductsFromFirestore() {
         description: d.description || "",
         imageUrl: d.imageUrl || "",
         sellerId: d.sellerId || "",
-        featured: !!d.featured
+        featured: !!d.featured,
+        productCode: d.productCode || ""
       });
     });
 
@@ -283,11 +282,6 @@ function renderProducts() {
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
-  const allowedCategories = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
-  const urlCatRaw = new URLSearchParams(window.location.search).get("cat") || "";
-  const urlCat = urlCatRaw.trim().toLowerCase();
-  const activeCat = allowedCategories.includes(urlCat) ? urlCat : "";
-
   listEl.innerHTML = "";
 
   if (!PRODUCTS.length) {
@@ -296,10 +290,6 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
-    if (activeCat) {
-      const pCat = (p.category || "").trim().toLowerCase();
-      if (pCat !== activeCat) return false;
-    }
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||
@@ -713,20 +703,13 @@ async function setupSellerPanel() {
 
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
-      const allowedCategories = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
-      const cat = (document.getElementById("sp-category").value || "").trim().toLowerCase();
+      const cat = document.getElementById("sp-category").value.trim();
       const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
 
       if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
         msg.textContent =
           "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
-        msg.style.color = "red";
-        return;
-      }
-
-      if (!allowedCategories.includes(cat)) {
-        msg.textContent = "Lütfen listeden geçerli bir kategori seçin.";
         msg.style.color = "red";
         return;
       }
@@ -760,7 +743,7 @@ async function setupSellerPanel() {
           sellerId: currentUser.uid,
           title,
           price,
-          category: String(cat).toLowerCase(),
+          category: cat,
           imageUrl: img,
           description: desc,
           status: "pending",
@@ -795,11 +778,10 @@ async function setupSellerPanel() {
       }
 
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
 
       snap.forEach((docSnap) => {
         const d = docSnap.data();
-        const id = docSnap.id;
         const statusText =
           d.status === "approved"
             ? "✅ Onaylandı"
@@ -807,36 +789,15 @@ async function setupSellerPanel() {
             ? "❌ Reddedildi"
             : "⏳ Beklemede";
 
-        const canDelete = (d.status !== "approved") || (d.status === "approved" && d.productDeleted === true);
-        const actionHtml = canDelete
-          ? `<button class="btn-link" data-delete-request="${id}">Sil</button>`
-          : "-";
-
         html += `<tr>
           <td>${d.title}</td>
           <td>${d.price} TL</td>
           <td>${statusText}</td>
-          <td>${actionHtml}</td>
         </tr>`;
       });
 
       html += "</tbody></table>";
       list.innerHTML = html;
-
-      list.querySelectorAll("[data-delete-request]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-delete-request");
-          if (!id) return;
-          const ok = confirm("Bu ürün başvurusunu silmek istiyor musunuz?");
-          if (!ok) return;
-          try {
-            await deleteDoc(doc(db, "productRequests", id));
-          } catch (e) {
-            console.error(e);
-            alert("Başvuru silinirken hata oluştu.");
-          }
-        });
-      });
     });
   }
 }
@@ -860,11 +821,8 @@ async function setupAdminPanel() {
 
   // Kullanıcı listesi & roller
   if (usersBox) {
-    usersBox.innerHTML = "<p>Yükleniyor...</p>";
     const usersCol = collection(db, "users");
-    onSnapshot(
-      usersCol,
-      (snap) => {
+    onSnapshot(usersCol, (snap) => {
       if (snap.empty) {
         usersBox.innerHTML = "<p>Kayıtlı kullanıcı bulunamadı.</p>";
         return;
@@ -909,10 +867,6 @@ async function setupAdminPanel() {
           }
         });
       });
-    }, (err) => {
-      console.error(err);
-      usersBox.innerHTML =
-        '<p class="warning-msg">Kullanıcılar & roller listesi yüklenemedi. Firestore rules / yetki kontrol edin.</p>';
     });
   }
 
@@ -971,13 +925,7 @@ async function setupAdminPanel() {
           }
         });
       });
-      },
-      (err) => {
-        console.error(err);
-        usersBox.innerHTML =
-          "<p class='warning-msg'>Kullanıcılar & Roller yüklenemedi. Lütfen yetkiler (Firestore rules) ve internet bağlantısını kontrol edin.</p>";
-      }
-    );
+    });
   }
 
   // Ürün başvuruları (onay/red)
@@ -1021,8 +969,8 @@ async function setupAdminPanel() {
 
           try {
             if (action === "approve-product") {
-              const productCode = generateProductCode();
-              const prodRef = await addDoc(collection(db, "products"), {
+              const productCode = generateProductCode(id);
+              const newProdRef = await addDoc(collection(db, "products"), {
                 title: d.title,
                 price: d.price,
                 category: d.category,
@@ -1035,10 +983,10 @@ async function setupAdminPanel() {
               });
               await updateDoc(reqRef, {
                 status: "approved",
+                productId: newProdRef.id,
+                productCode,
                 processedAt: serverTimestamp(),
-                processedBy: currentUser.uid,
-                productDocId: prodRef.id,
-                productCode
+                processedBy: currentUser.uid
               });
             } else {
               await updateDoc(reqRef, {
@@ -1064,12 +1012,12 @@ async function setupAdminPanel() {
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Kod</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
           <td>${d.title}</td>
-          <td style="font-size:0.85rem; white-space:nowrap;">${d.productCode || "-"}</td>
+          <td><code>${d.productCode || "-"}</code></td>
           <td>
             <input type="number" class="admin-prod-price" value="${d.price}" min="0" step="0.01">
           </td>
@@ -1121,25 +1069,6 @@ async function setupAdminPanel() {
             if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
             try {
               await deleteDoc(refProd);
-
-              // İlgili ürün başvurularını (varsa) işaretle: satıcı, admin silinen ürünün başvurusunu silebilsin
-              try {
-                const qReq = query(
-                  collection(db, "productRequests"),
-                  where("productDocId", "==", id)
-                );
-                const reqSnap = await getDocs(qReq);
-                for (const rDoc of reqSnap.docs) {
-                  await updateDoc(doc(db, "productRequests", rDoc.id), {
-                    productDeleted: true,
-                    productDeletedAt: serverTimestamp(),
-                    productDeletedBy: currentUser.uid
-                  });
-                }
-              } catch (inner) {
-                console.warn("productRequests işaretlenemedi:", inner);
-              }
-
             } catch (e) {
               console.error(e);
               alert("Ürün silinirken hata oluştu.");
@@ -1223,12 +1152,36 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(
-        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
-          2
-        )} TL`
-      );
-      window.location.href = `https://wa.me/${phone}?text=${message}`;
+
+// Sepetteki ürünleri kod + adet ile mesajla
+const cart = getCart();
+const lines = [];
+let total = 0;
+
+cart.forEach((ci) => {
+  const p = PRODUCTS.find((x) => x.id === ci.id);
+  if (!p) return;
+  const qty = Number(ci.qty) || 1;
+  const code = p.productCode || "-";
+  const price = Number(p.price) || 0;
+  total += price * qty;
+  lines.push(`• ${code} — ${p.name} x${qty}`);
+});
+
+const messageText =
+  `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.%0A%0A` +
+  `Sipariş (Ürün Kodu — Adet):%0A` +
+  `${lines.join("%0A")}%0A%0A` +
+  `Toplam: ${total.toFixed(2)} TL`;
+
+const url1 = `https://wa.me/${phone}?text=${messageText}`;
+const url2 = `https://api.whatsapp.com/send?phone=${phone}&text=${messageText}`;
+
+const opened = window.open(url1, "_blank", "noopener,noreferrer");
+if (!opened) {
+  window.location.href = url2;
+}
+
     });
   }
 
