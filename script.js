@@ -87,13 +87,7 @@ function loadPartial(placeholderId, url, callback) {
     return;
   }
 
-  // includes.js veya sayfa tarafından zaten doldurulduysa tekrar yükleme
-  if (container.innerHTML && container.innerHTML.trim().length > 10) {
-    if (callback) callback();
-    return;
-  }
-
-fetch(url)
+  fetch(url)
     .then((res) => res.text())
     .then((html) => {
       container.innerHTML = html;
@@ -467,7 +461,17 @@ function renderCart() {
 
 // ---------------- NAVBAR & PROFİL ----------------
 
+let __navbarBound = false;
+
 function setupNavbar() {
+  if (__navbarBound) {
+    // navbar tekrar yüklenirse sadece auth/cart güncelle
+    updateCartCount();
+    updateNavbarForAuth(currentUser);
+    return;
+  }
+  __navbarBound = true;
+
   const toggle = document.querySelector(".nav-toggle");
   const mobileMenu = document.querySelector(".nav-mobile-menu");
 

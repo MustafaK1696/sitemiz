@@ -75,7 +75,7 @@ img {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 4000;
   background: #ffffff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
@@ -227,6 +227,8 @@ img {
   display: none; /* girişle açılacak */
   position: relative;
   align-items: center;
+
+  z-index: 4100;
 }
 
 .nav-user-button {
@@ -269,7 +271,7 @@ img {
   padding: 10px;
   min-width: 210px;
   display: none;
-  z-index: 1200;
+  z-index: 5000;
 }
 
 .nav-user-dropdown.open {
@@ -810,10 +812,3 @@ body.theme-dark .mega-footer {
     flex-direction: column;
   }
 }
-
-
-/* includes.js destek: mobil menü ve kullanıcı menüsü aç/kapa */
-.nav-mobile-menu { display: none; }
-.nav-mobile-menu.open { display: flex; flex-direction: column; }
-#nav-user-dropdown { display: none; }
-#nav-user-dropdown.open { display: block; }
