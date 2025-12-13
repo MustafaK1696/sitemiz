@@ -18,6 +18,7 @@ import {
   updateDoc,
   collection,
   addDoc,
+  getDocs,
   query,
   where,
   onSnapshot,
@@ -46,6 +47,18 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+
+// ---------------- ÜRÜN KODU ÜRETİMİ ----------------
+function generateProductCode() {
+  // Örn: OGF-20251213-AB12
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4).padEnd(4, "X");
+  return `OGF-${y}${m}${day}-${rand}`;
+}
 
 let currentUser = null;
 let currentUserRole = "customer";
@@ -794,7 +807,7 @@ async function setupSellerPanel() {
             ? "❌ Reddedildi"
             : "⏳ Beklemede";
 
-        const canDelete = d.status !== "approved";
+        const canDelete = (d.status !== "approved") || (d.status === "approved" && d.productDeleted === true);
         const actionHtml = canDelete
           ? `<button class="btn-link" data-delete-request="${id}">Sil</button>`
           : "-";
@@ -1008,7 +1021,8 @@ async function setupAdminPanel() {
 
           try {
             if (action === "approve-product") {
-              await addDoc(collection(db, "products"), {
+              const productCode = generateProductCode();
+              const prodRef = await addDoc(collection(db, "products"), {
                 title: d.title,
                 price: d.price,
                 category: d.category,
@@ -1016,12 +1030,15 @@ async function setupAdminPanel() {
                 description: d.description,
                 sellerId: d.sellerId,
                 featured: false,
+                productCode,
                 createdAt: serverTimestamp()
               });
               await updateDoc(reqRef, {
                 status: "approved",
                 processedAt: serverTimestamp(),
-                processedBy: currentUser.uid
+                processedBy: currentUser.uid,
+                productDocId: prodRef.id,
+                productCode
               });
             } else {
               await updateDoc(reqRef, {
@@ -1052,6 +1069,7 @@ async function setupAdminPanel() {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
           <td>${d.title}</td>
+          <td style="font-size:0.85rem; white-space:nowrap;">${d.productCode || "-"}</td>
           <td>
             <input type="number" class="admin-prod-price" value="${d.price}" min="0" step="0.01">
           </td>
@@ -1103,6 +1121,25 @@ async function setupAdminPanel() {
             if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
             try {
               await deleteDoc(refProd);
+
+              // İlgili ürün başvurularını (varsa) işaretle: satıcı, admin silinen ürünün başvurusunu silebilsin
+              try {
+                const qReq = query(
+                  collection(db, "productRequests"),
+                  where("productDocId", "==", id)
+                );
+                const reqSnap = await getDocs(qReq);
+                for (const rDoc of reqSnap.docs) {
+                  await updateDoc(doc(db, "productRequests", rDoc.id), {
+                    productDeleted: true,
+                    productDeletedAt: serverTimestamp(),
+                    productDeletedBy: currentUser.uid
+                  });
+                }
+              } catch (inner) {
+                console.warn("productRequests işaretlenemedi:", inner);
+              }
+
             } catch (e) {
               console.error(e);
               alert("Ürün silinirken hata oluştu.");
