@@ -35,7 +35,7 @@
         <div class="form-group">
           <label for="sp-category">Kategori</label>
           <select id="sp-category" required>
-            <option value="" disabled selected>Kategori seçin...</option>
+            <option value="">Kategori seçiniz</option>
             <option value="ev">Ev</option>
             <option value="dekorasyon">Dekorasyon</option>
             <option value="aksesuar">Aksesuar</option>
@@ -50,12 +50,24 @@
         </div>
 
         <div class="form-group">
-          <label for="sp-image">
-            Ürün Görseli / PDF URL’si
-            <small>(Örn: https://... .jpg, .png veya .pdf)</small>
-          </label>
-          <input type="url" id="sp-image" required />
-        </div>
+  <label for="sp-image-file">
+    Ürün Görseli Yükle
+    <small>(Sadece .jpg / .jpeg / .png)</small>
+  </label>
+  <input type="file" id="sp-image-file" accept=".jpg,.jpeg,.png" required />
+  <div class="image-preview-box" aria-label="Ürün görseli önizleme">
+    <img id="sp-image-preview" alt="Önizleme" />
+  </div>
+</div>
+
+<div class="form-group">
+  <label for="sp-pdf-file">
+    Ürün PDF Yükle
+    <small>(Sadece .pdf)</small>
+  </label>
+  <input type="file" id="sp-pdf-file" accept=".pdf" required />
+</div>
+
 
         <p id="seller-form-message" class="form-message"></p>
 

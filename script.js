@@ -57,9 +57,6 @@ let sellerPanelInitialized = false;
 // Firestore'dan gelen ürünler
 let PRODUCTS = [];
 
-// Kategori whitelist (navbar ile aynı)
-const VALID_CATEGORIES = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
-
 // ---------------- TEMA ----------------
 
 const THEME_KEY = "ogrencify_theme";
@@ -270,16 +267,6 @@ function renderProducts() {
   const listEl = document.getElementById("product-list");
   if (!listEl) return;
 
-  // URL kategori filtresi: products.html -> tüm ürünler, products.html?cat=ev -> sadece kategori
-  const params = new URLSearchParams(window.location.search);
-  const catParamRaw = (params.get("cat") || "").trim().toLowerCase();
-  const catParam = VALID_CATEGORIES.includes(catParamRaw) ? catParamRaw : "";
-
-  const pageTitle = document.getElementById("products-page-title");
-  const pageSubtitle = document.getElementById("products-page-subtitle");
-  if (pageTitle) pageTitle.textContent = catParam ? `${catParam.charAt(0).toUpperCase()}${catParam.slice(1)} Ürünleri` : "Ürünler";
-  if (pageSubtitle) pageSubtitle.textContent = catParam ? "Bu kategorideki ürünler listeleniyor." : "Tüm ürünleri burada görebilirsiniz.";
-
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
@@ -291,7 +278,6 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
-    if (catParam && (p.category || "").toLowerCase() !== catParam) return false;
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||
@@ -306,7 +292,7 @@ function renderProducts() {
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
           <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
+            <img src="${product.imageDataUrl || product.imageUrl || ""}" alt="${product.name}" />
           </div>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `
@@ -366,7 +352,7 @@ function renderFeatured() {
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
           <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
+            <img src="${product.imageDataUrl || product.imageUrl || ""}" alt="${product.name}" />
           </div>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
@@ -680,6 +666,22 @@ function setupSellerRequest() {
   });
 }
 
+
+// Kategoriler (sabit)
+const CATEGORY_WHITELIST = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
+
+function isValidCategory(cat) {
+  return CATEGORY_WHITELIST.includes(String(cat || "").toLowerCase());
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("file-read-failed"));
+    reader.readAsDataURL(file);
+  });
+}
 // ---------------- SATICI PANELİ ----------------
 
 // ---------------- SATICI PANELİ ----------------
@@ -698,23 +700,78 @@ async function setupSellerPanel() {
   const msg = document.getElementById("seller-form-message");
   const list = document.getElementById("seller-product-list");
 
+// Görsel önizleme
+const imgFileEl = document.getElementById("sp-image-file");
+const imgPreview = document.getElementById("sp-image-preview");
+if (imgFileEl && imgPreview) {
+  imgFileEl.addEventListener("change", async () => {
+    const f = imgFileEl.files?.[0];
+    if (!f) {
+      imgPreview.removeAttribute("src");
+      imgPreview.style.display = "none";
+      return;
+    }
+    const name = (f.name || "").toLowerCase();
+    if (!(name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png"))) {
+      imgPreview.removeAttribute("src");
+      imgPreview.style.display = "none";
+      return;
+    }
+    const dataUrl = await readFileAsDataURL(f);
+    imgPreview.src = dataUrl;
+    imgPreview.style.display = "block";
+  });
+}
+
+
   // === ÜRÜN BAŞVURU FORMU ===
   if (form && msg) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       const title = document.getElementById("sp-title").value.trim();
-      const price = Number(document.getElementById("sp-price").value);
-      const cat = document.getElementById("sp-category").value.trim();
-      const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
-      const desc = document.getElementById("sp-description").value.trim();
+const price = Number(document.getElementById("sp-price").value);
+const cat = document.getElementById("sp-category").value.trim().toLowerCase();
+const desc = document.getElementById("sp-description").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
+const imgFileEl = document.getElementById("sp-image-file");
+const pdfFileEl = document.getElementById("sp-pdf-file");
+
+const imgFile = imgFileEl?.files?.[0] || null;
+const pdfFile = pdfFileEl?.files?.[0] || null;
+if (!title || !desc || !cat || isNaN(price) || price <= 0) {
         msg.textContent =
-          "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+          "Lütfen tüm alanları doldurun.";
         msg.style.color = "red";
         return;
       }
+
+if (!isValidCategory(cat)) {
+  msg.style.color = "red";
+  msg.textContent = "Lütfen geçerli bir kategori seçin.";
+  return;
+}
+
+if (!imgFile || !pdfFile) {
+  msg.style.color = "red";
+  msg.textContent = "Lütfen ürün görseli ve PDF dosyalarını yükleyin.";
+  return;
+}
+
+const imgName = (imgFile.name || "").toLowerCase();
+if (!(imgName.endsWith(".jpg") || imgName.endsWith(".jpeg") || imgName.endsWith(".png"))) {
+  msg.style.color = "red";
+  msg.textContent = "Ürün görseli sadece .jpg / .jpeg / .png olabilir.";
+  return;
+}
+
+const pdfName = (pdfFile.name || "").toLowerCase();
+if (!pdfName.endsWith(".pdf")) {
+  msg.style.color = "red";
+  msg.textContent = "Ürün PDF dosyası sadece .pdf olabilir.";
+  return;
+}
+
 
       // URL kontrolü (opsiyonel ama faydalı)
       if (!img.startsWith("http://") && !img.startsWith("https://")) {
@@ -740,13 +797,18 @@ async function setupSellerPanel() {
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
+const imageDataUrl = await readFileAsDataURL(imgFile);
+const pdfDataUrl = await readFileAsDataURL(pdfFile);
         // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
-          imageUrl: img,
+          imageDataUrl,
+          pdfDataUrl,
+          imageFileName: imgFile.name || null,
+          pdfFileName: pdfFile.name || null,
           description: desc,
           status: "pending",
           createdAt: serverTimestamp()
