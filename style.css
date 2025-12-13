@@ -83,11 +83,11 @@ img {
 .navbar {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0.8rem 5%;
+  padding: 0.9rem 4%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 22px;
 }
 
 .logo img {
@@ -104,7 +104,9 @@ img {
   list-style: none;
   display: flex;
   justify-content: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 28px;
+  row-gap: 10px;
   margin: 0;
   padding: 0;
 }
@@ -114,10 +116,59 @@ img {
   color: var(--text-color);
   font-weight: 500;
   font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
 }
 
 .nav-links a:hover {
   color: var(--primary-color);
+  background: rgba(123, 63, 228, 0.06);
+  transform: scale(1.04);
+}
+
+/* Ürünler dropdown */
+.nav-dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 200px;
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+  display: none;
+  z-index: 1300;
+}
+
+.dropdown-menu li a {
+  display: flex;
+  padding: 10px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.92rem;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-menu li a:hover {
+  background: rgba(123, 63, 228, 0.08);
+  color: var(--primary-color);
+  transform: scale(1.02);
+}
+
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown:focus-within .dropdown-menu {
+  display: block;
 }
 
 /* Satıcı Ol vurgulu */
@@ -149,6 +200,11 @@ img {
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid transparent;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.nav-btn:hover {
+  transform: scale(1.02);
 }
 
 .nav-login {
@@ -378,7 +434,7 @@ img {
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.02);
   box-shadow: 0 14px 26px rgba(123, 63, 228, 0.45);
 }
 
@@ -390,7 +446,7 @@ img {
 
 .btn-secondary:hover {
   background: #f3f4ff;
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.02);
 }
 
 /* Sepete eklendi görünümü */
@@ -445,6 +501,12 @@ img {
   justify-content: center;
   color: #6b7280;
   font-size: 0.9rem;
+}
+
+.card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-body {

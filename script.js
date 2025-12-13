@@ -270,6 +270,11 @@ function renderProducts() {
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
+  const allowedCategories = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
+  const urlCatRaw = new URLSearchParams(window.location.search).get("cat") || "";
+  const urlCat = urlCatRaw.trim().toLowerCase();
+  const activeCat = allowedCategories.includes(urlCat) ? urlCat : "";
+
   listEl.innerHTML = "";
 
   if (!PRODUCTS.length) {
@@ -278,6 +283,10 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
+    if (activeCat) {
+      const pCat = (p.category || "").trim().toLowerCase();
+      if (pCat !== activeCat) return false;
+    }
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||
@@ -691,13 +700,20 @@ async function setupSellerPanel() {
 
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
-      const cat = document.getElementById("sp-category").value.trim();
+      const allowedCategories = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
+      const cat = (document.getElementById("sp-category").value || "").trim().toLowerCase();
       const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
 
       if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
         msg.textContent =
           "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      if (!allowedCategories.includes(cat)) {
+        msg.textContent = "Lütfen listeden geçerli bir kategori seçin.";
         msg.style.color = "red";
         return;
       }
@@ -731,7 +747,7 @@ async function setupSellerPanel() {
           sellerId: currentUser.uid,
           title,
           price,
-          category: cat,
+          category: String(cat).toLowerCase(),
           imageUrl: img,
           description: desc,
           status: "pending",
@@ -766,10 +782,11 @@ async function setupSellerPanel() {
       }
 
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>';
 
       snap.forEach((docSnap) => {
         const d = docSnap.data();
+        const id = docSnap.id;
         const statusText =
           d.status === "approved"
             ? "✅ Onaylandı"
@@ -777,15 +794,36 @@ async function setupSellerPanel() {
             ? "❌ Reddedildi"
             : "⏳ Beklemede";
 
+        const canDelete = d.status !== "approved";
+        const actionHtml = canDelete
+          ? `<button class="btn-link" data-delete-request="${id}">Sil</button>`
+          : "-";
+
         html += `<tr>
           <td>${d.title}</td>
           <td>${d.price} TL</td>
           <td>${statusText}</td>
+          <td>${actionHtml}</td>
         </tr>`;
       });
 
       html += "</tbody></table>";
       list.innerHTML = html;
+
+      list.querySelectorAll("[data-delete-request]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-delete-request");
+          if (!id) return;
+          const ok = confirm("Bu ürün başvurusunu silmek istiyor musunuz?");
+          if (!ok) return;
+          try {
+            await deleteDoc(doc(db, "productRequests", id));
+          } catch (e) {
+            console.error(e);
+            alert("Başvuru silinirken hata oluştu.");
+          }
+        });
+      });
     });
   }
 }
@@ -809,8 +847,11 @@ async function setupAdminPanel() {
 
   // Kullanıcı listesi & roller
   if (usersBox) {
+    usersBox.innerHTML = "<p>Yükleniyor...</p>";
     const usersCol = collection(db, "users");
-    onSnapshot(usersCol, (snap) => {
+    onSnapshot(
+      usersCol,
+      (snap) => {
       if (snap.empty) {
         usersBox.innerHTML = "<p>Kayıtlı kullanıcı bulunamadı.</p>";
         return;
@@ -855,6 +896,10 @@ async function setupAdminPanel() {
           }
         });
       });
+    }, (err) => {
+      console.error(err);
+      usersBox.innerHTML =
+        '<p class="warning-msg">Kullanıcılar & roller listesi yüklenemedi. Firestore rules / yetki kontrol edin.</p>';
     });
   }
 
@@ -913,7 +958,13 @@ async function setupAdminPanel() {
           }
         });
       });
-    });
+      },
+      (err) => {
+        console.error(err);
+        usersBox.innerHTML =
+          "<p class='warning-msg'>Kullanıcılar & Roller yüklenemedi. Lütfen yetkiler (Firestore rules) ve internet bağlantısını kontrol edin.</p>";
+      }
+    );
   }
 
   // Ürün başvuruları (onay/red)
