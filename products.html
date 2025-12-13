@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ürünler - ÖğrenciFy</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
 </head>
 <body>
-
   <div id="navbar-placeholder"></div>
 
-  <main class="container">
-    <h1>Tüm Ürünler</h1>
+  <main class="container products-page">
+    <div class="section-header" style="margin-top:16px;">
+      <h1 id="products-page-title">Ürünler</h1>
+      <p id="products-page-subtitle">Tüm ürünleri burada görebilirsiniz.</p>
+    </div>
 
     <div class="filter-bar">
-      <input type="text" id="searchBox" placeholder="Ürün ara...">
+      <input type="text" id="searchBox" placeholder="Ürün ara..." />
     </div>
 
-    <div id="product-list" class="cards-grid">
-      <!-- script.js burayı dolduracak -->
-    </div>
+    <div id="product-list" class="product-grid"></div>
   </main>
 
   <div id="footer-placeholder"></div>

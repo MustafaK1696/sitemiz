@@ -57,6 +57,9 @@ let sellerPanelInitialized = false;
 // Firestore'dan gelen ürünler
 let PRODUCTS = [];
 
+// Kategori whitelist (navbar ile aynı)
+const VALID_CATEGORIES = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
+
 // ---------------- TEMA ----------------
 
 const THEME_KEY = "ogrencify_theme";
@@ -101,17 +104,6 @@ function loadPartial(placeholderId, url, callback) {
 
 // Sepet
 const CART_KEY = "ogrencify_cart";
-
-function generateProductCode(seed) {
-  const now = new Date();
-  const y = String(now.getFullYear()).slice(-2);
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  const base = (seed || "").toString().replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `OGF-${y}${m}${d}-${base || rand}`;
-}
-
 
 function getCart() {
   try {
@@ -242,8 +234,7 @@ function loadProductsFromFirestore() {
         description: d.description || "",
         imageUrl: d.imageUrl || "",
         sellerId: d.sellerId || "",
-        featured: !!d.featured,
-        productCode: d.productCode || ""
+        featured: !!d.featured
       });
     });
 
@@ -279,6 +270,16 @@ function renderProducts() {
   const listEl = document.getElementById("product-list");
   if (!listEl) return;
 
+  // URL kategori filtresi: products.html -> tüm ürünler, products.html?cat=ev -> sadece kategori
+  const params = new URLSearchParams(window.location.search);
+  const catParamRaw = (params.get("cat") || "").trim().toLowerCase();
+  const catParam = VALID_CATEGORIES.includes(catParamRaw) ? catParamRaw : "";
+
+  const pageTitle = document.getElementById("products-page-title");
+  const pageSubtitle = document.getElementById("products-page-subtitle");
+  if (pageTitle) pageTitle.textContent = catParam ? `${catParam.charAt(0).toUpperCase()}${catParam.slice(1)} Ürünleri` : "Ürünler";
+  if (pageSubtitle) pageSubtitle.textContent = catParam ? "Bu kategorideki ürünler listeleniyor." : "Tüm ürünleri burada görebilirsiniz.";
+
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
@@ -290,6 +291,7 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
+    if (catParam && (p.category || "").toLowerCase() !== catParam) return false;
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||
@@ -969,8 +971,7 @@ async function setupAdminPanel() {
 
           try {
             if (action === "approve-product") {
-              const productCode = generateProductCode(id);
-              const newProdRef = await addDoc(collection(db, "products"), {
+              await addDoc(collection(db, "products"), {
                 title: d.title,
                 price: d.price,
                 category: d.category,
@@ -978,13 +979,10 @@ async function setupAdminPanel() {
                 description: d.description,
                 sellerId: d.sellerId,
                 featured: false,
-                productCode,
                 createdAt: serverTimestamp()
               });
               await updateDoc(reqRef, {
                 status: "approved",
-                productId: newProdRef.id,
-                productCode,
                 processedAt: serverTimestamp(),
                 processedBy: currentUser.uid
               });
@@ -1012,12 +1010,11 @@ async function setupAdminPanel() {
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Kod</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
           <td>${d.title}</td>
-          <td><code>${d.productCode || "-"}</code></td>
           <td>
             <input type="number" class="admin-prod-price" value="${d.price}" min="0" step="0.01">
           </td>
@@ -1152,36 +1149,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-
-// Sepetteki ürünleri kod + adet ile mesajla
-const cart = getCart();
-const lines = [];
-let total = 0;
-
-cart.forEach((ci) => {
-  const p = PRODUCTS.find((x) => x.id === ci.id);
-  if (!p) return;
-  const qty = Number(ci.qty) || 1;
-  const code = p.productCode || "-";
-  const price = Number(p.price) || 0;
-  total += price * qty;
-  lines.push(`• ${code} — ${p.name} x${qty}`);
-});
-
-const messageText =
-  `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.%0A%0A` +
-  `Sipariş (Ürün Kodu — Adet):%0A` +
-  `${lines.join("%0A")}%0A%0A` +
-  `Toplam: ${total.toFixed(2)} TL`;
-
-const url1 = `https://wa.me/${phone}?text=${messageText}`;
-const url2 = `https://api.whatsapp.com/send?phone=${phone}&text=${messageText}`;
-
-const opened = window.open(url1, "_blank", "noopener,noreferrer");
-if (!opened) {
-  window.location.href = url2;
-}
-
+      const message = encodeURIComponent(
+        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
+          2
+        )} TL`
+      );
+      window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
 
