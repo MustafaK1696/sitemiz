@@ -75,19 +75,19 @@ img {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 1000;
+  z-index: 3000;
   background: #ffffff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 
 .navbar {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0.8rem 5%;
+  padding: 0.8rem 3%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
 }
 
 .logo img {
@@ -107,69 +107,29 @@ img {
   gap: 18px;
   margin: 0;
   padding: 0;
+
+  flex-wrap: nowrap;
+  align-items: center;
 }
+
 
 .nav-links a {
   text-decoration: none;
   color: var(--text-color);
   font-weight: 500;
   font-size: 0.95rem;
-}
-
-
-/* Navbar hover zoom (geri getirildi) */
-.nav-links a{
-  padding: 10px 14px;
-  border-radius: 14px;
   display: inline-flex;
   align-items: center;
+  padding: 10px 14px;
+  border-radius: 14px;
+  white-space: nowrap;
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.nav-links a:hover{
-  background: rgba(123, 63, 228, 0.06);
-  transform: scale(1.04);
-}
 
-/* Ürünler dropdown (hover ile açılır, üstündeyken kapanmaz) */
-.nav-dropdown{ position: relative; }
-
-.dropdown-menu{
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 220px;
-  list-style: none;
-  margin: 0;
-  padding: 10px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
-  display: none;
-  z-index: 1300;
-}
-
-.nav-dropdown:hover .dropdown-menu,
-.nav-dropdown:focus-within .dropdown-menu{
-  display: block;
-}
-
-.dropdown-menu li{ margin: 0; }
-
-.dropdown-menu li a{
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 0.92rem;
-}
-
-.dropdown-menu li a:hover{
-  background: rgba(123, 63, 228, 0.08);
-  color: var(--primary-color);
-  transform: scale(1.02);
-}
 .nav-links a:hover {
   color: var(--primary-color);
+  background: rgba(123, 63, 228, 0.07);
+  transform: scale(1.04);
 }
 
 /* Satıcı Ol vurgulu */
@@ -862,3 +822,47 @@ body.theme-dark .mega-footer {
     flex-direction: column;
   }
 }
+
+
+/* --- Navbar Dropdown (Ürünler) --- */
+.nav-dropdown { position: relative; }
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 210px;
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  display: none;
+  z-index: 5000; /* üst katman */
+}
+
+body.dark-theme .dropdown-menu { background: #0f172a; }
+
+.dropdown-menu li { margin: 0; padding: 0; }
+
+.dropdown-menu a {
+  display: flex;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 500;
+  color: var(--text-color);
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-menu a:hover {
+  background: rgba(123, 63, 228, 0.08);
+  color: var(--primary-color);
+  transform: scale(1.02);
+}
+
+/* Hover ile aç, menü üstünde kalınca kapanmasın */
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown:focus-within .dropdown-menu { display: block; }
