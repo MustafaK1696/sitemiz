@@ -85,14 +85,24 @@ img {
   margin: 0 auto;
   padding: 0.8rem 5%;
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   overflow: visible;
 }
 
+.logo {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 6px 12px;
+}
+
 .logo img {
-  height: 80px; /* 2 katına çıkarıldı */
+  height: 72px;
+  width: auto;
+  object-fit: contain;
 }
 
 /* Masaüstü menü */
