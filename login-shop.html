@@ -2,25 +2,43 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>Giriş Yap - ÖğrenciFy</title>
+  <title>Alışverişe Başlamak İçin Giriş Yap - ÖğrenciFy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <div id="navbar-placeholder"></div>
+
   <div class="auth-page">
     <div class="auth-card">
-      <a href="index.html" class="auth-logo"><img src="logo.png" alt="Logo" /></a>
-      <h1>Alışveriş için Giriş Yap</h1>
-      <form id="login-form" class="auth-form">
-        <input type="email" id="login-email" placeholder="E-posta" required />
-        <input type="password" id="login-password" placeholder="Şifre" required />
+      <a href="index.html" class="auth-logo">
+        <img src="logo.png" alt="ÖğrenciFy" />
+      </a>
+      <h1>Alışverişe başlamak için giriş yapınız</h1>
+      <p>Sepete ürün ekleyebilmek için önce hesabına giriş yapmalısın.</p>
+
+      <form id="login-form" class="auth-form" novalidate>
+        <label for="login-email">E-posta</label>
+        <input type="email" id="login-email" required autocomplete="email" />
+
+        <label for="login-password">Şifre</label>
+        <input type="password" id="login-password" required autocomplete="current-password" />
+
         <button type="submit" class="btn-primary">Giriş Yap</button>
       </form>
+
       <div id="login-message" class="message-box" style="display:none;"></div>
-      <p class="auth-switch">Hesabın yok mu? <a href="signup.html">Kayıt Ol</a></p>
+
+      <p class="auth-switch">
+        Hesabın yok mu?
+        <a href="signup.html">Kayıt Ol</a>
+      </p>
     </div>
   </div>
+
   <div id="footer-placeholder"></div>
+
   <script type="module" src="auth.js"></script>
   <script type="module" src="script.js"></script>
 </body>

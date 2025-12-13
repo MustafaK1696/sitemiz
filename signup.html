@@ -16,13 +16,38 @@
         <img src="logo.png" alt="ÖğrenciFy" />
       </a>
       <h1>Aramıza katıl ✨</h1>
-      <p>Hemen üye ol ve kazanmaya başla.</p>
+      <p>El emeği ürünlerini satmak veya öğrencilerden alışveriş yapmak için hemen üye ol.</p>
 
       <form id="signup-form" class="auth-form" novalidate>
-        <input type="text" id="signup-username" placeholder="Ad Soyad" required />
-        <input type="tel" id="signup-phone" placeholder="Telefon (5xxxxxxxxx)" required />
-        <input type="email" id="signup-email" placeholder="E-posta" required />
-        <input type="password" id="signup-password" placeholder="Şifre (Min 8 karakter)" required />
+        <label for="signup-username">Ad Soyad</label>
+        <input type="text" id="signup-username" required />
+
+        <label for="signup-phone">Telefon</label>
+        <input
+          type="tel"
+          id="signup-phone"
+          required
+          pattern="^\\+?\\d{10,15}$"
+          placeholder="+905xxxxxxxxx"
+        />
+
+        <label for="signup-email">E-posta</label>
+        <input
+          type="email"
+          id="signup-email"
+          required
+          autocomplete="email"
+        />
+
+        <label for="signup-password">Şifre</label>
+        <input
+          type="password"
+          id="signup-password"
+          required
+          minlength="8"
+          pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[A-Za-z\\d\\S]{8,}"
+          placeholder="En az 8 karakter, 1 büyük, 1 küçük harf ve 1 rakam"
+        />
 
         <button type="submit" class="btn-primary">Kayıt Ol</button>
       </form>
@@ -30,12 +55,14 @@
       <div id="signup-message" class="message-box" style="display:none;"></div>
 
       <p class="auth-switch">
-        Zaten hesabın var mı? <a href="login.html">Giriş Yap</a>
+        Zaten hesabın var mı?
+        <a href="login.html">Giriş Yap</a>
       </p>
     </div>
   </div>
 
   <div id="footer-placeholder"></div>
+
   <script type="module" src="auth.js"></script>
   <script type="module" src="script.js"></script>
 </body>
