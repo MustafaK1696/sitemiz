@@ -15,7 +15,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  getDocs,
   updateDoc,
   collection,
   addDoc,
@@ -81,17 +80,6 @@ function initTheme() {
 
 // ---------------- ORTAK YARDIMCILAR ----------------
 
-
-
-// ---------------- DOSYA YARDIMCILARI ----------------
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Dosya okunamadı"));
-    reader.readAsDataURL(file);
-  });
-}
 function loadPartial(placeholderId, url, callback) {
   const container = document.getElementById(placeholderId);
   if (!container) {
@@ -99,7 +87,13 @@ function loadPartial(placeholderId, url, callback) {
     return;
   }
 
-  fetch(url)
+  // includes.js veya sayfa tarafından zaten doldurulduysa tekrar yükleme
+  if (container.innerHTML && container.innerHTML.trim().length > 10) {
+    if (callback) callback();
+    return;
+  }
+
+fetch(url)
     .then((res) => res.text())
     .then((html) => {
       container.innerHTML = html;
@@ -682,7 +676,7 @@ function setupSellerRequest() {
 
 // ---------------- SATICI PANELİ ----------------
 
-async async function setupSellerPanel() {
+async function setupSellerPanel() {
   if (sellerPanelInitialized) return;
   const panel = document.getElementById("seller-panel");
   if (!panel) return;
@@ -694,51 +688,6 @@ async async function setupSellerPanel() {
 
   const form = document.getElementById("seller-product-form");
   const msg = document.getElementById("seller-form-message");
-  // Dosya önizleme
-  const mediaInput = document.getElementById("sp-media-file");
-  const videoInput = document.getElementById("sp-video-file");
-  const previewBox = document.getElementById("sp-media-preview");
-
-  function renderPreview() {
-    if (!previewBox) return;
-    previewBox.innerHTML = "";
-
-    const mediaFile = mediaInput && mediaInput.files ? mediaInput.files[0] : null;
-    const videoFile = videoInput && videoInput.files ? videoInput.files[0] : null;
-
-    if (!mediaFile && !videoFile) {
-      previewBox.textContent = "Dosya seçilmedi";
-      return;
-    }
-
-    if (mediaFile) {
-      const name = (mediaFile.name || "").toLowerCase();
-      if (name.endsWith(".pdf")) {
-        const pill = document.createElement("div");
-        pill.className = "upload-pill";
-        pill.textContent = `PDF seçildi: ${mediaFile.name}`;
-        previewBox.appendChild(pill);
-      } else {
-        const img = document.createElement("img");
-        img.className = "upload-preview-img";
-        img.alt = "Ürün görseli önizleme";
-        img.src = URL.createObjectURL(mediaFile);
-        previewBox.appendChild(img);
-      }
-    }
-
-    if (videoFile) {
-      const video = document.createElement("video");
-      video.className = "upload-preview-video";
-      video.controls = true;
-      video.src = URL.createObjectURL(videoFile);
-      previewBox.appendChild(video);
-    }
-  }
-
-  if (mediaInput) mediaInput.addEventListener("change", renderPreview);
-  if (videoInput) videoInput.addEventListener("change", renderPreview);
-
   const list = document.getElementById("seller-product-list");
 
   // === ÜRÜN BAŞVURU FORMU ===
@@ -748,48 +697,33 @@ async async function setupSellerPanel() {
 
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
-      const cat = (document.getElementById("sp-category").value || "").trim();
+      const cat = document.getElementById("sp-category").value.trim();
+      const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
 
-      const mediaInput = document.getElementById("sp-media-file");
-      const videoInput = document.getElementById("sp-video-file");
-
-      const mediaFile = mediaInput && mediaInput.files ? mediaInput.files[0] : null;
-      const videoFile = videoInput && videoInput.files ? videoInput.files[0] : null;
-
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !mediaFile || !videoFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve 1 görsel/PDF + 1 video dosyası yükleyin.";
-        msg.style.color = "red";
-        return;
-      }
-
-      const allowedCats = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
-      if (!allowedCats.includes(cat)) {
-        msg.textContent = "Kategori geçersiz. Lütfen listeden seçim yapın.";
-        msg.style.color = "red";
-        return;
-      }
-
-      const mediaName = (mediaFile.name || "").toLowerCase();
-      const okMedia =
-        mediaName.endsWith(".jpg") || mediaName.endsWith(".jpeg") || mediaName.endsWith(".png") || mediaName.endsWith(".pdf");
-      if (!okMedia) {
-        msg.textContent = "Görsel/PDF dosyası sadece .jpg / .jpeg / .png / .pdf olabilir.";
-        msg.style.color = "red";
-        return;
-      }
-
-      if (!videoFile.type || !videoFile.type.startsWith("video/")) {
-        msg.textContent = "Video dosyası geçersiz. Lütfen bir video dosyası seçin.";
-        msg.style.color = "red";
-        return;
-      }
-
-      // Firestore doküman limiti için video boyut sınırı (Storage yok)
-      const MAX_VIDEO_BYTES = 800 * 1024; // 800KB
-      if (videoFile.size > MAX_VIDEO_BYTES) {
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
         msg.textContent =
-          "Video dosyası çok büyük. (Storage kullanılmadığı için) lütfen 800KB altında bir video yükleyin.";
+          "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      // URL kontrolü (opsiyonel ama faydalı)
+      if (!img.startsWith("http://") && !img.startsWith("https://")) {
+        msg.textContent = "Lütfen http veya https ile başlayan geçerli bir URL girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      // Uzantı kontrolü (.jpg/.jpeg/.png/.pdf)
+      const allowedExts = ["jpg", "jpeg", "png", "pdf"];
+      const urlWithoutQuery = img.split("?")[0].split("#")[0];
+      const parts = urlWithoutQuery.split(".");
+      const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
+
+      if (!allowedExts.includes(ext)) {
+        msg.textContent =
+          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosya URL'lerine izin verilmektedir.";
         msg.style.color = "red";
         return;
       }
@@ -798,41 +732,18 @@ async async function setupSellerPanel() {
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
-        const mediaDataUrl = await readFileAsDataURL(mediaFile);
-        const videoDataUrl = await readFileAsDataURL(videoFile);
-
+        // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
+          imageUrl: img,
           description: desc,
-
-          // medya
-          mediaDataUrl,
-          mediaMime: mediaFile.type || "",
-          mediaName: mediaFile.name || "",
-
-          videoDataUrl,
-          videoMime: videoFile.type || "",
-          videoName: videoFile.name || "",
-
           status: "pending",
           createdAt: serverTimestamp()
         });
 
-        msg.textContent = "Başvuru alındı. Yönetici onayı sonrası ürünler sayfasında görünecektir.";
-        msg.style.color = "green";
-        form.reset();
-
-        const preview = document.getElementById("sp-media-preview");
-        if (preview) preview.textContent = "Dosya seçilmedi";
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Ürün başvurusu kaydedilirken bir hata oluştu.";
-        msg.style.color = "red";
-      }
-    });
         msg.style.color = "green";
         msg.textContent =
           "Ürün başvurunuz alındı. Yönetici onayı sonrası yayına alınacaktır.";
@@ -860,7 +771,8 @@ async async function setupSellerPanel() {
         return;
       }
 
-      let html = '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th><th>İşlem</th></tr></thead><tbody>';
+      let html =
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
 
       snap.forEach((docSnap) => {
         const d = docSnap.data();
@@ -871,82 +783,16 @@ async async function setupSellerPanel() {
             ? "❌ Reddedildi"
             : "⏳ Beklemede";
 
-        const canDelete = d.status === "rejected" || d.status === "approved";
-const delBtn = canDelete
-  ? `<button class="btn-link" data-action="delete-request" data-id="${docSnap.id}">Sil</button>`
-  : `<button class="btn-link" disabled style="opacity:.5;cursor:not-allowed;">Sil</button>`;
-
-html += `<tr data-id="${docSnap.id}">
-  <td>${d.title}</td>
-  <td>${d.price} TL</td>
-  <td>${statusText}</td>
-  <td>${delBtn}</td>
-</tr>`;
+        html += `<tr>
+          <td>${d.title}</td>
+          <td>${d.price} TL</td>
+          <td>${statusText}</td>
+        </tr>`;
       });
 
       html += "</tbody></table>";
       list.innerHTML = html;
-
-// Silme işlemleri (reddedilen / onaylanmış ama yayında olmayan başvurular)
-list.querySelectorAll('button[data-action="delete-request"]').forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const id = btn.getAttribute("data-id");
-    if (!id) return;
-
-    if (!confirm("Bu başvuruyu silmek istediğinize emin misiniz?")) return;
-
-    try {
-      const reqRef = doc(db, "productRequests", id);
-      const reqSnap = await getDoc(reqRef);
-      if (!reqSnap.exists()) return;
-
-      const d = reqSnap.data();
-      const status = d.status || "pending";
-
-      if (status === "pending") {
-        alert("Beklemedeki başvuru silinemez.");
-        return;
-      }
-
-      // Onaylı ise: ürün hâlâ yayında mı kontrol et (productId varsa direkt, yoksa benzer ürünü ara)
-      if (status === "approved") {
-        let productExists = false;
-
-        if (d.productId) {
-          const pSnap = await getDoc(doc(db, "products", d.productId));
-          productExists = pSnap.exists();
-        } else {
-          // productId yoksa: aynı satıcı + başlık + kategori + fiyat ile yayında ürün var mı?
-          const qLike = query(
-            collection(db, "products"),
-            where("sellerId", "==", currentUser.uid),
-            where("title", "==", d.title || ""),
-            where("category", "==", d.category || ""),
-            where("price", "==", d.price || 0)
-          );
-          const likeSnap = await getDocs(qLike);
-          productExists = !likeSnap.empty;
-        }
-
-        if (productExists) {
-          alert("Bu başvuruya ait ürün hâlâ yayında olduğu için başvuru silinemiyor.");
-          return;
-        }
-      }
-
-      await deleteDoc(reqRef);
-    } catch (e) {
-      console.error(e);
-      const msg = (e && e.code) ? e.code : (e.message || e);
-      if (String(msg).includes("permission-denied")) {
-        alert("Başvuru silinemedi: Firestore Rules'da productRequests için delete izni gerekiyor.");
-      } else {
-        alert("Başvuru silinirken hata oluştu.");
-      }
-    }
-  });
-});
-});
+    });
   }
 }
 

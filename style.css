@@ -85,33 +85,19 @@ img {
   margin: 0 auto;
   padding: 0.8rem 5%;
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  overflow: visible;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  padding: 6px 12px;
 }
 
 .logo img {
-  height: 72px;
-  width: auto;
-  object-fit: contain;
+  height: 80px; /* 2 katına çıkarıldı */
 }
 
 /* Masaüstü menü */
 
 .nav-main {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 
 .nav-links {
@@ -121,7 +107,6 @@ img {
   gap: 18px;
   margin: 0;
   padding: 0;
-  flex-wrap: nowrap;
 }
 
 .nav-links a {
@@ -129,59 +114,11 @@ img {
   color: var(--text-color);
   font-weight: 500;
   font-size: 0.95rem;
-  padding: 8px 12px;
-  border-radius: 999px;
-  white-space: nowrap;
-  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .nav-links a:hover {
   color: var(--primary-color);
-  background: rgba(123, 63, 228, 0.08);
-  transform: scale(1.04);
 }
-
-/* ÜRÜNLER DROPDOWN (hover ile açılır, üst katmanda) */
-.nav-dropdown { position: relative; }
-
-.dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 220px;
-  list-style: none;
-  margin: 0;
-  padding: 10px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
-  display: none;
-  z-index: 3000;
-}
-
-.nav-dropdown:hover .dropdown-menu,
-.nav-dropdown:focus-within .dropdown-menu {
-  display: block;
-}
-
-.dropdown-menu li { margin: 0; padding: 0; }
-
-.dropdown-menu a {
-  display: block;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: var(--text-color);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-
-.dropdown-menu a:hover {
-  background: rgba(123, 63, 228, 0.08);
-  color: var(--primary-color);
-  transform: scale(1.02);
-}
-
 
 /* Satıcı Ol vurgulu */
 
@@ -875,41 +812,8 @@ body.theme-dark .mega-footer {
 }
 
 
-/* Satıcı paneli dosya önizleme */
-.upload-preview {
-  margin-top: 12px;
-}
-.upload-preview-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.upload-preview-box {
-  width: 100%;
-  min-height: 220px;
-  border-radius: 16px;
-  background: #f1f5ff;
-  border: 1px dashed rgba(123, 63, 228, 0.25);
-  display: grid;
-  place-items: center;
-  padding: 12px;
-  overflow: hidden;
-}
-.upload-preview-img {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 14px;
-}
-.upload-preview-video {
-  width: 100%;
-  max-height: 240px;
-  border-radius: 14px;
-}
-.upload-pill {
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(123, 63, 228, 0.10);
-  color: var(--primary-color);
-  font-weight: 600;
-}
+/* includes.js destek: mobil menü ve kullanıcı menüsü aç/kapa */
+.nav-mobile-menu { display: none; }
+.nav-mobile-menu.open { display: flex; flex-direction: column; }
+#nav-user-dropdown { display: none; }
+#nav-user-dropdown.open { display: block; }

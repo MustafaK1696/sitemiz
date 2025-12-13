@@ -34,14 +34,7 @@
 
         <div class="form-group">
           <label for="sp-category">Kategori</label>
-          <select id="sp-category" required>
-  <option value="" disabled selected>Kategori seçin</option>
-  <option value="ev">Ev</option>
-  <option value="dekorasyon">Dekorasyon</option>
-  <option value="aksesuar">Aksesuar</option>
-  <option value="elektronik">Elektronik</option>
-  <option value="hediyelik">Hediyelik</option>
-</select>
+          <input type="text" id="sp-category" placeholder="Defter, kitap, kırtasiye..." required />
         </div>
 
         <div class="form-group">
@@ -49,26 +42,15 @@
           <textarea id="sp-description" rows="3" required></textarea>
         </div>
 
-        
         <div class="form-group">
-          <label for="sp-media-file">
-            Ürün Görseli veya PDF Yükle <small>(.jpg / .jpeg / .png / .pdf)</small>
+          <label for="sp-image">
+            Ürün Görseli / PDF URL’si
+            <small>(Örn: https://... .jpg, .png veya .pdf)</small>
           </label>
-          <input type="file" id="sp-media-file" accept=".jpg,.jpeg,.png,.pdf" required />
+          <input type="url" id="sp-image" required />
         </div>
 
-        <div class="form-group">
-          <label for="sp-video-file">
-            Ürün Videosu Yükle <small>(video dosyaları)</small>
-          </label>
-          <input type="file" id="sp-video-file" accept="video/*" required />
-        </div>
-
-        <div class="upload-preview">
-          <div class="upload-preview-title">Önizleme</div>
-          <div id="sp-media-preview" class="upload-preview-box">Dosya seçilmedi</div>
-        </div>
-<p id="seller-form-message" class="form-message"></p>
+        <p id="seller-form-message" class="form-message"></p>
 
         <button type="submit" class="btn-primary">Ürün Başvurusu Gönder</button>
       </form>
@@ -83,7 +65,8 @@
     </section>
   </main>
 
-  <div id="footer-placeholder"></div>
+  <div id="footer-placeholder"></div>  <script src="includes.js" defer></script>
+
 
   <script type="module" src="script.js"></script>
 </body>
