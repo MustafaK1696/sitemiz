@@ -57,6 +57,42 @@ let sellerPanelInitialized = false;
 // Firestore'dan gelen ürünler
 let PRODUCTS = [];
 
+// ---------------- CACHE (HIZLI AÇILIŞ) ----------------
+const PRODUCTS_CACHE_KEY = "ogrencify.products.cache.v1";
+const PRODUCTS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 dakika
+
+function readProductsCache() {
+  try {
+    const raw = localStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || !Array.isArray(obj.items) || typeof obj.ts !== "number") return null;
+    if (Date.now() - obj.ts > PRODUCTS_CACHE_TTL_MS) return null;
+    return obj.items;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeProductsCache(items) {
+  try {
+    localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({ ts: Date.now(), items }));
+  } catch (e) {}
+}
+
+function warmImageCache(items, limit = 12) {
+  try {
+    items.slice(0, limit).forEach((p) => {
+      if (!p?.imageUrl) return;
+      const img = new Image();
+      img.decoding = "async";
+      img.loading = "eager";
+      img.src = p.imageUrl;
+    });
+  } catch (e) {}
+}
+
+
 // ---------------- TEMA ----------------
 
 const THEME_KEY = "ogrencify_theme";
@@ -218,6 +254,18 @@ async function requireRole(allowedRoles) {
 // ---------------- ÜRÜNLERİ FIRESTORE'DAN YÜKLE ----------------
 
 function loadProductsFromFirestore() {
+  // Önce cache'ten hızlıca çiz (Firebase gelene kadar boş kalmasın)
+  const cached = readProductsCache();
+  if (cached && cached.length) {
+    PRODUCTS = cached;
+    writeProductsCache(PRODUCTS);
+    renderProducts();
+    renderCart();
+    renderFeatured();
+    warmImageCache(cached);
+  }
+
+
   const productsCol = collection(db, "products");
   onSnapshot(productsCol, (snap) => {
     PRODUCTS = [];
@@ -292,7 +340,7 @@ function renderProducts() {
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
           <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
+            <img src="${product.imageUrl}" alt="${product.name}" loading="lazy" decoding="async" />
           </div>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `
@@ -352,7 +400,7 @@ function renderFeatured() {
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
           <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
+            <img src="${product.imageUrl}" alt="${product.name}" loading="lazy" decoding="async" />
           </div>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
@@ -461,17 +509,7 @@ function renderCart() {
 
 // ---------------- NAVBAR & PROFİL ----------------
 
-let __navbarBound = false;
-
 function setupNavbar() {
-  if (__navbarBound) {
-    // navbar tekrar yüklenirse sadece auth/cart güncelle
-    updateCartCount();
-    updateNavbarForAuth(currentUser);
-    return;
-  }
-  __navbarBound = true;
-
   const toggle = document.querySelector(".nav-toggle");
   const mobileMenu = document.querySelector(".nav-mobile-menu");
 
