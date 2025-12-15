@@ -270,6 +270,17 @@ function renderProducts() {
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
+  // Kategori filtresi (?cat=ev vb.)
+  const urlCat = new URLSearchParams(window.location.search).get("cat");
+  const activeCat = urlCat ? urlCat.toLowerCase() : "";
+
+  const titleEl = document.getElementById("products-title");
+  if (titleEl) {
+    const map = { ev: "Ev Ürünleri", dekorasyon: "Dekorasyon Ürünleri", aksesuar: "Aksesuar Ürünleri", elektronik: "Elektronik Ürünleri", hediyelik: "Hediyelik Ürünleri" };
+    titleEl.textContent = activeCat && map[activeCat] ? map[activeCat] : "Tüm Ürünler";
+  }
+
+
   listEl.innerHTML = "";
 
   if (!PRODUCTS.length) {
@@ -278,6 +289,7 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
+    if (activeCat && (p.category || '').toLowerCase() !== activeCat) return false;
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||

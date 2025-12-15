@@ -1,133 +1,62 @@
 <header class="site-header">
   <nav class="navbar">
-    <!-- Logo -->
     <a href="index.html" class="logo">
-  <img src="logo.png" alt="ÖğrenciFy">
-</a>
-    <!-- Masaüstü menü -->
+      <img src="logo.png" alt="ÖğrenciFy">
+    </a>
+
     <div class="nav-main">
       <ul class="nav-links">
-  <li><a href="index.html">Ana Sayfa</a></li>
+        <li><a href="index.html">Ana Sayfa</a></li>
 
-  <!-- ÜRÜNLER DROPDOWN -->
-  <li class="nav-dropdown">
-    <a href="products.html">Ürünler</a>
-    <ul class="dropdown-menu">
-      <li><a href="products.html?cat=ev">Ev</a></li>
-      <li><a href="products.html?cat=dekorasyon">Dekorasyon</a></li>
-      <li><a href="products.html?cat=aksesuar">Aksesuar</a></li>
-      <li><a href="products.html?cat=elektronik">Elektronik</a></li>
-      <li><a href="products.html?cat=hediyelik">Hediyelik</a></li>
-    </ul>
-  </li>
+        <li class="nav-dropdown">
+          <a href="products.html" class="nav-products-link">Ürünler</a>
+          <ul class="dropdown-menu" aria-label="Ürün Kategorileri">
+            <li><a href="products.html?cat=ev">Ev</a></li>
+            <li><a href="products.html?cat=dekorasyon">Dekorasyon</a></li>
+            <li><a href="products.html?cat=aksesuar">Aksesuar</a></li>
+            <li><a href="products.html?cat=elektronik">Elektronik</a></li>
+            <li><a href="products.html?cat=hediyelik">Hediyelik</a></li>
+          </ul>
+        </li>
 
-  <li><a href="seller.html" class="nav-seller">Satıcı Ol</a></li>
-  <li><a href="about.html">Hakkımızda</a></li>
-  <!-- İletişim kaldırıldı -->
-  <li><a href="help.html">Yardım</a></li>
-
-  <!-- SADECE ADMİN İÇİN: Yönetici Paneli -->
-  <li>
-    <a href="admin.html"
-       class="nav-admin-link"
-       style="display:none; font-weight:600; color:#7b3fe4;">
-      Yönetici Paneli
-    </a>
-  </li>
-</ul>
+        <li><a href="seller.html" class="nav-seller">Satıcı Ol</a></li>
+        <li><a href="about.html">Hakkımızda</a></li>
+        <li><a href="help.html">Yardım</a></li>
+        <li><a href="admin.html" class="nav-admin" style="display:none;">Yönetici Paneli</a></li>
+      </ul>
     </div>
 
-    <!-- Giriş / Kayıt / Sepet / Profil -->
     <div class="nav-auth">
-      <!-- Misafir görünümü -->
-      <div class="nav-auth-guest">
-        <a href="login.html" class="nav-btn nav-login">Giriş Yap</a>
-        <a href="signup.html" class="nav-btn nav-signup">Kayıt Ol</a>
-      </div>
+      <a href="cart.html" class="nav-cart">
+        Sepetim <span class="cart-count" id="cart-count">0</span>
+        <span class="cart-progress"><span class="cart-progress-fill" id="cart-progress-fill"></span></span>
+      </a>
 
-      <!-- Girişli kullanıcı görünümü -->
-      <div class="nav-auth-user">
-        <!-- Sepet butonu -->
-        <a href="cart.html" class="nav-btn nav-cart">
-          <span>Sepetim</span>
-          <span class="badge" id="cart-count">0</span>
-          <span class="cart-progress">
-            <span id="cart-progress-fill" class="cart-progress-fill"></span>
-          </span>
-        </a>
+      <!-- giriş / kayıt (login olunca script.js gizler) -->
+      <a href="login.html" class="nav-btn nav-login nav-login-link">Giriş Yap</a>
+      <a href="signup.html" class="nav-btn nav-signup nav-signup-link">Kayıt Ol</a>
 
-        <!-- Kullanıcı menüsü -->
-        <button id="nav-user-button" class="nav-user-button" type="button">
-          <div id="nav-user-avatar" class="nav-user-avatar">U</div>
-          <span class="nav-user-name" id="nav-user-name">Kullanıcı</span>
+      <!-- login olunca açılacak profil alanı -->
+      <div class="nav-auth-user" id="nav-auth-user">
+        <button class="nav-user-button" id="nav-user-button" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" id="nav-user-avatar">M</span>
+          <span class="nav-user-name" id="nav-user-name">Profil</span>
         </button>
 
-        <div id="nav-user-dropdown" class="nav-user-dropdown">
+        <div class="nav-user-dropdown" id="nav-user-dropdown" aria-label="Profil menüsü">
           <div class="nav-user-dropdown-header">
-            <div id="nav-user-avatar-big" class="nav-user-avatar">U</div>
+            <span class="avatar" id="nav-user-avatar2">M</span>
             <div>
-              <div id="nav-user-name-big" class="nav-user-name">Kullanıcı</div>
-              <div id="nav-user-email" class="nav-user-email">-</div>
+              <div class="nav-user-title" id="nav-user-title">Hesabım</div>
+              <div class="nav-user-sub" id="nav-user-sub"> </div>
             </div>
           </div>
-          <button class="nav-user-link" onclick="window.location.href='profile.html'">
-            Profil & Güvenlik
-          </button>
 
-          <!-- SADECE seller/admin için: Satıcı Panelim -->
-          <button class="nav-user-link nav-seller-panel-link"
-                  style="display:none;"
-                  onclick="window.location.href='seller-dashboard.html'">
-            Satıcı Panelim
-          </button>
-
-          <button class="nav-user-link nav-user-logout" id="logout-btn">
-            Çıkış Yap
-          </button>
+          <a class="nav-user-link" href="profile.html">Profil Ayarları</a>
+          <a class="nav-user-link nav-seller-panel" href="seller-dashboard.html" style="display:none;">Satıcı Panelim</a>
+          <button class="nav-user-link" type="button" data-action="logout">Çıkış Yap</button>
         </div>
       </div>
     </div>
-
-    <!-- Mobil menü butonu -->
-    <button class="nav-toggle" type="button" aria-label="Menü">
-      ☰
-    </button>
   </nav>
-
-  <!-- Mobil menü içeriği -->
-<div class="nav-mobile-menu">
-  <a href="index.html">Ana Sayfa</a>
-  <a href="products.html">Ürünler</a>
-  <a href="products.html?cat=ev">• Ev</a>
-  <a href="products.html?cat=dekorasyon">• Dekorasyon</a>
-  <a href="products.html?cat=aksesuar">• Aksesuar</a>
-  <a href="products.html?cat=elektronik">• Elektronik</a>
-  <a href="products.html?cat=hediyelik">• Hediyelik</a>
-
-  <a href="seller.html" class="nav-seller-mobile">Satıcı Ol</a>
-  <a href="about.html">Hakkımızda</a>
-  <!-- İletişim kaldırıldı -->
-  <a href="help.html">Yardım</a>
-
-  <!-- ADMİN ve Satıcı paneli linklerin, mevcut halleri kalsın -->
-  <a href="admin.html"
-     class="nav-admin-link-mobile"
-     style="display:none; font-weight:600; color:#7b3fe4;">
-    Yönetici Paneli
-  </a>
-
-  <a href="seller-dashboard.html"
-     class="nav-seller-panel-mobile"
-     style="display:none;">
-    Satıcı Panelim
-  </a>
-
-  <!-- Mobil login/signup -->
-  <a href="login.html" class="nav-mobile-login">Giriş Yap</a>
-  <a href="signup.html" class="nav-signup-mobile">Kayıt Ol</a>
-  <a href="cart.html">Sepetim</a>
-</div>
-
 </header>
-
-
