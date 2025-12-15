@@ -231,19 +231,9 @@ body.dark-theme .dropdown-menu {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  text-decoration: none;
   background: rgba(123, 63, 228, 0.06);
   color: var(--primary-color);
-  transition: transform 0.15s ease, background 0.15s ease;
 }
-
-.nav-cart:hover {
-  background: rgba(123, 63, 228, 0.10);
-  transform: scale(1.02);
-}
-
 
 .badge {
   background: var(--primary-color);
@@ -874,4 +864,71 @@ body.theme-dark .mega-footer {
   .cart-container {
     flex-direction: column;
   }
+}
+
+
+
+/* --- NAVBAR UI PATCH (Satıcı Ol / Sepetim / Profil dropdown) --- */
+.site-header { z-index: 1200; }
+.navbar { display:flex; align-items:center; justify-content:space-between; gap:18px; padding: 14px 22px; }
+
+.logo img { height: 72px; width:auto; display:block; object-fit:contain; }
+.nav-main { flex: 1; display:flex; justify-content:center; }
+
+.nav-links { display:flex; align-items:center; gap: 26px; list-style:none; margin:0; padding:0; flex-wrap: nowrap; }
+.nav-links a { text-decoration:none; }
+
+.nav-actions { display:flex; align-items:center; gap: 12px; }
+
+.btn-nav { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding: 10px 14px; border-radius: 16px; font-weight:600; text-decoration:none;
+  transition: transform .15s ease, background .15s ease, box-shadow .15s ease, color .15s ease; border: 1px solid transparent; }
+.btn-nav:hover { transform: translateY(-1px) scale(1.03); }
+
+.btn-nav-primary { background: var(--primary-color); color:#fff; box-shadow: 0 10px 20px rgba(123,63,228,.18); }
+.btn-nav-primary:hover { box-shadow: 0 12px 24px rgba(123,63,228,.22); }
+
+.btn-nav-outline { background: #fff; color: var(--primary-color); border-color: rgba(123,63,228,.35); }
+body.dark-theme .btn-nav-outline { background: transparent; }
+.btn-nav-outline:hover { background: rgba(123,63,228,.06); }
+
+.btn-nav-accent { background: rgba(255,138,0,.12); color: #ff8a00; border-color: rgba(255,138,0,.25); }
+.btn-nav-accent:hover { background: rgba(255,138,0,.18); }
+
+.nav-cart { display:inline-flex; align-items:center; gap:10px; padding: 10px 14px; border-radius: 999px; background: rgba(123,63,228,.08);
+  color: var(--primary-color); text-decoration:none; font-weight: 700; }
+.nav-cart:hover { transform: translateY(-1px) scale(1.03); transition: transform .15s ease; }
+.nav-cart-count { width: 26px; height: 26px; border-radius: 999px; background: var(--primary-color); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size: 0.9rem; }
+
+.nav-user-button { display:inline-flex; align-items:center; gap:10px; padding: 8px 12px; border-radius: 999px; border:1px solid rgba(15,23,42,.12);
+  background:#fff; cursor:pointer; transition: transform .15s ease; }
+.nav-user-button:hover { transform: translateY(-1px) scale(1.02); }
+body.dark-theme .nav-user-button { background: transparent; border-color: rgba(255,255,255,.14); }
+
+.nav-avatar { width: 34px; height: 34px; border-radius: 999px; display:inline-flex; align-items:center; justify-content:center;
+  background: linear-gradient(135deg, #ff8a00, #7b3fe4); color:#fff; font-weight: 800; }
+.nav-avatar.big { width: 44px; height: 44px; }
+
+.nav-user-dropdown { position:absolute; right: 0; top: calc(100% + 10px); width: 260px; background:#fff; border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15,23,42,.18); padding: 10px; display:none; z-index: 2000; }
+body.dark-theme .nav-user-dropdown { background: #0f172a; }
+.nav-auth-user { position: relative; }
+
+.nav-user-dropdown.open { display:block; }
+
+.nav-user-card { padding: 8px 8px 10px; border-bottom: 1px solid rgba(15,23,42,.08); margin-bottom: 8px; }
+body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
+
+.nav-user-card-top { display:flex; gap:10px; align-items:center; }
+.nav-user-name-big { font-weight: 800; }
+.nav-user-email { font-size: .88rem; color: var(--muted-color); margin-top: 2px; }
+
+.nav-drop-item { width:100%; display:flex; padding: 10px 10px; border-radius: 14px; text-decoration:none; color: var(--text-color);
+  background: transparent; border: 0; cursor:pointer; font-weight: 600; align-items:center; }
+.nav-drop-item:hover { background: rgba(123,63,228,.08); transform: scale(1.01); transition: transform .15s ease; }
+.nav-drop-danger { color: #dc2626; background: rgba(220,38,38,.08); }
+.nav-drop-danger:hover { background: rgba(220,38,38,.12); }
+
+@media (max-width: 980px) {
+  .nav-main { display:none; }
+  .nav-toggle { display:inline-flex; }
 }

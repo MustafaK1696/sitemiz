@@ -269,16 +269,11 @@ function renderProducts() {
 
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
+  const params = new URLSearchParams(window.location.search);
+  const catParam = (params.get("cat") || "").trim().toLowerCase();
 
-  // Kategori filtresi (?cat=ev vb.)
-  const urlCat = new URLSearchParams(window.location.search).get("cat");
-  const activeCat = urlCat ? urlCat.toLowerCase() : "";
-
-  const titleEl = document.getElementById("products-title");
-  if (titleEl) {
-    const map = { ev: "Ev Ürünleri", dekorasyon: "Dekorasyon Ürünleri", aksesuar: "Aksesuar Ürünleri", elektronik: "Elektronik Ürünleri", hediyelik: "Hediyelik Ürünleri" };
-    titleEl.textContent = activeCat && map[activeCat] ? map[activeCat] : "Tüm Ürünler";
-  }
+  const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
+  const activeCat = allowedCats.includes(catParam) ? catParam : "";
 
 
   listEl.innerHTML = "";
@@ -516,6 +511,9 @@ function setupNavbar() {
 function updateNavbarForAuth(user) {
   const guest = document.querySelector(".nav-auth-guest");
   const userBox = document.querySelector(".nav-auth-user");
+  const sellerCta = document.querySelector(".nav-seller-cta");
+  const sellerCtaWrap = document.querySelector(".nav-seller-cta-wrap");
+  const sellerCtaMobile = document.querySelector(".nav-seller-cta-mobile");
   const nameSpan = document.getElementById("nav-user-name");
   const nameBig = document.getElementById("nav-user-name-big");
   const avatar = document.getElementById("nav-user-avatar");
@@ -544,6 +542,10 @@ function updateNavbarForAuth(user) {
     if (emailSpan && user.email) emailSpan.textContent = user.email;
 
     guest.style.display = "none";
+
+    if (sellerCta) sellerCta.style.display = "none";
+    if (sellerCtaWrap) sellerCtaWrap.style.display = "none";
+    if (sellerCtaMobile) sellerCtaMobile.style.display = "none";
     userBox.style.display = "flex";
 
     if (mobileLogin) mobileLogin.style.display = "none";
@@ -559,6 +561,9 @@ function updateNavbarForAuth(user) {
     if (sellerPanelMobile) sellerPanelMobile.style.display = isSeller ? "" : "none";
   } else {
     guest.style.display = "flex";
+    if (sellerCta) sellerCta.style.display = "";
+    if (sellerCtaWrap) sellerCtaWrap.style.display = "";
+    if (sellerCtaMobile) sellerCtaMobile.style.display = "";
     userBox.style.display = "none";
 
     if (mobileLogin) mobileLogin.style.display = "";
