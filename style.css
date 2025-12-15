@@ -75,13 +75,14 @@ img {
 .site-header {
   position: sticky;
   top: 0;
-  z-index: 4000;
+  z-index: 1000;
   background: #ffffff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
 }
 
 .navbar {
-  max-width: 1200px;
+  /* Biraz daha geniş: yazıların tek satırda kalmasına yardımcı olur */
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0.8rem 5%;
   display: flex;
@@ -105,6 +106,7 @@ img {
   display: flex;
   justify-content: center;
   gap: 18px;
+  flex-wrap: nowrap;
   margin: 0;
   padding: 0;
 }
@@ -114,10 +116,63 @@ img {
   color: var(--text-color);
   font-weight: 500;
   font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .nav-links a:hover {
   color: var(--primary-color);
+  background: rgba(123, 63, 228, 0.06);
+  transform: scale(1.04);
+}
+
+/* Ürünler dropdown (kategoriler) */
+.nav-dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  min-width: 220px;
+  margin: 0;
+  padding: 10px;
+  list-style: none;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+  display: none;
+  z-index: 2000; /* üst katmanda dursun */
+}
+
+body.theme-dark .dropdown-menu,
+body.dark-theme .dropdown-menu {
+  background: #0f172a;
+}
+
+.dropdown-menu li a {
+  display: flex;
+  padding: 10px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 500;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-menu li a:hover {
+  background: rgba(123, 63, 228, 0.08);
+  color: var(--primary-color);
+  transform: scale(1.02);
+}
+
+/* Hover ile açılır, mouse çekilince kapanır */
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown:focus-within .dropdown-menu {
+  display: block;
 }
 
 /* Satıcı Ol vurgulu */
@@ -227,8 +282,6 @@ img {
   display: none; /* girişle açılacak */
   position: relative;
   align-items: center;
-
-  z-index: 4100;
 }
 
 .nav-user-button {
@@ -271,7 +324,7 @@ img {
   padding: 10px;
   min-width: 210px;
   display: none;
-  z-index: 5000;
+  z-index: 1200;
 }
 
 .nav-user-dropdown.open {
