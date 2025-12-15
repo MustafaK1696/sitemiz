@@ -1,39 +1,30 @@
-// includes.js - Navbar/Footer yükleyici (Firebase'den bağımsız)
+// includes.js
+// Bu dosya artık sadece 'script.js' bulunmayan sayfalarda navbar/footer partial yüklemek için kullanılır.
+// Çünkü script.js zaten navbar/footer yükleme ve navbar etkileşimlerini kuruyor.
+
 (function () {
   function byId(id) { return document.getElementById(id); }
 
   async function loadInto(id, url) {
     const host = byId(id);
     if (!host) return;
-    if (host.innerHTML && host.innerHTML.trim().length > 20) return;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    host.innerHTML = await res.text();
-  }
+    if (host.innerHTML && host.innerHTML.trim().length > 10) return;
 
-  function wireNavInteractions() {
-    // Profile dropdown toggle (tüm sayfalarda)
-    const btn = byId("nav-user-button");
-    const menu = byId("nav-user-dropdown");
-    if (btn && menu) {
-      const close = () => {
-        menu.classList.remove("open");
-        btn.setAttribute("aria-expanded", "false");
-      };
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const open = menu.classList.toggle("open");
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-      document.addEventListener("click", close);
-      menu.addEventListener("click", (e) => e.stopPropagation());
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) return;
+      host.innerHTML = await res.text();
+    } catch (e) {
+      // sessiz geç
     }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    try { await loadInto("navbar-placeholder", "navbar.html"); } catch (e) {}
-    try { await loadInto("footer-placeholder", "footer.html"); } catch (e) {}
-    wireNavInteractions();
+    // Eğer sayfada script.js varsa partial'ları o yönetsin (çakışmayı önler)
+    const hasMain = !!document.querySelector('script[type="module"][src$="script.js"]');
+    if (hasMain) return;
+
+    await loadInto("navbar-placeholder", "navbar.html");
+    await loadInto("footer-placeholder", "footer.html");
   });
 })();

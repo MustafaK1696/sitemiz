@@ -1,18 +1,19 @@
-// auth.js
-
+// auth.js (Firebase MODULAR v9+ / v10+ CDN)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
+  setPersistence,
+  browserLocalPersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
-  signOut,
   updateProfile
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
   getFirestore,
   doc,
-  setDoc
+  setDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -29,11 +30,18 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-function showMsg(element, message, type) {
-  if (!element) return;
-  element.style.display = "block";
-  element.className = "message-box " + type;
-  element.innerText = message;
+// ✅ Login sonrası "giriş yapılmamış" görünmesini engellemek için kalıcı oturum
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+function showMsg(box, text, type) {
+  if (!box) return;
+  box.textContent = text;
+  box.className = "auth-message " + (type || "");
+}
+
+function safeVal(id) {
+  const el = document.getElementById(id);
+  return el ? (el.value || "").trim() : "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -44,104 +52,48 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginForm) setupLogin(loginForm);
 });
 
-// ---- Kayıt Ol ----
-
 function setupSignup(form) {
   const msgBox = document.getElementById("signup-message");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const username = document.getElementById("signup-username").value.trim();
-    const phone = document.getElementById("signup-phone").value.trim();
-    const email = document.getElementById("signup-email").value.trim();
-    const password = document.getElementById("signup-password").value;
+    const username = safeVal("signup-username");
+    const phone = safeVal("signup-phone");
+    const email = safeVal("signup-email");
+    const password = document.getElementById("signup-password")?.value || "";
 
     if (!username || !phone || !email || !password) {
       showMsg(msgBox, "Lütfen tüm alanları doldurun.", "error");
       return;
     }
 
-    const phonePattern = /^\+?\d{10,15}$/;
-    if (!phonePattern.test(phone)) {
-      showMsg(
-        msgBox,
-        "Telefon numarasını başında 0 olmadan ve boşluksuz girin. Örn: +905xxxxxxxxx",
-        "error"
-      );
-      return;
-    }
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      showMsg(msgBox, "Geçerli bir e-posta adresi girin.", "error");
-      return;
-    }
-
-    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d\S]{8,}$/;
-    if (!strongPassword.test(password)) {
-      showMsg(
-        msgBox,
-        "Şifre en az 8 karakter olmalı ve en az 1 büyük harf, 1 küçük harf, 1 rakam içermelidir.",
-        "error"
-      );
-      return;
-    }
-
-    const submitBtn = form.querySelector("button");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Kaydediliyor...";
-
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      await updateProfile(user, { displayName: username });
+      // displayName
+      await updateProfile(cred.user, { displayName: username });
 
-      await setDoc(doc(db, "users", user.uid), {
+      // users/{uid} (role varsayılan customer)
+      await setDoc(doc(db, "users", cred.user.uid), {
         username,
         phone,
         email,
-        createdAt: new Date().toISOString()
-      });
+        role: "customer",
+        createdAt: serverTimestamp()
+      }, { merge: true });
 
-      await sendEmailVerification(user);
-      await signOut(auth);
+      // mail doğrulama (opsiyonel)
+      try { await sendEmailVerification(cred.user); } catch {}
 
-      showMsg(
-        msgBox,
-        "Kayıt başarılı! E-posta adresine doğrulama linki gönderdik. Lütfen mailini kontrol et.",
-        "success"
-      );
-
-      setTimeout(() => {
-        window.location.href = "login.html";
-      }, 3000);
-    } catch (error) {
-      console.error(error);
-      let msg = "Kayıt başarısız.";
-
-      if (error.code === "auth/email-already-in-use") {
-        msg = "Bu e-posta zaten kayıtlı.";
-      } else if (error.code === "auth/invalid-email") {
-        msg = "Geçersiz e-posta adresi.";
-      } else if (error.code === "auth/weak-password") {
-        msg = "Şifre çok zayıf.";
-      }
-
-      showMsg(msgBox, msg, "error");
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Kayıt Ol";
+      showMsg(msgBox, "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun...", "success");
+      setTimeout(() => { window.location.href = "login.html"; }, 900);
+    } catch (err) {
+      console.error(err);
+      showMsg(msgBox, "Kayıt olurken hata oluştu. E-posta zaten kayıtlı olabilir.", "error");
     }
   });
 }
-
-// ---- Giriş Yap ----
 
 function setupLogin(form) {
   const msgBox = document.getElementById("login-message");
@@ -149,71 +101,27 @@ function setupLogin(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById("login-email").value.trim();
-    const password = document.getElementById("login-password").value;
+    const email = safeVal("login-email");
+    const password = document.getElementById("login-password")?.value || "";
 
     if (!email || !password) {
       showMsg(msgBox, "Lütfen e-posta ve şifreyi girin.", "error");
       return;
     }
 
-    const submitBtn = form.querySelector("button");
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Giriş Yapılıyor...";
+    const btn = form.querySelector("button");
+    if (btn) btn.disabled = true;
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+      await signInWithEmailAndPassword(auth, email, password);
 
-      if (!user.emailVerified) {
-        await signOut(auth);
-        showMsg(
-          msgBox,
-          "Lütfen önce e-posta adresini doğrula. Mail kutunu kontrol et.",
-          "error"
-        );
-        return;
-      }
-
-      showMsg(
-        msgBox,
-        "Giriş başarılı, ana sayfaya yönlendiriliyorsun...",
-        "success"
-      );
-
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 1000);
-    } catch (error) {
-      console.error(error);
-      let msg = "Giriş başarısız.";
-      if (
-        error.code === "auth/user-not-found" ||
-        error.code === "auth/wrong-password"
-      ) {
-        msg = "E-posta veya şifre hatalı.";
-      }
-      showMsg(msgBox, msg, "error");
+      showMsg(msgBox, "Giriş başarılı, ana sayfaya yönlendiriliyorsun...", "success");
+      setTimeout(() => { window.location.href = "index.html"; }, 600);
+    } catch (err) {
+      console.error(err);
+      showMsg(msgBox, "Giriş başarısız. E-posta veya şifre hatalı.", "error");
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Giriş Yap";
+      if (btn) btn.disabled = false;
     }
   });
 }
-
-// ÇIKIŞ (isteyen isterse başka yerde de kullanabilir)
-export async function logoutUser() {
-  try {
-    await signOut(auth);
-  } catch (err) {
-    console.error(err);
-  } finally {
-    window.location.href = "index.html";
-  }
-}
-
-window.logoutUser = logoutUser;

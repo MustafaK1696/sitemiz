@@ -231,9 +231,19 @@ body.dark-theme .dropdown-menu {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-decoration: none;
   background: rgba(123, 63, 228, 0.06);
   color: var(--primary-color);
+  transition: transform 0.15s ease, background 0.15s ease;
 }
+
+.nav-cart:hover {
+  background: rgba(123, 63, 228, 0.10);
+  transform: scale(1.02);
+}
+
 
 .badge {
   background: var(--primary-color);
