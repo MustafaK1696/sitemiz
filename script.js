@@ -1,7 +1,7 @@
 // script.js  (ES module)
 
 // Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import {initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -22,8 +22,7 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+  deleteDoc, increment, orderBy, limit} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
 import {
   getStorage,
@@ -147,26 +146,6 @@ function updateCartCount() {
   updateCartProgress(getCartSubtotal());
 }
 
-function setCartItemQty(productId, qty) {
-  const cart = getCart();
-  const idx = cart.findIndex((i) => i.id === productId);
-  if (qty <= 0) {
-    if (idx >= 0) cart.splice(idx, 1);
-  } else {
-    if (idx >= 0) cart[idx].qty = qty;
-    else cart.push({ id: productId, qty });
-  }
-  saveCart(cart);
-  updateCartCount();
-}
-
-function adjustCartItem(productId, delta) {
-  const cart = getCart();
-  const item = cart.find((i) => i.id === productId);
-  const nextQty = (item ? item.qty : 0) + delta;
-  setCartItemQty(productId, nextQty);
-}
-
 function addToCart(productId) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
@@ -235,6 +214,12 @@ async function requireRole(allowedRoles) {
   return true;
 }
 
+function generateProductCode(docId) {
+  const y = new Date().getFullYear();
+  const tail = String(docId || "").slice(-6).toUpperCase();
+  return `OGF-${y}-${tail}`;
+}
+
 // ---------------- ÜRÜNLERİ FIRESTORE'DAN YÜKLE ----------------
 
 function loadProductsFromFirestore() {
@@ -257,6 +242,7 @@ function loadProductsFromFirestore() {
 
     renderProducts();
     renderCart();
+  renderProductPage();
     renderFeatured();
   });
 }
@@ -320,9 +306,11 @@ function renderProducts() {
       const urlLower = product.imageUrl.toLowerCase();
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
+          <a class="card-media-link" href="product.html?id=${product.id}">
+            <div class="card-img">
+              <img src="${product.imageUrl}" alt="${product.name}" />
+            </div>
+          </a>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `
           <div class="card-img pdf-icon">
@@ -336,7 +324,7 @@ function renderProducts() {
     card.innerHTML = `
       ${mediaHtml}
       <div class="card-body">
-        <h3>${product.name}</h3>
+        <h3><a class="card-link" href="product.html?id=${product.id}">${product.name}</a></h3>
         <p>${product.description}</p>
         <div class="price">${product.price} TL</div>
         <button class="btn-primary" data-add-to-cart="${product.id}">
@@ -380,9 +368,11 @@ function renderFeatured() {
       const urlLower = product.imageUrl.toLowerCase();
       if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
         mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
+          <a class="card-media-link" href="product.html?id=${product.id}">
+            <div class="card-img">
+              <img src="${product.imageUrl}" alt="${product.name}" />
+            </div>
+          </a>`;
       } else if (urlLower.includes(".pdf")) {
         mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
       }
@@ -393,7 +383,7 @@ function renderFeatured() {
     card.innerHTML = `
       ${mediaHtml}
       <div class="card-body">
-        <h3>${product.name}</h3>
+        <h3><a class="card-link" href="product.html?id=${product.id}">${product.name}</a></h3>
         <p>${product.description}</p>
         <div class="price">${product.price} TL</div>
         <button class="btn-primary" data-add-to-cart="${product.id}">
@@ -447,16 +437,13 @@ function renderCart() {
     row.innerHTML = `
       <div>
         <h4>${product.name}</h4>
-        <p>${price} TL</p>
+        <p>${price} TL x ${item.qty} adet</p>
       </div>
       <div class="cart-item-actions">
-        <div class="cart-qty">
-          <button class="qty-btn" data-qty-dec="${product.id}" aria-label="Azalt">−</button>
-          <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn" data-qty-inc="${product.id}" aria-label="Arttır">+</button>
-        </div>
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${product.id}">Kaldır</button>
+        <button class="btn-link" data-remove-from-cart="${product.id}">
+          Kaldır
+        </button>
       </div>
     `;
     container.appendChild(row);
@@ -503,14 +490,14 @@ function setupNavbar() {
     });
   }
 
-  // Profil dropdown (her zaman aç/kapa, tek sefer bağla)
-  const userBtn = document.querySelector(".nav-user-button");
-  const dropdown = document.querySelector(".nav-auth-user .nav-user-dropdown");
-  if (userBtn && dropdown && !userBtn.dataset.bound) {
-    userBtn.dataset.bound = "1";
+  // Profil dropdown: sayfada navbar birden fazla kez render edilmişse bile çalışsın
+  const userBtns = document.querySelectorAll(".nav-user-button");
+  userBtns.forEach((userBtn) => {
+    const parent = userBtn.closest(".nav-auth-user") || document;
+    const dropdown = parent.querySelector(".nav-user-dropdown");
+    if (!dropdown) return;
 
     userBtn.addEventListener("click", (e) => {
-      e.preventDefault();
       e.stopPropagation();
       dropdown.classList.toggle("open");
     });
@@ -522,7 +509,7 @@ function setupNavbar() {
         dropdown.classList.remove("open");
       }
     });
-  }
+  });
 
   // Logout
   document.querySelectorAll("#logout-btn, .nav-user-logout").forEach((logoutBtn) => {
@@ -943,6 +930,8 @@ async function setupAdminPanel() {
             if (action === "approve-seller") {
               await updateDoc(reqRef, {
                 status: "approved",
+                productId: newRef.id,
+                productCode: productCode,
                 processedAt: serverTimestamp(),
                 processedBy: currentUser.uid
               });
@@ -1003,7 +992,7 @@ async function setupAdminPanel() {
 
           try {
             if (action === "approve-product") {
-              await addDoc(collection(db, "products"), {
+              const newRef = await addDoc(collection(db, "products"), {
                 title: d.title,
                 price: d.price,
                 category: d.category,
@@ -1011,8 +1000,12 @@ async function setupAdminPanel() {
                 description: d.description,
                 sellerId: d.sellerId,
                 featured: false,
+                productCode: generateProductCode("TEMP"),
                 createdAt: serverTimestamp()
               });
+              const productCode = generateProductCode(newRef.id);
+              await updateDoc(newRef, { productCode });
+
               await updateDoc(reqRef, {
                 status: "approved",
                 processedAt: serverTimestamp(),
@@ -1047,6 +1040,8 @@ async function setupAdminPanel() {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
           <td>${d.title}</td>
+          <td>${d.productCode || "-"}</td>
+          <td class="admin-prod-views" data-views-id="${docSnap.id}">-</td>
           <td>
             <input type="number" class="admin-prod-price" value="${d.price}" min="0" step="0.01">
           </td>
@@ -1064,6 +1059,45 @@ async function setupAdminPanel() {
       });
       html += "</tbody></table>";
       productsManageBox.innerHTML = html;
+      // Görüntülenmeleri yükle (productStats)
+      const viewCells = productsManageBox.querySelectorAll(".admin-prod-views");
+      viewCells.forEach(async (cell) => {
+        const pid = cell.getAttribute("data-views-id");
+        try {
+          const st = await getDoc(doc(db, "productStats", pid));
+          cell.textContent = st.exists() ? String(st.data().views || 0) : "0";
+        } catch {
+          cell.textContent = "-";
+        }
+      });
+
+      // En çok ziyaret edilen ürünü göster
+      try {
+        const topWrapId = "admin-top-visited";
+        let topWrap = document.getElementById(topWrapId);
+        if (!topWrap) {
+          topWrap = document.createElement("div");
+          topWrap.id = topWrapId;
+          topWrap.className = "admin-top-visited";
+          productsManageBox.parentElement.insertBefore(topWrap, productsManageBox);
+        }
+        const qTop = query(collection(db, "productStats"), orderBy("views", "desc"), limit(1));
+        onSnapshot(qTop, async (qSnap) => {
+          if (qSnap.empty) {
+            topWrap.innerHTML = "";
+            return;
+          }
+          const topDoc = qSnap.docs[0];
+          const pid = topDoc.id;
+          const views = topDoc.data().views || 0;
+          const pSnap = await getDoc(doc(db, "products", pid));
+          const title = pSnap.exists() ? (pSnap.data().title || pid) : pid;
+          topWrap.innerHTML = `<div class="admin-top-card"><b>En Çok Ziyaret Edilen Ürün:</b> ${title} <span class="muted">(${views} görüntülenme)</span></div>`;
+        });
+      } catch (e) {
+        console.warn(e);
+      }
+
 
       productsManageBox.querySelectorAll("button[data-action]").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -1139,10 +1173,11 @@ onAuthStateChanged(auth, async (user) => {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
 
-    // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
-  setupNavbar();
-  applyTheme(localStorage.getItem(THEME_KEY) || "light");
-
+  loadPartial("navbar-placeholder", "navbar.html", () => {
+    setupNavbar();
+    applyTheme(localStorage.getItem(THEME_KEY) || "light");
+  });
+  loadPartial("footer-placeholder", "footer.html");
 
   // Ürünleri Firestore'dan dinamik yükle
   loadProductsFromFirestore();
@@ -1152,7 +1187,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderCart();
 
-  // Sepeti onayla
+  async function renderProductPage() {
+  const wrap = document.getElementById("product-detail");
+  if (!wrap) return;
+
+  const id = new URLSearchParams(window.location.search).get("id");
+  if (!id) {
+    wrap.innerHTML = "<p>Ürün bulunamadı.</p>";
+    return;
+  }
+
+  try {
+    const prodRef = doc(db, "products", id);
+    const snap = await getDoc(prodRef);
+    if (!snap.exists()) {
+      wrap.innerHTML = "<p>Ürün bulunamadı.</p>";
+      return;
+    }
+    const d = snap.data();
+    const title = d.title || "Ürün";
+    document.title = `${title} - ÖğrenciFy`;
+
+    let media = "";
+    const url = (d.imageUrl || "").trim();
+    const urlLower = url.toLowerCase();
+    if (url) {
+      if (urlLower.endsWith(".pdf")) {
+        media = `<div class="product-media"><a class="btn-secondary" href="${url}" target="_blank" rel="noopener">PDF Görüntüle</a></div>`;
+      } else {
+        media = `<div class="product-media"><img src="${url}" alt="${title}" /></div>`;
+      }
+    }
+
+    const code = d.productCode ? `<div class="product-code">Ürün Kodu: <b>${d.productCode}</b></div>` : "";
+
+    wrap.innerHTML = `
+      <div class="product-detail-card">
+        ${media}
+        <div class="product-detail-info">
+          <h1>${title}</h1>
+          ${code}
+          <div class="price">${Number(d.price || 0)} TL</div>
+          <p class="muted">${d.description || ""}</p>
+          <button class="btn-primary" id="detail-add-cart">Sepete Ekle</button>
+        </div>
+      </div>
+    `;
+
+    const btn = document.getElementById("detail-add-cart");
+    if (btn) btn.addEventListener("click", () => handleAddToCart(id, btn));
+
+    const key = `viewed_${id}`;
+    const last = Number(localStorage.getItem(key) || "0");
+    const now = Date.now();
+    if (!last || now - last > 10 * 60 * 1000) {
+      localStorage.setItem(key, String(now));
+      const statRef = doc(db, "productStats", id);
+      await setDoc(statRef, { views: increment(1), updatedAt: serverTimestamp() }, { merge: true });
+    }
+  } catch (e) {
+    console.error(e);
+    wrap.innerHTML = "<p>Ürün yüklenirken hata oluştu.</p>";
+  }
+}
+
+// Sepeti onayla
   const checkoutBtn = document.getElementById("checkout-btn");
   if (checkoutBtn) {
     checkoutBtn.addEventListener("click", async () => {
