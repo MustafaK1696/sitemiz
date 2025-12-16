@@ -1,5 +1,5 @@
 // auth.js (Firebase MODULAR v9+ / v10+ CDN)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
   setPersistence,
@@ -26,7 +26,7 @@ const firebaseConfig = {
   measurementId: "G-VS0KGRBLN0"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 

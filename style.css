@@ -228,7 +228,7 @@ body.dark-theme .dropdown-menu {
 /* Sepet butonu */
 
 .nav-cart {
-  min-width: 230px;
+  min-width: 210px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -958,3 +958,8 @@ body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
 }
 .qty-btn:hover{ transform: scale(1.05); background: rgba(123, 63, 228, 0.18); }
 .qty-val{ min-width: 18px; text-align:center; font-weight:600; }
+
+
+/* Sepet ikon */
+.nav-cart-icon{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;}
+.nav-cart-icon svg{fill:currentColor;}

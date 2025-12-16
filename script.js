@@ -1,7 +1,7 @@
 // script.js  (ES module)
 
 // Firebase
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -42,7 +42,7 @@ const firebaseConfig = {
   measurementId: "G-VS0KGRBLN0"
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -50,6 +50,10 @@ const storage = getStorage(app);
 let currentUser = null;
 let currentUserRole = "customer";
 let currentTwoFactorEnabled = false;
+
+// Kategori kısıtı
+const ALLOWED_CATEGORIES = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
+const CATEGORY_LABELS = {ev:"Ev", dekorasyon:"Dekorasyon", aksesuar:"Aksesuar", elektronik:"Elektronik", hediyelik:"Hediyelik"};
 
 let adminPanelInitialized = false;
 let sellerPanelInitialized = false;
@@ -737,13 +741,19 @@ async function setupSellerPanel() {
 
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
-      const cat = document.getElementById("sp-category").value.trim();
+      const cat = (document.getElementById("sp-category").value || "").trim();
       const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
       const desc = document.getElementById("sp-description").value.trim();
 
       if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
         msg.textContent =
           "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+        msg.style.color = "red";
+        return;
+      }
+
+      if (!ALLOWED_CATEGORIES.includes(cat)) {
+        msg.textContent = "Lütfen geçerli bir kategori seçiniz: " + ALLOWED_CATEGORIES.map(c=>CATEGORY_LABELS[c]||c).join(", ");
         msg.style.color = "red";
         return;
       }
