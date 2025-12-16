@@ -1,6 +1,7 @@
 // auth.js (Firebase MODULAR v9+ / v10+ CDN)
-import { auth, db } from "./firebase.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
+  getAuth,
   setPersistence,
   browserLocalPersistence,
   createUserWithEmailAndPassword,
@@ -9,10 +10,25 @@ import {
   updateProfile
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
 import {
+  getFirestore,
   doc,
   setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
+  authDomain: "ogrencify.firebaseapp.com",
+  projectId: "ogrencify",
+  storageBucket: "ogrencify.firebasestorage.app",
+  messagingSenderId: "467595249158",
+  appId: "1:467595249158:web:55373baf2ee993bee3a587",
+  measurementId: "G-VS0KGRBLN0"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // ✅ Login sonrası "giriş yapılmamış" görünmesini engellemek için kalıcı oturum
 setPersistence(auth, browserLocalPersistence).catch(() => {});
