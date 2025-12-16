@@ -552,7 +552,7 @@ function updateNavbarForAuth(user) {
 
   const adminLinks = document.querySelectorAll(".nav-admin-link");
   const adminLinksMobile = document.querySelectorAll(".nav-admin-link-mobile");
-  const sellerPanelLinks = document.querySelectorAll(".nav-seller-panel-link");
+  const sellerPanelLinks = document.querySelectorAll(".nav-seller-panel, .nav-seller-panel-dd, .nav-seller-panel-link");
   const sellerPanelMobile = document.querySelectorAll(".nav-seller-panel-mobile");
   const sellerCta = document.querySelectorAll(".nav-seller, .nav-seller-mobile");
 
