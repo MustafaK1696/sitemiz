@@ -137,11 +137,28 @@
         </div>
 
         <div class="form-group">
-          <label for="sp-image">
-            Ürün Görseli / PDF URL’si
-            <small>(Örn: https://... .jpg, .png veya .pdf)</small>
+          <label for="sp-image-file">
+            Ürün Görseli / PDF Dosyası
+            <small>(Zorunlu: .jpg, .jpeg, .png veya .pdf)</small>
           </label>
-          <input type="url" id="sp-image" required />
+          <input
+            type="file"
+            id="sp-image-file"
+            accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="sp-video-file">
+            Ürün Videosu (Opsiyonel)
+            <small>(.mp4, .webm, .mov, .m4v)</small>
+          </label>
+          <input
+            type="file"
+            id="sp-video-file"
+            accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v"
+          />
         </div>
 
         <p id="seller-form-message" class="form-message"></p>

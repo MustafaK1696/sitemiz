@@ -494,13 +494,70 @@ body.dark-theme .dropdown-menu {
 }
 
 .card-img {
-  height: 180px;
+  /* Ürün medyası alanı (kareye yakın görünüm) */
+  height: 280px;
   background-color: #f3f4ff;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #6b7280;
   font-size: 0.9rem;
+  overflow: hidden;
+}
+
+/* Görsel / video kare alana sığsın */
+.card-img img,
+.card-img video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Kaydırmalı medya (foto+video) */
+.media-slider {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.media-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-slide img,
+.media-slide video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pdf-slide,
+.pdf-icon {
+  background: #eef0ff;
+}
+
+.pdf-open {
+  color: var(--primary-color);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.pdf-open:hover {
+  text-decoration: underline;
 }
 
 .card-body {

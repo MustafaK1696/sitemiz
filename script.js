@@ -254,6 +254,11 @@ function loadProductsFromFirestore() {
         category: d.category || "",
         description: d.description || "",
         imageUrl: d.imageUrl || "",
+        media: Array.isArray(d.media)
+          ? d.media
+          : (d.imageUrl
+              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: d.imageUrl }]
+              : []),
         sellerId: d.sellerId || "",
         featured: !!d.featured
       });
@@ -318,21 +323,50 @@ function renderProducts() {
       (p.category || "").toLowerCase().includes(queryText)
     );
   }).forEach((product) => {
-    // Görsel
+    // Medya (görsel/pdf + opsiyonel video) -> kaydırmalı alan
+    const mediaItems = Array.isArray(product.media) && product.media.length
+      ? product.media
+      : (product.imageUrl
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          : []);
+
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
-    if (product.imageUrl) {
-      const urlLower = product.imageUrl.toLowerCase();
-      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
+
+    if (mediaItems.length === 1) {
+      const m = mediaItems[0];
+      if (m.type === "video") {
         mediaHtml = `
           <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
+            <video src="${m.url}" controls preload="metadata"></video>
           </div>`;
-      } else if (urlLower.includes(".pdf")) {
+      } else if (m.type === "pdf") {
         mediaHtml = `
           <div class="card-img pdf-icon">
-            PDF
+            <a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a>
+          </div>`;
+      } else {
+        mediaHtml = `
+          <div class="card-img">
+            <img src="${m.url}" alt="${product.name}" />
           </div>`;
       }
+    } else if (mediaItems.length > 1) {
+      const slides = mediaItems.map((m) => {
+        if (m.type === "video") {
+          return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+        }
+        if (m.type === "pdf") {
+          return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
+        }
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+      }).join("");
+
+      mediaHtml = `
+        <div class="card-img">
+          <div class="media-slider" aria-label="Ürün medyası">
+            ${slides}
+          </div>
+        </div>`;
     }
 
     const card = document.createElement("div");
@@ -379,17 +413,29 @@ function renderFeatured() {
   }
 
   featured.forEach((product) => {
+    const mediaItems = Array.isArray(product.media) && product.media.length
+      ? product.media
+      : (product.imageUrl
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          : []);
+
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
-    if (product.imageUrl) {
-      const urlLower = product.imageUrl.toLowerCase();
-      if (urlLower.includes(".jpg") || urlLower.includes(".jpeg") || urlLower.includes(".png")) {
-        mediaHtml = `
-          <div class="card-img">
-            <img src="${product.imageUrl}" alt="${product.name}" />
-          </div>`;
-      } else if (urlLower.includes(".pdf")) {
-        mediaHtml = `<div class="card-img pdf-icon">PDF</div>`;
+    if (mediaItems.length === 1) {
+      const m = mediaItems[0];
+      if (m.type === 'video') {
+        mediaHtml = `<div class="card-img"><video src="${m.url}" controls preload="metadata"></video></div>`;
+      } else if (m.type === 'pdf') {
+        mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
+      } else {
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" /></div>`;
       }
+    } else if (mediaItems.length > 1) {
+      const slides = mediaItems.map((m) => {
+        if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+        if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+      }).join('');
+      mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası">${slides}</div></div>`;
     }
 
     const card = document.createElement("div");
@@ -742,12 +788,14 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = (document.getElementById("sp-category").value || "").trim();
-      const img = document.getElementById("sp-image").value.trim(); // ← HTML’de id="sp-image" olsun
+      const imgFileEl = document.getElementById("sp-image-file");
+      const videoFileEl = document.getElementById("sp-video-file");
+      const imgFile = imgFileEl && imgFileEl.files ? imgFileEl.files[0] : null;
+      const videoFile = videoFileEl && videoFileEl.files ? videoFileEl.files[0] : null;
       const desc = document.getElementById("sp-description").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !img) {
-        msg.textContent =
-          "Lütfen tüm alanları doldurun ve geçerli bir görsel/PDF URL'si girin.";
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
+        msg.textContent = "Lütfen tüm alanları doldurun ve zorunlu görsel/PDF dosyasını yükleyin.";
         msg.style.color = "red";
         return;
       }
@@ -758,37 +806,62 @@ async function setupSellerPanel() {
         return;
       }
 
-      // URL kontrolü (opsiyonel ama faydalı)
-      if (!img.startsWith("http://") && !img.startsWith("https://")) {
-        msg.textContent = "Lütfen http veya https ile başlayan geçerli bir URL girin.";
+      // Görsel/PDF uzantı kontrolü
+      const allowedImgExts = ["jpg", "jpeg", "png", "pdf"];
+      const imgName = (imgFile.name || "").toLowerCase();
+      const imgExt = imgName.includes(".") ? imgName.split(".").pop() : "";
+      if (!allowedImgExts.includes(imgExt)) {
+        msg.textContent = "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yüklenebilir.";
         msg.style.color = "red";
         return;
       }
 
-      // Uzantı kontrolü (.jpg/.jpeg/.png/.pdf)
-      const allowedExts = ["jpg", "jpeg", "png", "pdf"];
-      const urlWithoutQuery = img.split("?")[0].split("#")[0];
-      const parts = urlWithoutQuery.split(".");
-      const ext = parts.length > 1 ? parts.pop().toLowerCase() : "";
-
-      if (!allowedExts.includes(ext)) {
-        msg.textContent =
-          "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosya URL'lerine izin verilmektedir.";
-        msg.style.color = "red";
-        return;
+      // Video uzantı kontrolü (opsiyonel)
+      const allowedVideoExts = ["mp4", "webm", "mov", "m4v"];
+      if (videoFile) {
+        const vName = (videoFile.name || "").toLowerCase();
+        const vExt = vName.includes(".") ? vName.split(".").pop() : "";
+        if (!allowedVideoExts.includes(vExt)) {
+          msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v yükleyebilirsiniz.";
+          msg.style.color = "red";
+          return;
+        }
       }
 
       msg.style.color = "black";
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
+        // 1) Dosyaları Storage'a yükle
+        const safeName = (name) => (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const ts = Date.now();
+
+        const imgPath = `product_requests/${currentUser.uid}/${ts}_${safeName(imgFile.name)}`;
+        const imgRef = storageRef(storage, imgPath);
+        await uploadBytes(imgRef, imgFile);
+        const imageUrl = await getDownloadURL(imgRef);
+
+        let videoUrl = "";
+        if (videoFile) {
+          const vPath = `product_requests/${currentUser.uid}/${ts}_${safeName(videoFile.name)}`;
+          const vRef = storageRef(storage, vPath);
+          await uploadBytes(vRef, videoFile);
+          videoUrl = await getDownloadURL(vRef);
+        }
+
+        const media = [];
+        const imgType = imgExt === "pdf" ? "pdf" : "image";
+        media.push({ type: imgType, url: imageUrl, name: imgFile.name || "" });
+        if (videoUrl) media.push({ type: "video", url: videoUrl, name: videoFile.name || "" });
+
         // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
           category: cat,
-          imageUrl: img,
+          imageUrl, // geriye dönük uyumluluk
+          media,
           description: desc,
           status: "pending",
           createdAt: serverTimestamp()
@@ -1017,7 +1090,8 @@ async function setupAdminPanel() {
                 title: d.title,
                 price: d.price,
                 category: d.category,
-                imageUrl: d.imageUrl || "",
+                imageUrl: d.imageUrl || (Array.isArray(d.media) && d.media[0] ? d.media[0].url : ""),
+                media: Array.isArray(d.media) ? d.media : (d.imageUrl ? [{ type: (String(d.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: d.imageUrl }] : []),
                 description: d.description,
                 sellerId: d.sellerId,
                 featured: false,
