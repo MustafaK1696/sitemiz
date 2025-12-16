@@ -20,7 +20,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
   authDomain: "ogrencify.firebaseapp.com",
   projectId: "ogrencify",
-  storageBucket: "ogrencify.firebasestorage.app",
+  storageBucket: "ogrencify.appspot.com",
   messagingSenderId: "467595249158",
   appId: "1:467595249158:web:55373baf2ee993bee3a587",
   measurementId: "G-VS0KGRBLN0"

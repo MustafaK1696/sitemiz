@@ -29,6 +29,7 @@ import {
   getStorage,
   ref as storageRef,
   uploadBytes,
+  uploadBytesResumable,
   getDownloadURL
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js";
 
@@ -36,7 +37,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduwPnxOC8FcjsCR4",
   authDomain: "ogrencify.firebaseapp.com",
   projectId: "ogrencify",
-  storageBucket: "ogrencify.firebasestorage.app",
+  storageBucket: "ogrencify.appspot.com",
   messagingSenderId: "467595249158",
   appId: "1:467595249158:web:55373baf2ee993bee3a587",
   measurementId: "G-VS0KGRBLN0"
@@ -46,6 +47,36 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+
+
+// --- Upload yardımcıları ---
+function withTimeout(promise, ms, label="işlem") {
+  let t;
+  const timeout = new Promise((_, rej) => {
+    t = setTimeout(() => rej(new Error(`${label} zaman aşımına uğradı. İnternetinizi kontrol edip tekrar deneyin.`)), ms);
+  });
+  return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
+}
+
+async function uploadFileWithProgress(fileRef, file, onPct) {
+  return await withTimeout(new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(fileRef, file);
+    task.on("state_changed",
+      (snap) => {
+        if (!snap.totalBytes) return;
+        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+        if (onPct) onPct(pct);
+      },
+      (err) => reject(err),
+      async () => {
+        try {
+          const url = await getDownloadURL(task.snapshot.ref);
+          resolve(url);
+        } catch (e) { reject(e); }
+      }
+    );
+  }), 120000, "Dosya yükleme"); // 2 dk timeout
+}
 
 let currentUser = null;
 let currentUserRole = "customer";
@@ -838,15 +869,17 @@ async function setupSellerPanel() {
 
         const imgPath = `product_requests/${currentUser.uid}/${ts}_${safeName(imgFile.name)}`;
         const imgRef = storageRef(storage, imgPath);
-        await uploadBytes(imgRef, imgFile);
-        const imageUrl = await getDownloadURL(imgRef);
+        const imageUrl = await uploadFileWithProgress(imgRef, imgFile, (pct) => {
+          msg.textContent = `Ürün başvurunuz kaydediliyor... (Görsel %${pct})`;
+        });
 
         let videoUrl = "";
         if (videoFile) {
           const vPath = `product_requests/${currentUser.uid}/${ts}_${safeName(videoFile.name)}`;
           const vRef = storageRef(storage, vPath);
-          await uploadBytes(vRef, videoFile);
-          videoUrl = await getDownloadURL(vRef);
+          videoUrl = await uploadFileWithProgress(vRef, videoFile, (pct) => {
+            msg.textContent = `Ürün başvurunuz kaydediliyor... (Video %${pct})`;
+          });
         }
 
         const media = [];
