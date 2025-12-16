@@ -269,11 +269,11 @@ function renderProducts() {
 
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
-  const params = new URLSearchParams(window.location.search);
-  const catParam = (params.get("cat") || "").trim().toLowerCase();
 
+  // URL kategori filtresi (products.html?cat=ev)
   const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
-  const activeCat = allowedCats.includes(catParam) ? catParam : "";
+  const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
+  const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
 
 
   listEl.innerHTML = "";
@@ -284,7 +284,9 @@ function renderProducts() {
   }
 
   PRODUCTS.filter((p) => {
-    if (activeCat && (p.category || '').toLowerCase() !== activeCat) return false;
+    // Kategori varsa önce onu uygula
+    if (urlCat && (p.category || '').toLowerCase() !== urlCat) return false;
+
     if (!queryText) return true;
     return (
       (p.name || "").toLowerCase().includes(queryText) ||
@@ -478,23 +480,29 @@ function setupNavbar() {
     });
   }
 
-  const userBtn = document.getElementById("nav-user-button");
-  const dropdown = document.getElementById("nav-user-dropdown");
-  const logoutBtn = document.getElementById("logout-btn");
+  // Profil dropdown: sayfada navbar birden fazla kez render edilmişse bile çalışsın
+  const userBtns = document.querySelectorAll(".nav-user-button");
+  userBtns.forEach((userBtn) => {
+    const parent = userBtn.closest(".nav-auth-user") || document;
+    const dropdown = parent.querySelector(".nav-user-dropdown");
+    if (!dropdown) return;
 
-  if (userBtn && dropdown) {
-    userBtn.addEventListener("click", () => {
+    userBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
       dropdown.classList.toggle("open");
     });
+
+    dropdown.addEventListener("click", (e) => e.stopPropagation());
 
     document.addEventListener("click", (e) => {
       if (!dropdown.contains(e.target) && !userBtn.contains(e.target)) {
         dropdown.classList.remove("open");
       }
     });
-  }
+  });
 
-  if (logoutBtn) {
+  // Logout
+  document.querySelectorAll("#logout-btn, .nav-user-logout").forEach((logoutBtn) => {
     logoutBtn.addEventListener("click", async () => {
       try {
         await signOut(auth);
@@ -502,79 +510,77 @@ function setupNavbar() {
         console.error(err);
       }
     });
-  }
+  });
 
   updateCartCount();
   updateNavbarForAuth(currentUser);
 }
 
 function updateNavbarForAuth(user) {
-  const guest = document.querySelector(".nav-auth-guest");
-  const userBox = document.querySelector(".nav-auth-user");
-  const sellerCta = document.querySelector(".nav-seller-cta");
-  const sellerCtaWrap = document.querySelector(".nav-seller-cta-wrap");
-  const sellerCtaMobile = document.querySelector(".nav-seller-cta-mobile");
-  const nameSpan = document.getElementById("nav-user-name");
-  const nameBig = document.getElementById("nav-user-name-big");
-  const avatar = document.getElementById("nav-user-avatar");
-  const avatarBig = document.getElementById("nav-user-avatar-big");
-  const emailSpan = document.getElementById("nav-user-email");
+  const guests = document.querySelectorAll(".nav-auth-guest");
+  const userBoxes = document.querySelectorAll(".nav-auth-user");
 
-  const mobileLogin = document.querySelector(".nav-mobile-login");
-  const mobileSignup = document.querySelector(".nav-signup-mobile");
+  const mobileLogin = document.querySelectorAll(".nav-mobile-login");
+  const mobileSignup = document.querySelectorAll(".nav-signup-mobile");
 
-  const adminLink = document.querySelector(".nav-admin-link");
-  const adminLinkMobile = document.querySelector(".nav-admin-link-mobile");
-  const sellerPanelLink = document.querySelector(".nav-seller-panel-link");
-  const sellerPanelMobile = document.querySelector(".nav-seller-panel-mobile");
+  const adminLinks = document.querySelectorAll(".nav-admin-link");
+  const adminLinksMobile = document.querySelectorAll(".nav-admin-link-mobile");
+  const sellerPanelLinks = document.querySelectorAll(".nav-seller-panel-link");
+  const sellerPanelMobile = document.querySelectorAll(".nav-seller-panel-mobile");
+  const sellerCta = document.querySelectorAll(".nav-seller, .nav-seller-mobile");
 
-  if (!guest || !userBox) return;
+  if (!guests.length || !userBoxes.length) return;
+
+  const setTextAll = (selector, value) => {
+    document.querySelectorAll(selector).forEach((el) => {
+      if (el) el.textContent = value;
+    });
+  };
 
   if (user) {
-    const displayName =
-      user.displayName || (user.email ? user.email.split("@")[0] : "Kullanıcı");
-    const firstLetter = displayName.charAt(0).toUpperCase();
+    const displayName = user.displayName || (user.email ? user.email.split("@")[0] : "Kullanıcı");
+    const firstLetter = (displayName || "K").charAt(0).toUpperCase();
 
-    if (nameSpan) nameSpan.textContent = displayName;
-    if (nameBig) nameBig.textContent = displayName;
-    if (avatar) avatar.textContent = firstLetter;
-    if (avatarBig) avatarBig.textContent = firstLetter;
-    if (emailSpan && user.email) emailSpan.textContent = user.email;
+    setTextAll("#nav-user-name", displayName);
+    setTextAll("#nav-user-name-big", displayName);
+    setTextAll("#nav-user-avatar", firstLetter);
+    setTextAll("#nav-user-avatar-big", firstLetter);
+    if (user.email) setTextAll("#nav-user-email", user.email);
 
-    guest.style.display = "none";
+    guests.forEach((g) => (g.style.display = "none"));
+    userBoxes.forEach((u) => (u.style.display = "flex"));
 
-    if (sellerCta) sellerCta.style.display = "none";
-    if (sellerCtaWrap) sellerCtaWrap.style.display = "none";
-    if (sellerCtaMobile) sellerCtaMobile.style.display = "none";
-    userBox.style.display = "flex";
+    mobileLogin.forEach((a) => (a.style.display = "none"));
+    mobileSignup.forEach((a) => (a.style.display = "none"));
 
-    if (mobileLogin) mobileLogin.style.display = "none";
-    if (mobileSignup) mobileSignup.style.display = "none";
+    // Girişliyken Satıcı Ol CTA gizlensin
+    sellerCta.forEach((a) => (a.style.display = "none"));
 
     const isAdmin = currentUserRole === "admin";
     const isSeller = currentUserRole === "seller" || isAdmin;
 
-    if (adminLink) adminLink.style.display = isAdmin ? "" : "none";
-    if (adminLinkMobile) adminLinkMobile.style.display = isAdmin ? "" : "none";
+    adminLinks.forEach((a) => (a.style.display = isAdmin ? "" : "none"));
+    adminLinksMobile.forEach((a) => (a.style.display = isAdmin ? "" : "none"));
 
-    if (sellerPanelLink) sellerPanelLink.style.display = isSeller ? "" : "none";
-    if (sellerPanelMobile) sellerPanelMobile.style.display = isSeller ? "" : "none";
+    sellerPanelLinks.forEach((a) => (a.style.display = isSeller ? "" : "none"));
+    sellerPanelMobile.forEach((a) => (a.style.display = isSeller ? "" : "none"));
   } else {
-    guest.style.display = "flex";
-    if (sellerCta) sellerCta.style.display = "";
-    if (sellerCtaWrap) sellerCtaWrap.style.display = "";
-    if (sellerCtaMobile) sellerCtaMobile.style.display = "";
-    userBox.style.display = "none";
+    guests.forEach((g) => (g.style.display = "flex"));
+    userBoxes.forEach((u) => (u.style.display = "none"));
 
-    if (mobileLogin) mobileLogin.style.display = "";
-    if (mobileSignup) mobileSignup.style.display = "";
+    mobileLogin.forEach((a) => (a.style.display = ""));
+    mobileSignup.forEach((a) => (a.style.display = ""));
 
-    if (adminLink) adminLink.style.display = "none";
-    if (adminLinkMobile) adminLinkMobile.style.display = "none";
-    if (sellerPanelLink) sellerPanelLink.style.display = "none";
-    if (sellerPanelMobile) sellerPanelMobile.style.display = "none";
+    // Misafirken Satıcı Ol CTA görünsün
+    sellerCta.forEach((a) => (a.style.display = ""));
+
+    adminLinks.forEach((a) => (a.style.display = "none"));
+    adminLinksMobile.forEach((a) => (a.style.display = "none"));
+    sellerPanelLinks.forEach((a) => (a.style.display = "none"));
+    sellerPanelMobile.forEach((a) => (a.style.display = "none"));
   }
 }
+
 
 // PROFİL SAYFASI
 
@@ -1110,22 +1116,11 @@ onAuthStateChanged(auth, async (user) => {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
 
-  // Navbar bazı sayfalarda partial olarak, bazı sayfalarda direkt gömülü olabilir.
-  // Partial yoksa da profil dropdown / çıkış / mobil menü gibi etkileşimler çalışmalı.
-  const navbarHost = document.getElementById("navbar-placeholder");
-  if (navbarHost) {
-    loadPartial("navbar-placeholder", "navbar.html", () => {
-      setupNavbar();
-      applyTheme(localStorage.getItem(THEME_KEY) || "light");
-    });
-  } else {
-    // Navbar zaten sayfadaysa doğrudan kur
+  loadPartial("navbar-placeholder", "navbar.html", () => {
     setupNavbar();
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
-  }
-
-  const footerHost = document.getElementById("footer-placeholder");
-  if (footerHost) loadPartial("footer-placeholder", "footer.html");
+  });
+  loadPartial("footer-placeholder", "footer.html");
 
   // Ürünleri Firestore'dan dinamik yükle
   loadProductsFromFirestore();
