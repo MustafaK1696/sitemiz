@@ -147,6 +147,26 @@ function updateCartCount() {
   updateCartProgress(getCartSubtotal());
 }
 
+function setCartItemQty(productId, qty) {
+  const cart = getCart();
+  const idx = cart.findIndex((i) => i.id === productId);
+  if (qty <= 0) {
+    if (idx >= 0) cart.splice(idx, 1);
+  } else {
+    if (idx >= 0) cart[idx].qty = qty;
+    else cart.push({ id: productId, qty });
+  }
+  saveCart(cart);
+  updateCartCount();
+}
+
+function adjustCartItem(productId, delta) {
+  const cart = getCart();
+  const item = cart.find((i) => i.id === productId);
+  const nextQty = (item ? item.qty : 0) + delta;
+  setCartItemQty(productId, nextQty);
+}
+
 function addToCart(productId) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
@@ -427,13 +447,16 @@ function renderCart() {
     row.innerHTML = `
       <div>
         <h4>${product.name}</h4>
-        <p>${price} TL x ${item.qty} adet</p>
+        <p>${price} TL</p>
       </div>
       <div class="cart-item-actions">
+        <div class="cart-qty">
+          <button class="qty-btn" data-qty-dec="${product.id}" aria-label="Azalt">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn" data-qty-inc="${product.id}" aria-label="Arttır">+</button>
+        </div>
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${product.id}">
-          Kaldır
-        </button>
+        <button class="btn-link" data-remove-from-cart="${product.id}">Kaldır</button>
       </div>
     `;
     container.appendChild(row);
@@ -480,14 +503,14 @@ function setupNavbar() {
     });
   }
 
-  // Profil dropdown: sayfada navbar birden fazla kez render edilmişse bile çalışsın
-  const userBtns = document.querySelectorAll(".nav-user-button");
-  userBtns.forEach((userBtn) => {
-    const parent = userBtn.closest(".nav-auth-user") || document;
-    const dropdown = parent.querySelector(".nav-user-dropdown");
-    if (!dropdown) return;
+  // Profil dropdown (her zaman aç/kapa, tek sefer bağla)
+  const userBtn = document.querySelector(".nav-user-button");
+  const dropdown = document.querySelector(".nav-auth-user .nav-user-dropdown");
+  if (userBtn && dropdown && !userBtn.dataset.bound) {
+    userBtn.dataset.bound = "1";
 
     userBtn.addEventListener("click", (e) => {
+      e.preventDefault();
       e.stopPropagation();
       dropdown.classList.toggle("open");
     });
@@ -499,7 +522,7 @@ function setupNavbar() {
         dropdown.classList.remove("open");
       }
     });
-  });
+  }
 
   // Logout
   document.querySelectorAll("#logout-btn, .nav-user-logout").forEach((logoutBtn) => {
@@ -1116,11 +1139,10 @@ onAuthStateChanged(auth, async (user) => {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
 
-  loadPartial("navbar-placeholder", "navbar.html", () => {
-    setupNavbar();
-    applyTheme(localStorage.getItem(THEME_KEY) || "light");
-  });
-  loadPartial("footer-placeholder", "footer.html");
+    // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
+  setupNavbar();
+  applyTheme(localStorage.getItem(THEME_KEY) || "light");
+
 
   // Ürünleri Firestore'dan dinamik yükle
   loadProductsFromFirestore();
