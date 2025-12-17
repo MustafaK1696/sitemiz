@@ -1,5 +1,4 @@
-// drive_upload.js
-// Google Apps Script Web App endpoint
+// drive_upload.js (v2 - preflight/CORS fix)
 export const DRIVE_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzQFoCx-yv7rpTAxeUiC-F4mVk7JyxJyHS_zXgvwSzNwLatewyZ1wPbu4EMswkhcl_g/exec";
 
 function fileToBase64(file) {
@@ -22,25 +21,31 @@ export async function uploadToDrive(file, { timeoutMs = 120000 } = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
 
-  const payload = {
-    name: file.name,
-    mimeType: file.type || "application/octet-stream",
-    dataBase64: base64
-  };
+  // ✅ application/json kullanmıyoruz (OPTIONS preflight olmasın diye)
+  const body = new URLSearchParams();
+  body.set("name", file.name);
+  body.set("mimeType", file.type || "application/octet-stream");
+  body.set("dataBase64", base64);
 
   try {
     const res = await fetch(DRIVE_WEBAPP_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body,
       signal: ctrl.signal
     });
 
-    const data = await res.json().catch(() => ({}));
+    const text = await res.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (_) {
+      throw new Error("Drive Web App JSON dönmedi. Deploy erişimi 'Anyone' mi? Yanıt: " + text.slice(0, 120));
+    }
+
     if (!res.ok || !data.ok) {
       throw new Error(data.error || `Upload failed: ${res.status}`);
     }
-    return data; // {ok, fileId, name, mimeType, viewUrl}
+    return data;
   } finally {
     clearTimeout(t);
   }
