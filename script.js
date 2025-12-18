@@ -2,6 +2,7 @@
 
 // Firebase
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+import { uploadToBlob, mediaKindFromFilename } from "./blob_upload.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -888,7 +889,53 @@ async function setupSellerPanel() {
         if (videoUrl) media.push({ type: "video", url: videoUrl, name: videoFile.name || "" });
 
         // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
-        await addDoc(collection(db, "productRequests"), {
+        
+    // --- Vercel Blob Upload (required image/pdf, optional video) ---
+    const statusEl = document.getElementById("requestStatus") || document.querySelector(".request-status");
+    const imageInput = document.getElementById("productImage");
+    const videoInput = document.getElementById("productVideo");
+    const imageFile = imageInput && imageInput.files ? imageInput.files[0] : null;
+    const videoFile = videoInput && videoInput.files ? videoInput.files[0] : null;
+
+    if (!imageFile) {
+      throw new Error("Lütfen .jpg/.jpeg/.png/.pdf uzantılı bir görsel/PDF dosyası yükleyin.");
+    }
+
+    const imgName = (imageFile.name || "").toLowerCase();
+    const okImg = imgName.endsWith(".jpg") || imgName.endsWith(".jpeg") || imgName.endsWith(".png") || imgName.endsWith(".pdf");
+    if (!okImg) throw new Error("Görsel/PDF dosyası sadece .jpg, .jpeg, .png veya .pdf olmalıdır.");
+
+    if (videoFile) {
+      const vName = (videoFile.name || "").toLowerCase();
+      const okVid = vName.endsWith(".mp4") || vName.endsWith(".webm") || vName.endsWith(".mov") || vName.endsWith(".m4v");
+      if (!okVid) throw new Error("Video dosyası sadece .mp4, .webm, .mov veya .m4v olmalıdır.");
+    }
+
+    _assertMaxSize(imageFile, MAX_IMAGE_MB, "Görsel/PDF");
+    _assertMaxSize(videoFile, MAX_VIDEO_MB, "Video");
+
+    if (statusEl) statusEl.textContent = "Dosya yükleniyor... (Görsel)";
+    const upImg = await uploadToBlob(imageFile, { folder: "productRequests" });
+
+    let media = [{
+      kind: mediaKindFromFilename(imageFile.name, imageFile.type),
+      url: upImg.url,
+      pathname: upImg.pathname,
+      mimeType: upImg.contentType
+    }];
+
+    if (videoFile) {
+      if (statusEl) statusEl.textContent = "Dosya yükleniyor... (Video)";
+      const upVid = await uploadToBlob(videoFile, { folder: "productRequests" });
+      media.push({
+        kind: "video",
+        url: upVid.url,
+        pathname: upVid.pathname,
+        mimeType: upVid.contentType
+      });
+    }
+
+await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
           price,
@@ -1312,3 +1359,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+
+
+const MAX_IMAGE_MB = 5;
+const MAX_VIDEO_MB = 15;
+function _assertMaxSize(file, maxMb, label){
+  if(!file) return;
+  const mb = file.size/(1024*1024);
+  if(mb>maxMb) throw new Error(`${label} çok büyük: ${mb.toFixed(1)} MB. Max ${maxMb} MB.`);
+}
