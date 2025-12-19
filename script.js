@@ -1,6 +1,33 @@
 // script.js  (ES module)
 
 // Firebase
+
+// --- Drive public link helpers (manual upload) ---
+function extractDriveId(input) {
+  const s = String(input || "").trim();
+  if (!s) return "";
+  // If already looks like an id
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(s)) return s;
+
+  // /file/d/ID/
+  let m = s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+
+  // id=ID
+  m = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+
+  return "";
+}
+
+function driveDirectUrl(fileId, kind) {
+  const id = String(fileId || "").trim();
+  if (!id) return "";
+  if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
+  // image/video direct (public file)
+  return `https://drive.google.com/uc?export=download&id=${id}`;
+}
+
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 import {
   getAuth,
@@ -863,31 +890,45 @@ async function setupSellerPanel() {
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
-        // 1) Dosyaları Storage'a yükle
-        const safeName = (name) => (name || "file").replace(/[^a-zA-Z0-9._-]/g, "_");
-        const ts = Date.now();
+        // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
+        const driveImgInput = document.getElementById("driveImageLink");
+        const driveImgTypeEl = document.getElementById("driveImageType");
+        const driveImg2Input = document.getElementById("driveImageLink2");
+        const driveVidInput = document.getElementById("driveVideoLink");
 
-        const imgPath = `product_requests/${currentUser.uid}/${ts}_${safeName(imgFile.name)}`;
-        const imgRef = storageRef(storage, imgPath);
-        const imageUrl = await uploadFileWithProgress(imgRef, imgFile, (pct) => {
-          msg.textContent = `Ürün başvurunuz kaydediliyor... (Görsel %${pct})`;
-        });
+        const imgRaw = driveImgInput ? driveImgInput.value : "";
+        const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
+        const imgId = extractDriveId(imgRaw);
 
-        let videoUrl = "";
-        if (videoFile) {
-          const vPath = `product_requests/${currentUser.uid}/${ts}_${safeName(videoFile.name)}`;
-          const vRef = storageRef(storage, vPath);
-          videoUrl = await uploadFileWithProgress(vRef, videoFile, (pct) => {
-            msg.textContent = `Ürün başvurunuz kaydediliyor... (Video %${pct})`;
-          });
+        if (!imgId) {
+          msg.textContent = "Drive görsel/PDF linki geçersiz. Lütfen Drive paylaşım linki veya fileId girin.";
+          msg.style.color = "red";
+          return;
         }
 
-        const media = [];
-        const imgType = imgExt === "pdf" ? "pdf" : "image";
-        media.push({ type: imgType, url: imageUrl, name: imgFile.name || "" });
-        if (videoUrl) media.push({ type: "video", url: videoUrl, name: videoFile.name || "" });
+        // Zorunlu ana medya
+        const imageUrl = driveDirectUrl(imgId, imgTypeSel);
 
-        // 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
+        // Opsiyonel 2. görsel
+        const img2Raw = driveImg2Input ? driveImg2Input.value : "";
+        const img2Id = extractDriveId(img2Raw);
+        const imageUrl2 = img2Id ? driveDirectUrl(img2Id, "image") : "";
+
+        // Opsiyonel video
+        const vidRaw = driveVidInput ? driveVidInput.value : "";
+        const vidId = extractDriveId(vidRaw);
+        const videoUrl = vidId ? driveDirectUrl(vidId, "video") : "";
+
+        msg.style.color = "black";
+        msg.textContent = "Ürün başvurunuz kaydediliyor...";
+
+        const media = [];
+
+        media.push({ type: (imgTypeSel==="pdf" ? "pdf" : "image"), url: imageUrl, name: imgId });
+        if (imageUrl2) media.push({ type: "image", url: imageUrl2, name: img2Id });
+        if (videoUrl) media.push({ type: "video", url: videoUrl, name: vidId });
+
+// 🔥 Artık db.collection değil, addDoc + collection(db, "productRequests")
         await addDoc(collection(db, "productRequests"), {
           sellerId: currentUser.uid,
           title,
