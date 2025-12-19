@@ -853,7 +853,7 @@ async function setupSellerPanel() {
       const desc = document.getElementById("sp-description").value.trim();
 
       if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve zorunlu görsel/PDF dosyasını yükleyin.";
+        msg.textContent = "Lütfen tüm alanları doldurun ve Drive görsel linki alanına en az 1 adet .jpg veya .png uzantılı bağlantı girin.";
         msg.style.color = "red";
         return;
       }
