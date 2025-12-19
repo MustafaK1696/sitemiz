@@ -29,6 +29,35 @@ function driveDirectUrl(fileId, kind) {
 }
 
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
+
+// --- Drive link helpers ---
+function extractDriveFileId(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    // /file/d/<id>/view
+    const m1 = u.pathname.match(/\/file\/d\/([^\/]+)/);
+    if (m1 && m1[1]) return m1[1];
+    // open?id=<id>
+    const id = u.searchParams.get("id");
+    if (id) return id;
+    // uc?id=<id>
+    const id2 = u.searchParams.get("id");
+    if (id2) return id2;
+  } catch (e) {
+    // allow raw id
+    if (/^[a-zA-Z0-9_-]{10,}$/.test(String(url).trim())) return String(url).trim();
+  }
+  return null;
+}
+
+function driveImageUrlFromId(fileId) {
+  return `https://drive.google.com/uc?export=view&id=${fileId}`;
+}
+
+function driveVideoPreviewUrlFromId(fileId) {
+  return `https://drive.google.com/file/d/${fileId}/preview`;
+}
 import {
   getAuth,
   onAuthStateChanged,
