@@ -145,20 +145,22 @@
         <p id="seller-form-message" class="form-message"></p>
 
         
-<label>Drive Görsel/PDF Linki (Zorunlu)</label>
-<input type="text" id="driveImageLink" placeholder="Drive paylaşım linki veya fileId" required>
+<div class="drive-media-fields">
+  <label for="driveImageLink">Drive Görsel/PDF Linki (Zorunlu)</label>
+  <input type="text" id="driveImageLink" placeholder="Drive paylaşım linki veya fileId" required>
 
-<label>Görsel türü</label>
-<select id="driveImageType" required>
-  <option value="image" selected>Görsel (.jpg/.png)</option>
-  <option value="pdf">PDF</option>
-</select>
+  <label for="driveImageType">Görsel türü</label>
+  <select id="driveImageType" required>
+    <option value="image" selected>Görsel (.jpg/.png)</option>
+    <option value="pdf">PDF</option>
+  </select>
 
-<label>Drive İkinci Görsel Linki (Opsiyonel)</label>
-<input type="text" id="driveImageLink2" placeholder="Drive paylaşım linki veya fileId (opsiyonel)">
+  <label for="driveSecondImageLink">Drive İkinci Görsel Linki (Opsiyonel)</label>
+  <input type="text" id="driveSecondImageLink" placeholder="Drive paylaşım linki veya fileId (opsiyonel)">
 
-<label>Drive Video Linki (Opsiyonel)</label>
-<input type="text" id="driveVideoLink" placeholder="Drive paylaşım linki veya fileId (mp4/webm/mov/m4v)">
+  <label for="driveVideoLink">Drive Video Linki (Opsiyonel)</label>
+  <input type="text" id="driveVideoLink" placeholder="Drive paylaşım linki veya fileId (mp4/webm/mov/m4v)">
+</div>
 
 <button type="submit" class="btn-primary">Ürün Başvurusu Gönder</button>
       </form>

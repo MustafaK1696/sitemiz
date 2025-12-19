@@ -922,7 +922,7 @@ async function setupSellerPanel() {
         // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
         const driveImgInput = document.getElementById("driveImageLink");
         const driveImgTypeEl = document.getElementById("driveImageType");
-        const driveImg2Input = document.getElementById("driveImageLink2");
+        const driveImg2Input = document.getElementById("driveSecondImageLink");
         const driveVidInput = document.getElementById("driveVideoLink");
 
         const imgRaw = driveImgInput ? driveImgInput.value : "";

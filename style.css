@@ -1020,3 +1020,25 @@ body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
 /* Sepet ikon */
 .nav-cart-icon{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;}
 .nav-cart-icon svg{fill:currentColor;}
+
+
+/* --- Drive media fields (seller panel) --- */
+.drive-media-fields{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+  max-width:520px;
+}
+.drive-media-fields label{
+  font-weight:600;
+  margin-top:6px;
+}
+.drive-media-fields input,
+.drive-media-fields select{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid #d6d6d6;
+  border-radius:10px;
+  box-sizing:border-box;
+}
