@@ -586,10 +586,17 @@ function renderFeatured() {
   }
 
   featured.forEach((product) => {
+    // Featured/Vitrin kartlarında da Drive linklerini görüntülenebilir URL'lere normalize et
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? product.media
+      ? normalizeMediaArray(product.media)
       : (product.imageUrl
-          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          ? [{
+              type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'),
+              url: normalizeMediaUrl(
+                product.imageUrl,
+                (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')
+              )
+            }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
