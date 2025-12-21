@@ -23,18 +23,14 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-
-  // PDF: embed/preview works best in-browser
+  // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-
-  // Images: use "view" endpoint (more reliable for <img src="..."> than export=download)
+  // Images render more reliably with export=view
   if (kind === "image") return `https://drive.google.com/uc?export=view&id=${id}`;
-
-  // Video: keep download; you can also open the /file/d/<id>/view link in a new tab if you prefer
-  if (kind === "video") return `https://drive.google.com/uc?export=download&id=${id}`;
-
-  return `https://drive.google.com/uc?export=view&id=${id}`;
+  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
+  return `https://drive.google.com/uc?export=download&id=${id}`;
 }
+
 
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 
@@ -622,36 +618,7 @@ function renderCart() {
     }
   }
 
-
-  // Qty +/- handlers
-  container.querySelectorAll("[data-qty-inc]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-qty-inc");
-      const cartNow = getCart();
-      const item = cartNow.find((x) => x.id === id);
-      if (!item) return;
-      item.qty = (Number(item.qty) || 1) + 1;
-      saveCart(cartNow);
-      renderCart();
-    });
-  });
-
-  container.querySelectorAll("[data-qty-dec]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-qty-dec");
-      let cartNow = getCart();
-      const item = cartNow.find((x) => x.id === id);
-      if (!item) return;
-      const newQty = (Number(item.qty) || 1) - 1;
-      if (newQty <= 0) {
-        cartNow = cartNow.filter((x) => x.id !== id);
-      } else {
-        item.qty = newQty;
-      }
-      saveCart(cartNow);
-      renderCart();
-    });
-  });
+  updateCartProgress(subtotal);
 
   container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -914,14 +881,33 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = (document.getElementById("sp-category").value || "").trim();
-      const imgFileEl = document.getElementById("sp-image-file");
-      const videoFileEl = document.getElementById("sp-video-file");
-      const imgFile = imgFileEl && imgFileEl.files ? imgFileEl.files[0] : null;
-      const videoFile = videoFileEl && videoFileEl.files ? videoFileEl.files[0] : null;
+      
       const desc = document.getElementById("sp-description").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve Drive görsel linki alanına en az 1 adet .jpg veya .png uzantılı bağlantı girin.";
+      // Drive link inputs (ana medya zorunlu, diğerleri opsiyonel)
+      const driveImgInput = document.getElementById("driveImageLink");
+      const driveImgTypeEl = document.getElementById("driveImageType");
+      const driveImg2Input = document.getElementById("driveSecondImageLink");
+      const driveVidInput = document.getElementById("driveVideoLink");
+
+      const imgRaw = driveImgInput ? String(driveImgInput.value || "").trim() : "";
+      const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image"; // image | pdf
+      const img2Raw = driveImg2Input ? String(driveImg2Input.value || "").trim() : "";
+      const vidRaw = driveVidInput ? String(driveVidInput.value || "").trim() : "";
+
+      // Basit URL uzantı kontrolü (Drive linkleri uzantı taşımaz: Drive ise uzantı aramayız)
+      const hasAllowedExt = (url, allowedExts) => {
+        const s = String(url || "").trim().toLowerCase();
+        if (!s) return false;
+        const clean = s.split("?")[0].split("#")[0];
+        return allowedExts.some((ext) => clean.endsWith("." + ext));
+      };
+
+      const isDrive = (raw) => !!extractDriveId(raw);
+
+      // Zorunlu alanlar
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgRaw) {
+        msg.textContent = "Lütfen tüm alanları doldurun ve Drive Görsel/PDF Linki (Zorunlu) alanına bir Drive paylaşım linki veya fileId girin.";
         msg.style.color = "red";
         return;
       }
@@ -932,23 +918,40 @@ async function setupSellerPanel() {
         return;
       }
 
-      // Görsel/PDF uzantı kontrolü
-      const allowedImgExts = ["jpg", "jpeg", "png", "pdf"];
-      const imgName = (imgFile.name || "").toLowerCase();
-      const imgExt = imgName.includes(".") ? imgName.split(".").pop() : "";
-      if (!allowedImgExts.includes(imgExt)) {
-        msg.textContent = "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yüklenebilir.";
-        msg.style.color = "red";
-        return;
+      // Ana medya doğrulama: Drive ise kabul; Drive değilse seçilen türe göre uzantı zorunlu
+      if (isDrive(imgRaw)) {
+        // ok
+      } else if (imgTypeSel === "pdf") {
+        if (!hasAllowedExt(imgRaw, ["pdf"])) {
+          msg.textContent = "Ana medya PDF seçildi. Drive linki/fileId girin veya .pdf uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
+      } else {
+        if (!hasAllowedExt(imgRaw, ["jpg", "jpeg", "png"])) {
+          msg.textContent = "Ana medya görsel seçildi. Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
       }
 
-      // Video uzantı kontrolü (opsiyonel)
-      const allowedVideoExts = ["mp4", "webm", "mov", "m4v"];
-      if (videoFile) {
-        const vName = (videoFile.name || "").toLowerCase();
-        const vExt = vName.includes(".") ? vName.split(".").pop() : "";
-        if (!allowedVideoExts.includes(vExt)) {
-          msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v yükleyebilirsiniz.";
+      // Opsiyonel 2. görsel: Drive veya .jpg/.jpeg/.png
+      if (img2Raw) {
+        if (isDrive(img2Raw)) {
+          // ok
+        } else if (!hasAllowedExt(img2Raw, ["jpg", "jpeg", "png"])) {
+          msg.textContent = "İkinci görsel için Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
+      }
+
+      // Opsiyonel video: Drive veya mp4/webm/mov/m4v
+      if (vidRaw) {
+        if (isDrive(vidRaw)) {
+          // ok
+        } else if (!hasAllowedExt(vidRaw, ["mp4", "webm", "mov", "m4v"])) {
+          msg.textContent = "Video için Drive linki/fileId girin veya .mp4/.webm/.mov/.m4v uzantılı bir bağlantı girin.";
           msg.style.color = "red";
           return;
         }
@@ -956,13 +959,11 @@ async function setupSellerPanel() {
 
       msg.style.color = "black";
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
+msg.style.color = "black";
+      msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
         // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
-        const driveImgInput = document.getElementById("driveImageLink");
-        const driveImgTypeEl = document.getElementById("driveImageType");
-        const driveImg2Input = document.getElementById("driveSecondImageLink");
-        const driveVidInput = document.getElementById("driveVideoLink");
 
         const imgRaw = driveImgInput ? driveImgInput.value : "";
         const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
