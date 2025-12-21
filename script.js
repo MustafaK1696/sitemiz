@@ -32,6 +32,30 @@ function driveDirectUrl(fileId, kind) {
 }
 
 
+function normalizeMediaUrl(rawUrl, kind) {
+  const s = String(rawUrl || "").trim();
+  if (!s) return "";
+  // If it's a Drive share link or raw fileId, convert to direct/preview URL.
+  const id = extractDriveId(s);
+  if (id) return driveDirectUrl(id, kind);
+  return s;
+}
+
+function normalizeMediaItem(raw) {
+  if (!raw) return null;
+  const type = String(raw.type || "").toLowerCase() || "image";
+  const url = String(raw.url || "").trim();
+  const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
+  return { type: kind, url: normalizeMediaUrl(url, kind) };
+}
+
+function normalizeMediaArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizeMediaItem).filter(Boolean).filter(m => m.url);
+}
+
+
+
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 
 // --- Drive link helpers ---
@@ -217,10 +241,20 @@ function getCartCount() {
 function getCartSubtotal() {
   const cart = getCart();
   let subtotal = 0;
+
   cart.forEach((item) => {
+    // Prefer price stored in cart (works even before PRODUCTS loads)
+    const itemPrice = Number(item.price ?? 0);
+    if (itemPrice > 0) {
+      subtotal += itemPrice * Number(item.qty || 0);
+      return;
+    }
+
+    // Fallback: look up from PRODUCTS if available
     const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) subtotal += Number(product.price || 0) * item.qty;
+    if (product) subtotal += Number(product.price || 0) * Number(item.qty || 0);
   });
+
   return subtotal;
 }
 
@@ -242,32 +276,78 @@ function updateCartCount() {
   updateCartProgress(getCartSubtotal());
 }
 
-function setCartItemQty(productId, qty) {
+function setCartItemQty(productId, qty, meta) {
   const cart = getCart();
   const idx = cart.findIndex((i) => i.id === productId);
+
   if (qty <= 0) {
     if (idx >= 0) cart.splice(idx, 1);
   } else {
-    if (idx >= 0) cart[idx].qty = qty;
-    else cart.push({ id: productId, qty });
+    if (idx >= 0) {
+      cart[idx].qty = qty;
+      // refresh meta if provided
+      if (meta && typeof meta === "object") {
+        cart[idx].name = meta.name ?? cart[idx].name;
+        cart[idx].price = meta.price ?? cart[idx].price;
+        cart[idx].imageUrl = meta.imageUrl ?? cart[idx].imageUrl;
+      }
+    } else {
+      const item = { id: productId, qty };
+      if (meta && typeof meta === "object") {
+        item.name = meta.name ?? "";
+        item.price = meta.price ?? 0;
+        item.imageUrl = meta.imageUrl ?? "";
+      }
+      cart.push(item);
+    }
   }
+
   saveCart(cart);
+
+  // If we're on cart page, re-render immediately for UI consistency
+  if (document.getElementById("cart-items-container")) renderCart();
+
   updateCartCount();
 }
 
 function adjustCartItem(productId, delta) {
   const cart = getCart();
   const item = cart.find((i) => i.id === productId);
-  const nextQty = (item ? item.qty : 0) + delta;
-  setCartItemQty(productId, nextQty);
+  const nextQty = (item ? Number(item.qty || 0) : 0) + delta;
+
+  // try to pull latest meta from PRODUCTS if available
+  const p = PRODUCTS.find((x) => x.id === productId);
+  const meta = p
+    ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" }
+    : undefined;
+
+  setCartItemQty(productId, nextQty, meta);
 }
 
-function addToCart(productId) {
+function addToCart(productId, meta) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
-  if (existing) existing.qty += 1;
-  else cart.push({ id: productId, qty: 1 });
+
+  if (existing) {
+    existing.qty = Number(existing.qty || 0) + 1;
+    if (meta && typeof meta === "object") {
+      existing.name = meta.name ?? existing.name;
+      existing.price = meta.price ?? existing.price;
+      existing.imageUrl = meta.imageUrl ?? existing.imageUrl;
+    }
+  } else {
+    const item = { id: productId, qty: 1 };
+    if (meta && typeof meta === "object") {
+      item.name = meta.name ?? "";
+      item.price = meta.price ?? 0;
+      item.imageUrl = meta.imageUrl ?? "";
+    }
+    cart.push(item);
+  }
+
   saveCart(cart);
+
+  if (document.getElementById("cart-items-container")) renderCart();
   updateCartCount();
 }
 
@@ -344,11 +424,11 @@ function loadProductsFromFirestore() {
         price: d.price,
         category: d.category || "",
         description: d.description || "",
-        imageUrl: d.imageUrl || "",
+        imageUrl: normalizeMediaUrl(d.imageUrl || "", (String(d.imageUrl||"").toLowerCase().includes(".pdf") ? "pdf" : "image")),
         media: Array.isArray(d.media)
-          ? d.media
+          ? normalizeMediaArray(d.media)
           : (d.imageUrl
-              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: d.imageUrl }]
+              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: normalizeMediaUrl(d.imageUrl, (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image")) }]
               : []),
         sellerId: d.sellerId || "",
         featured: !!d.featured
@@ -369,7 +449,9 @@ function handleAddToCart(productId, buttonEl) {
     return;
   }
 
-  addToCart(productId);
+  const p = PRODUCTS.find(x => x.id === productId);
+  const meta = p ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" } : undefined;
+  addToCart(productId, meta);
 
   const originalText = buttonEl.textContent;
   buttonEl.textContent = "Sepete eklendi";
@@ -416,9 +498,9 @@ function renderProducts() {
   }).forEach((product) => {
     // Medya (görsel/pdf + opsiyonel video) -> kaydırmalı alan
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? product.media
+      ? normalizeMediaArray(product.media)
       : (product.imageUrl
-          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: normalizeMediaUrl(product.imageUrl, (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')) }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
@@ -438,7 +520,7 @@ function renderProducts() {
       } else {
         mediaHtml = `
           <div class="card-img">
-            <img src="${m.url}" alt="${product.name}" />
+            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
           </div>`;
       }
     } else if (mediaItems.length > 1) {
@@ -449,7 +531,7 @@ function renderProducts() {
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         }
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join("");
 
       mediaHtml = `
@@ -518,13 +600,13 @@ function renderFeatured() {
       } else if (m.type === 'pdf') {
         mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" /></div>`;
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join('');
       mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası">${slides}</div></div>`;
     }
@@ -555,6 +637,7 @@ function renderFeatured() {
 
 // ---------------- SEPET ----------------
 
+
 function renderCart() {
   const container = document.getElementById("cart-items-container");
   if (!container) return;
@@ -564,12 +647,40 @@ function renderCart() {
   const warningEl = document.getElementById("limit-warning");
 
   const cart = getCart();
+
+  // Bind once (event delegation) so +/- never breaks after rerender
+  if (!container.dataset.bound) {
+    container.dataset.bound = "1";
+    container.addEventListener("click", (e) => {
+      const incBtn = e.target.closest("[data-qty-inc]");
+      const decBtn = e.target.closest("[data-qty-dec]");
+      const rmBtn = e.target.closest("[data-remove-from-cart]");
+
+      if (incBtn) {
+        const id = incBtn.getAttribute("data-qty-inc");
+        adjustCartItem(id, +1);
+        return;
+      }
+      if (decBtn) {
+        const id = decBtn.getAttribute("data-qty-dec");
+        adjustCartItem(id, -1);
+        return;
+      }
+      if (rmBtn) {
+        const id = rmBtn.getAttribute("data-remove-from-cart");
+        setCartItemQty(id, 0);
+        return;
+      }
+    });
+  }
+
   if (!cart.length) {
     container.innerHTML = `<p class="empty-cart">Sepetiniz boş.</p>`;
     if (subEl) subEl.textContent = "0 TL";
     if (totalEl) totalEl.textContent = "0 TL";
     if (warningEl) warningEl.textContent = "";
     updateCartProgress(0);
+    updateCartCount();
     return;
   }
 
@@ -577,27 +688,40 @@ function renderCart() {
   let subtotal = 0;
 
   cart.forEach((item) => {
-    const product = PRODUCTS.find((p) => p.id === item.id);
-    if (!product) return;
-    const price = Number(product.price || 0);
-    const lineTotal = price * item.qty;
+    const product = PRODUCTS.find((p) => p.id === item.id) || null;
+
+    const name = (product?.name ?? item.name ?? "").toString() || "Ürün";
+    const price = Number(product?.price ?? item.price ?? 0);
+    const qty = Number(item.qty || 0);
+
+    const imgUrlRaw = product?.imageUrl ?? item.imageUrl ?? "";
+    const imgUrl = normalizeMediaUrl(imgUrlRaw, "image");
+
+    const lineTotal = price * qty;
     subtotal += lineTotal;
 
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML = `
-      <div>
-        <h4>${product.name}</h4>
-        <p>${price} TL</p>
+      <div class="cart-item-left">
+        <div class="cart-item-thumb">
+          <img src="${imgUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer"
+               onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+        </div>
+        <div class="cart-item-info">
+          <h4>${name}</h4>
+          <p>${price} TL</p>
+        </div>
       </div>
+
       <div class="cart-item-actions">
         <div class="cart-qty">
-          <button class="qty-btn" data-qty-dec="${product.id}" aria-label="Azalt">−</button>
-          <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn" data-qty-inc="${product.id}" aria-label="Arttır">+</button>
+          <button class="qty-btn" data-qty-dec="${item.id}" aria-label="Azalt">−</button>
+          <span class="qty-val">${qty}</span>
+          <button class="qty-btn" data-qty-inc="${item.id}" aria-label="Arttır">+</button>
         </div>
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${product.id}">Kaldır</button>
+        <button class="btn-link" data-remove-from-cart="${item.id}">Kaldır</button>
       </div>
     `;
     container.appendChild(row);
@@ -611,26 +735,13 @@ function renderCart() {
       warningEl.textContent =
         "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
     } else if (subtotal >= 400) {
-      warningEl.textContent =
-        "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
+      warningEl.textContent = "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
     } else {
       warningEl.textContent = "";
     }
   }
 
   updateCartProgress(subtotal);
-
-  container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-remove-from-cart");
-      let cartNow = getCart();
-      cartNow = cartNow.filter((item) => item.id !== id);
-      saveCart(cartNow);
-      renderCart();
-      updateCartCount();
-    });
-  });
-
   updateCartCount();
 }
 
