@@ -875,14 +875,29 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = (document.getElementById("sp-category").value || "").trim();
-      const imgFileEl = document.getElementById("sp-image-file");
-      const videoFileEl = document.getElementById("sp-video-file");
-      const imgFile = imgFileEl && imgFileEl.files ? imgFileEl.files[0] : null;
-      const videoFile = videoFileEl && videoFileEl.files ? videoFileEl.files[0] : null;
       const desc = document.getElementById("sp-description").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve Drive görsel linki alanına en az 1 adet .jpg veya .png uzantılı bağlantı girin.";
+      // Drive alanları (bu projede medya dosyaları manuel olarak Drive'a yüklenir ve link/fileId girilir)
+      const driveImgInput = document.getElementById("driveImageLink");
+      const driveImgTypeEl = document.getElementById("driveImageType");
+      const driveImg2Input = document.getElementById("driveSecondImageLink");
+      const driveVidInput = document.getElementById("driveVideoLink");
+
+      const imgRaw = driveImgInput ? String(driveImgInput.value || "").trim() : "";
+      const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
+
+      // Yardımcı: Drive id'i çıkaramazsak, dış URL'lerde uzantı kontrolü yap
+      const isHttpUrl = (v) => /^https?:\/\//i.test(String(v || "").trim());
+      const hasAllowedExt = (v, exts) => {
+        const s = String(v || "").trim().toLowerCase();
+        // querystring'i temizle
+        const clean = s.split("?")[0].split("#")[0];
+        return exts.some((ext) => clean.endsWith("." + ext));
+      };
+
+      // Zorunlu alanlar + Drive ana medya linki
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgRaw) {
+        msg.textContent = "Lütfen tüm alanları doldurun ve Drive Görsel/PDF Linki (Zorunlu) alanına bir bağlantı veya fileId girin.";
         msg.style.color = "red";
         return;
       }
@@ -893,23 +908,15 @@ async function setupSellerPanel() {
         return;
       }
 
-      // Görsel/PDF uzantı kontrolü
-      const allowedImgExts = ["jpg", "jpeg", "png", "pdf"];
-      const imgName = (imgFile.name || "").toLowerCase();
-      const imgExt = imgName.includes(".") ? imgName.split(".").pop() : "";
-      if (!allowedImgExts.includes(imgExt)) {
-        msg.textContent = "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yüklenebilir.";
-        msg.style.color = "red";
-        return;
-      }
-
-      // Video uzantı kontrolü (opsiyonel)
-      const allowedVideoExts = ["mp4", "webm", "mov", "m4v"];
-      if (videoFile) {
-        const vName = (videoFile.name || "").toLowerCase();
-        const vExt = vName.includes(".") ? vName.split(".").pop() : "";
-        if (!allowedVideoExts.includes(vExt)) {
-          msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v yükleyebilirsiniz.";
+      // Eğer Drive id çıkarılamıyorsa (yani dış URL girildiyse), tür bazlı uzantı kontrolü uygula
+      const imgIdPre = extractDriveId(imgRaw);
+      if (!imgIdPre) {
+        const exts = imgTypeSel === "pdf" ? ["pdf"] : ["jpg", "jpeg", "png"];
+        if (!isHttpUrl(imgRaw) || !hasAllowedExt(imgRaw, exts)) {
+          msg.textContent =
+            imgTypeSel === "pdf"
+              ? "PDF için .pdf uzantılı bir link veya geçerli bir Google Drive paylaşım linki/fileId girin."
+              : "Görsel için .jpg/.jpeg/.png uzantılı bir link veya geçerli bir Google Drive paylaşım linki/fileId girin.";
           msg.style.color = "red";
           return;
         }
@@ -920,33 +927,40 @@ async function setupSellerPanel() {
 
       try {
         // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
-        const driveImgInput = document.getElementById("driveImageLink");
-        const driveImgTypeEl = document.getElementById("driveImageType");
-        const driveImg2Input = document.getElementById("driveSecondImageLink");
-        const driveVidInput = document.getElementById("driveVideoLink");
-
-        const imgRaw = driveImgInput ? driveImgInput.value : "";
-        const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
         const imgId = extractDriveId(imgRaw);
 
-        if (!imgId) {
-          msg.textContent = "Drive görsel/PDF linki geçersiz. Lütfen Drive paylaşım linki veya fileId girin.";
-          msg.style.color = "red";
-          return;
-        }
-
-        // Zorunlu ana medya
-        const imageUrl = driveDirectUrl(imgId, imgTypeSel);
+        // Zorunlu ana medya (Drive ise id'den üret, dış URL ise aynen kullan)
+        const imageUrl = imgId ? driveDirectUrl(imgId, imgTypeSel) : String(imgRaw).trim();
 
         // Opsiyonel 2. görsel
-        const img2Raw = driveImg2Input ? driveImg2Input.value : "";
+        const img2Raw = driveImg2Input ? String(driveImg2Input.value || "").trim() : "";
         const img2Id = extractDriveId(img2Raw);
-        const imageUrl2 = img2Id ? driveDirectUrl(img2Id, "image") : "";
+        const imageUrl2 = img2Id ? driveDirectUrl(img2Id, "image") : (img2Raw ? img2Raw : "");
+
+        // Opsiyonel 2. görsel uzantı kontrolü (Drive değilse)
+        if (imageUrl2 && !img2Id) {
+          const okImg2 = isHttpUrl(imageUrl2) && hasAllowedExt(imageUrl2, ["jpg", "jpeg", "png"]);
+          if (!okImg2) {
+            msg.textContent = "İkinci görsel için sadece .jpg/.jpeg/.png uzantılı link veya geçerli Drive linki/fileId girebilirsiniz.";
+            msg.style.color = "red";
+            return;
+          }
+        }
 
         // Opsiyonel video
-        const vidRaw = driveVidInput ? driveVidInput.value : "";
+        const vidRaw = driveVidInput ? String(driveVidInput.value || "").trim() : "";
         const vidId = extractDriveId(vidRaw);
-        const videoUrl = vidId ? driveDirectUrl(vidId, "video") : "";
+        const videoUrl = vidId ? driveDirectUrl(vidId, "video") : (vidRaw ? vidRaw : "");
+
+        // Opsiyonel video uzantı kontrolü (Drive değilse)
+        if (videoUrl && !vidId) {
+          const okVid = isHttpUrl(videoUrl) && hasAllowedExt(videoUrl, ["mp4", "webm", "mov", "m4v"]);
+          if (!okVid) {
+            msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v uzantılı link veya geçerli Drive linki/fileId girebilirsiniz.";
+            msg.style.color = "red";
+            return;
+          }
+        }
 
         msg.style.color = "black";
         msg.textContent = "Ürün başvurunuz kaydediliyor...";
