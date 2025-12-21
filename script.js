@@ -25,8 +25,9 @@ function driveDirectUrl(fileId, kind) {
   if (!id) return "";
   // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images render more reliably with export=view
-  if (kind === "image") return `https://drive.google.com/uc?export=view&id=${id}`;
+  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
+  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
+  if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
   // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
   return `https://drive.google.com/uc?export=download&id=${id}`;
 }
@@ -256,6 +257,44 @@ function getCartSubtotal() {
   });
 
   return subtotal;
+}
+
+function getCartLineItems() {
+  const cart = getCart();
+  return cart
+    .map((item) => {
+      const id = String(item.id || "");
+      const qty = Number(item.qty || 0);
+      if (!id || qty <= 0) return null;
+
+      const p = PRODUCTS.find((x) => x.id === id);
+      const name = String(item.name || (p ? p.name : "") || "Ürün").trim();
+      const price = Number(item.price ?? (p ? p.price : 0) ?? 0);
+
+      return {
+        id,
+        name,
+        qty,
+        price,
+        lineTotal: price * qty
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildWhatsAppOrderMessage(subtotal) {
+  const items = getCartLineItems();
+  const lines = items.map((it) => {
+    const priceTxt = Number.isFinite(it.price) ? `${it.price.toFixed(2)} TL` : "-";
+    const lineTotalTxt = Number.isFinite(it.lineTotal) ? `${it.lineTotal.toFixed(2)} TL` : "-";
+    return `• ${it.name} (Kod: ${it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
+  });
+
+  const header = "Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.";
+  const detailHeader = lines.length ? "\n\nSipariş Detayları:\n" + lines.join("\n") : "";
+  const totalLine = `\n\nToplam: ${Number(subtotal || 0).toFixed(2)} TL`;
+
+  return header + detailHeader + totalLine;
 }
 
 function updateCartProgress(subtotal) {
@@ -1525,11 +1564,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(
-        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
-          2
-        )} TL`
-      );
+      const message = encodeURIComponent(buildWhatsAppOrderMessage(subtotal));
       window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
