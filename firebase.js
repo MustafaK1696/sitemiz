@@ -6,9 +6,9 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-
 
 const firebaseConfig = {
   apiKey: "AIzaSyD2hTcFgZQXwBERXpOduws0E_UwgaT75g",
-  authDomain: "ogrencify.firebaseapp.com",
-  projectId: "ogrencify",
-  storageBucket: "ogrencify.firebasestorage.app",
+  authDomain: "ogrencify-eb70b.firebaseapp.com",
+  projectId: "ogrencify-eb70b",
+  storageBucket: "ogrencify-eb70b.firebasestorage.app",
   messagingSenderId: "467595249158",
   appId: "1:467595249158:web:55373baf2ee993bee3a587",
   measurementId: "G-L1NJGJZE66"
