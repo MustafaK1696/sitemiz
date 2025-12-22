@@ -1,253 +1,197 @@
-// auth.js - Firebase Auth (Modular CDN) for login & signup
-// NOTE: This file is loaded as <script type="module" src="auth.js"></script>
+// auth.js (Firebase Modular CDN) - Login & Signup handlers
+// Works with firebase.js (exports auth, db)
 
 import { auth, db } from "./firebase.js";
+
 import {
-  setPersistence,
-  browserLocalPersistence,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  sendEmailVerification,
-  updateProfile
+  updateProfile,
+  sendEmailVerification
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js";
+
 import {
   doc,
   setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
-// Keep users logged in across refresh
-setPersistence(auth, browserLocalPersistence).catch(() => {});
+// ---------------- Helpers ----------------
+function $(id) {
+  return document.getElementById(id);
+}
 
-function qs(id) { return document.getElementById(id); }
-
-function showMsg(box, text, type = "error") {
+function setMsg(box, text, type = "error") {
   if (!box) return;
-  const t = String(text || "").trim();
-  if (!t) {
-    box.style.display = "none";
-    box.textContent = "";
-    box.className = "message-box";
-    return;
-  }
   box.style.display = "block";
-  box.textContent = t;
-  box.className = "message-box " + type;
+  box.className = `message-box ${type}`;
+  box.textContent = text;
 }
 
-function setFieldError(el, msg) {
-  if (!el) return;
-  el.textContent = msg || "";
-}
-
-function clearFieldErrors(prefix) {
-  const ids = [
-    `err-${prefix}-name`,
-    `err-${prefix}-phone`,
-    `err-${prefix}-email`,
-    `err-${prefix}-password`
-  ];
-  ids.forEach((id) => {
-    const el = qs(id);
-    if (el) el.textContent = "";
-  });
+function clearMsg(box) {
+  if (!box) return;
+  box.style.display = "none";
+  box.textContent = "";
 }
 
 function isValidEmail(email) {
-  // Simple but effective for UI validation
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(email || "").trim());
+  // simple, robust enough for client-side
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
 }
 
-function checkPasswordRules(pw) {
+function normalizePhone(phone) {
+  const p = String(phone || "").trim();
+  if (!p) return "";
+  // keep digits only
+  return p.replace(/\D/g, "");
+}
+
+function passwordRuleOk(pw) {
   const p = String(pw || "");
-  if (p.length < 8) return "Şifre en az 8 karakter olmalı.";
-  if (p.length > 64) return "Şifre en fazla 64 karakter olmalı.";
-  if (!/[a-z]/.test(p)) return "Şifre en az 1 küçük harf içermeli.";
-  if (!/[A-Z]/.test(p)) return "Şifre en az 1 büyük harf içermeli.";
-  if (!/[0-9]/.test(p)) return "Şifre en az 1 rakam içermeli.";
-  return "";
+  // min 8, at least 1 letter and 1 digit
+  return p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);
 }
 
-function normalizeTrPhone(phone) {
-  const raw = String(phone || "").replace(/\D/g, "");
-  if (!raw) return "";
-  // accept 10 digits starting with 5, or 11 digits starting with 0 then 5...
-  if (raw.length === 10 && raw.startsWith("5")) return raw;
-  if (raw.length === 11 && raw.startsWith("05")) return raw.slice(1);
-  return "";
-}
-
-function mapFirebaseError(err) {
+function humanAuthError(err) {
   const code = err?.code || "";
-  switch (code) {
-    case "auth/invalid-email":
-      return "E-posta adresi geçersiz.";
-    case "auth/user-not-found":
-    case "auth/wrong-password":
-    case "auth/invalid-credential":
-      return "E-posta veya şifre hatalı.";
-    case "auth/email-already-in-use":
-      return "Bu e-posta zaten kullanılıyor.";
-    case "auth/weak-password":
-      return "Şifre zayıf. Daha güçlü bir şifre deneyin.";
-    case "auth/too-many-requests":
-      return "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.";
-    case "auth/network-request-failed":
-      return "Ağ hatası. İnternet bağlantınızı kontrol edin.";
-    default:
-      return "Bir hata oluştu. Lütfen tekrar deneyin.";
-  }
+  const msg = err?.message || "";
+
+  const map = {
+    "auth/invalid-email": "E-posta formatı geçersiz.",
+    "auth/user-disabled": "Bu hesap devre dışı bırakılmış.",
+    "auth/user-not-found": "Bu e-posta ile kayıtlı bir hesap bulunamadı.",
+    "auth/wrong-password": "Şifre hatalı. Lütfen tekrar deneyin.",
+    "auth/email-already-in-use": "Bu e-posta zaten kullanılıyor.",
+    "auth/weak-password": "Şifre zayıf. En az 8 karakter, 1 harf ve 1 rakam içermeli.",
+    "auth/too-many-requests": "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.",
+    "auth/network-request-failed": "Ağ hatası oluştu. İnternet bağlantınızı kontrol edin."
+  };
+
+  return map[code] || (msg ? "İşlem başarısız: " + msg : "Bir hata oluştu. Lütfen tekrar deneyin.");
 }
 
-function disableBtn(btn, text) {
-  if (!btn) return;
-  btn.disabled = true;
-  btn.dataset._oldText = btn.textContent || "";
-  btn.textContent = text || "Lütfen bekleyin...";
-}
-function enableBtn(btn) {
-  if (!btn) return;
-  btn.disabled = false;
-  btn.textContent = btn.dataset._oldText || btn.textContent || "";
-}
+// ---------------- Signup ----------------
+const signupForm = $("signup-form");
+if (signupForm) {
+  const msgBox = $("signup-message") || $("auth-message");
 
-// ---------------- LOGIN ----------------
-function setupLogin() {
-  const form = qs("login-form");
-  if (!form) return;
-
-  const emailEl = qs("login-email");
-  const passEl = qs("login-password");
-  const msgBox = qs("login-message");
-  const btn = form.querySelector("button[type='submit']");
-
-  form.addEventListener("submit", async (e) => {
+  signupForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearMsg(msgBox);
 
-    // clear errors
-    setFieldError(qs("err-login-email"), "");
-    setFieldError(qs("err-login-password"), "");
-    showMsg(msgBox, "", "error");
+    const name = ( $("signup-name")?.value || $("signup-username")?.value || "" ).trim();
+    const email = ( $("signup-email")?.value || "" ).trim();
+    const phoneRaw = $("signup-phone")?.value || "";
+    const phone = normalizePhone(phoneRaw);
+    const password = $("signup-password")?.value || "";
 
-    const email = String(emailEl?.value || "").trim();
-    const password = String(passEl?.value || "");
-
-    let hasError = false;
+    // client validations
+    if (!name || name.length < 2) {
+      setMsg(msgBox, "Ad Soyad en az 2 karakter olmalı.", "error");
+      return;
+    }
     if (!isValidEmail(email)) {
-      setFieldError(qs("err-login-email"), "Geçerli bir e-posta girin.");
-      hasError = true;
+      setMsg(msgBox, "Geçerli bir e-posta girin.", "error");
+      return;
     }
-    if (!password) {
-      setFieldError(qs("err-login-password"), "Şifre zorunludur.");
-      hasError = true;
+    if (phoneRaw && (phone.length < 10 || phone.length > 15)) {
+      setMsg(msgBox, "Telefon numarası geçersiz (10-15 hane).", "error");
+      return;
     }
-    if (hasError) return;
+    if (!passwordRuleOk(password)) {
+      setMsg(msgBox, "Şifre en az 8 karakter olmalı ve en az 1 harf + 1 rakam içermeli.", "error");
+      return;
+    }
+
+    const btn = signupForm.querySelector("button[type='submit'], button") ;
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset._oldText = btn.textContent;
+      btn.textContent = "Kaydediliyor...";
+    }
 
     try {
-      disableBtn(btn, "Giriş yapılıyor...");
-      showMsg(msgBox, "Giriş yapılıyor...", "success");
-
-      await signInWithEmailAndPassword(auth, email, password);
-
-      showMsg(msgBox, "Giriş başarılı, ana sayfaya yönlendiriliyorsunuz...", "success");
-      setTimeout(() => {
-        window.location.href = "index.html";
-      }, 600);
-    } catch (err) {
-      showMsg(msgBox, mapFirebaseError(err), "error");
-    } finally {
-      enableBtn(btn);
-    }
-  });
-}
-
-// ---------------- SIGNUP ----------------
-function setupSignup() {
-  const form = qs("signup-form");
-  if (!form) return;
-
-  const nameEl = qs("signup-name");
-  const phoneEl = qs("signup-phone");
-  const emailEl = qs("signup-email");
-  const passEl = qs("signup-password");
-  const msgBox = qs("signup-message");
-  const btn = form.querySelector("button[type='submit']");
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    clearFieldErrors("signup");
-    showMsg(msgBox, "", "error");
-
-    const name = String(nameEl?.value || "").trim();
-    const phoneRaw = String(phoneEl?.value || "").trim();
-    const email = String(emailEl?.value || "").trim();
-    const password = String(passEl?.value || "");
-
-    let hasError = false;
-
-    if (name.length < 2) {
-      setFieldError(qs("err-signup-name"), "Ad Soyad en az 2 karakter olmalı.");
-      hasError = true;
-    }
-
-    const normalizedPhone = normalizeTrPhone(phoneRaw);
-    if (phoneRaw && !normalizedPhone) {
-      setFieldError(qs("err-signup-phone"), "Telefon 5XXXXXXXXX formatında olmalı.");
-      hasError = true;
-    }
-
-    if (!isValidEmail(email)) {
-      setFieldError(qs("err-signup-email"), "Geçerli bir e-posta girin.");
-      hasError = true;
-    }
-
-    const pwErr = checkPasswordRules(password);
-    if (pwErr) {
-      setFieldError(qs("err-signup-password"), pwErr);
-      hasError = true;
-    }
-
-    if (hasError) return;
-
-    try {
-      disableBtn(btn, "Kayıt yapılıyor...");
-      showMsg(msgBox, "Kayıt yapılıyor...", "success");
-
       const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // Set display name
-      await updateProfile(cred.user, { displayName: name });
+      // set displayName
+      try {
+        await updateProfile(cred.user, { displayName: name });
+      } catch (_) {}
 
-      // Store profile in Firestore
-      await setDoc(doc(db, "users", cred.user.uid), {
-        name,
-        phone: normalizedPhone || "",
-        email,
-        createdAt: serverTimestamp()
-      }, { merge: true });
+      // store user doc (non-sensitive)
+      try {
+        await setDoc(doc(db, "users", cred.user.uid), {
+          name,
+          email,
+          phone: phone || "",
+          createdAt: serverTimestamp()
+        }, { merge: true });
+      } catch (_) {}
 
-      // Send verification email (optional - if enabled)
-      try { await sendEmailVerification(cred.user); } catch (_) {}
+      // send verification (non-blocking)
+      try {
+        await sendEmailVerification(cred.user);
+      } catch (_) {}
 
-      showMsg(
-        msgBox,
-        "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...",
-        "success"
-      );
-
+      setMsg(msgBox, "Kayıt başarılı. Giriş sayfasına yönlendiriliyorsunuz…", "success");
       setTimeout(() => {
         window.location.href = "login.html";
       }, 900);
     } catch (err) {
-      showMsg(msgBox, mapFirebaseError(err), "error");
+      console.error("Signup error:", err);
+      setMsg(msgBox, humanAuthError(err), "error");
     } finally {
-      enableBtn(btn);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset._oldText || "Kayıt Ol";
+      }
     }
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  setupLogin();
-  setupSignup();
-});
+// ---------------- Login ----------------
+const loginForm = $("login-form");
+if (loginForm) {
+  const msgBox = $("login-message") || $("auth-message");
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearMsg(msgBox);
+
+    const email = ( $("login-email")?.value || "" ).trim();
+    const password = $("login-password")?.value || "";
+
+    if (!isValidEmail(email)) {
+      setMsg(msgBox, "Geçerli bir e-posta girin.", "error");
+      return;
+    }
+    if (!password) {
+      setMsg(msgBox, "Şifre boş olamaz.", "error");
+      return;
+    }
+
+    const btn = loginForm.querySelector("button[type='submit'], button");
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset._oldText = btn.textContent;
+      btn.textContent = "Giriş yapılıyor...";
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+
+      setMsg(msgBox, "Giriş başarılı. Ana sayfaya yönlendiriliyorsunuz…", "success");
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 700);
+    } catch (err) {
+      console.error("Login error:", err);
+      setMsg(msgBox, humanAuthError(err), "error");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = btn.dataset._oldText || "Giriş Yap";
+      }
+    }
+  });
+}
