@@ -23,10 +23,39 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
+  // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // image/video direct (public file)
+  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
+  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
+  if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
   return `https://drive.google.com/uc?export=download&id=${id}`;
 }
+
+
+function normalizeMediaUrl(rawUrl, kind) {
+  const s = String(rawUrl || "").trim();
+  if (!s) return "";
+  // If it's a Drive share link or raw fileId, convert to direct/preview URL.
+  const id = extractDriveId(s);
+  if (id) return driveDirectUrl(id, kind);
+  return s;
+}
+
+function normalizeMediaItem(raw) {
+  if (!raw) return null;
+  const type = String(raw.type || "").toLowerCase() || "image";
+  const url = String(raw.url || "").trim();
+  const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
+  return { type: kind, url: normalizeMediaUrl(url, kind) };
+}
+
+function normalizeMediaArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizeMediaItem).filter(Boolean).filter(m => m.url);
+}
+
+
 
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 
@@ -103,112 +132,6 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
-
-// ---------------- BAKIM MODU (GLOBAL) ----------------
-const MAINT_REF = doc(db, "siteSettings", "maintenance");
-let maintState = { status: "off", startAtMs: null, message: "" };
-let maintTick = null;
-
-function isLoginPage() {
-  const p = (location.pathname || "").toLowerCase();
-  return p.endsWith("/login.html") || p.endsWith("/login-shop.html") || p.endsWith("/signup.html") || p.endsWith("/login");
-}
-
-function fmtTime(ms) {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const mm = String(Math.floor(s / 60)).padStart(2, "0");
-  const ss = String(s % 60).padStart(2, "0");
-  return `${mm}:${ss}`;
-}
-
-function ensureMaintenanceBanner() {
-  let el = document.getElementById("maintenance-banner");
-  if (el) return el;
-  el = document.createElement("div");
-  el.id = "maintenance-banner";
-  el.className = "maintenance-banner";
-  el.style.display = "none";
-  el.innerHTML = `
-    <div class="mb-row">
-      <div class="mb-text">
-        <span class="mb-pill" id="mb-pill">Bakım</span>
-        <span id="mb-message">Bakım bildirimi</span>
-        <strong id="mb-count"></strong>
-      </div>
-      <div class="mb-actions" id="mb-actions"></div>
-    </div>
-  `;
-  document.body.prepend(el);
-  return el;
-}
-
-function renderMaintenance(state, isAdminUser) {
-  const banner = ensureMaintenanceBanner();
-
-  const now = Date.now();
-  const scheduled = state.status === "scheduled" && state.startAtMs && now < state.startAtMs;
-  const active = (state.status === "on") || (state.status === "scheduled" && state.startAtMs && now >= state.startAtMs);
-
-  if (!scheduled && !active) {
-    banner.style.display = "none";
-    if (maintTick) { clearInterval(maintTick); maintTick = null; }
-    return;
-  }
-
-  banner.style.display = "block";
-  const msgEl = document.getElementById("mb-message");
-  const countEl = document.getElementById("mb-count");
-  const pillEl = document.getElementById("mb-pill");
-
-  const msg = state.message ? String(state.message) : "Planlı bakım yapılacaktır.";
-  if (msgEl) msgEl.textContent = msg;
-
-  if (scheduled) {
-    if (pillEl) pillEl.textContent = "Bakım Başlıyor";
-    const update = () => {
-      const left = Math.max(0, state.startAtMs - Date.now());
-      if (countEl) countEl.textContent = ` (${fmtTime(left)})`;
-      if (left <= 0) {
-        clearInterval(maintTick);
-        maintTick = null;
-      }
-    };
-    update();
-    if (!maintTick) maintTick = setInterval(update, 1000);
-  } else {
-    if (pillEl) pillEl.textContent = "Bakım Aktif";
-    if (countEl) countEl.textContent = "";
-    if (maintTick) { clearInterval(maintTick); maintTick = null; }
-  }
-
-  // erişim kısıtı: bakım aktifken admin harici herkes login sayfasına yönlendirilir
-  if (active && !isAdminUser) {
-    const p = (location.pathname || "").toLowerCase();
-    const isAllowed = p.endsWith("/login.html") || p.endsWith("/login-shop.html");
-    if (!isAllowed) {
-      window.location.replace("login.html?maintenance=1");
-    }
-  }
-
-  // login sayfasında signup linkini gizle (bakım aktifse)
-  if (active && !isAdminUser && isLoginPage()) {
-    document.querySelectorAll('a[href="signup.html"]').forEach(a => a.style.display = "none");
-  }
-}
-
-function startMaintenanceWatch() {
-  onSnapshot(MAINT_REF, (snap) => {
-    const d = snap.exists() ? (snap.data() || {}) : {};
-    maintState = {
-      status: d.status || "off",
-      startAtMs: typeof d.startAtMs === "number" ? d.startAtMs : null,
-      message: d.message || ""
-    };
-    const isAdminUser = (typeof currentUserRole === "string" && currentUserRole === "admin");
-    renderMaintenance(maintState, isAdminUser);
-  }, () => {});
-}
-
 
 
 // --- Upload yardımcıları ---
@@ -319,11 +242,59 @@ function getCartCount() {
 function getCartSubtotal() {
   const cart = getCart();
   let subtotal = 0;
+
   cart.forEach((item) => {
+    // Prefer price stored in cart (works even before PRODUCTS loads)
+    const itemPrice = Number(item.price ?? 0);
+    if (itemPrice > 0) {
+      subtotal += itemPrice * Number(item.qty || 0);
+      return;
+    }
+
+    // Fallback: look up from PRODUCTS if available
     const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) subtotal += Number(product.price || 0) * item.qty;
+    if (product) subtotal += Number(product.price || 0) * Number(item.qty || 0);
   });
+
   return subtotal;
+}
+
+function getCartLineItems() {
+  const cart = getCart();
+  return cart
+    .map((item) => {
+      const id = String(item.id || "");
+      const qty = Number(item.qty || 0);
+      if (!id || qty <= 0) return null;
+
+      const p = PRODUCTS.find((x) => x.id === id);
+      const name = String(item.name || (p ? p.name : "") || "Ürün").trim();
+      const price = Number(item.price ?? (p ? p.price : 0) ?? 0);
+
+      return {
+        id,
+        name,
+        qty,
+        price,
+        lineTotal: price * qty
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildWhatsAppOrderMessage(subtotal) {
+  const items = getCartLineItems();
+  const lines = items.map((it) => {
+    const priceTxt = Number.isFinite(it.price) ? `${it.price.toFixed(2)} TL` : "-";
+    const lineTotalTxt = Number.isFinite(it.lineTotal) ? `${it.lineTotal.toFixed(2)} TL` : "-";
+    return `• ${it.name} (Kod: ${it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
+  });
+
+  const header = "Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.";
+  const detailHeader = lines.length ? "\n\nSipariş Detayları:\n" + lines.join("\n") : "";
+  const totalLine = `\n\nToplam: ${Number(subtotal || 0).toFixed(2)} TL`;
+
+  return header + detailHeader + totalLine;
 }
 
 function updateCartProgress(subtotal) {
@@ -344,32 +315,78 @@ function updateCartCount() {
   updateCartProgress(getCartSubtotal());
 }
 
-function setCartItemQty(productId, qty) {
+function setCartItemQty(productId, qty, meta) {
   const cart = getCart();
   const idx = cart.findIndex((i) => i.id === productId);
+
   if (qty <= 0) {
     if (idx >= 0) cart.splice(idx, 1);
   } else {
-    if (idx >= 0) cart[idx].qty = qty;
-    else cart.push({ id: productId, qty });
+    if (idx >= 0) {
+      cart[idx].qty = qty;
+      // refresh meta if provided
+      if (meta && typeof meta === "object") {
+        cart[idx].name = meta.name ?? cart[idx].name;
+        cart[idx].price = meta.price ?? cart[idx].price;
+        cart[idx].imageUrl = meta.imageUrl ?? cart[idx].imageUrl;
+      }
+    } else {
+      const item = { id: productId, qty };
+      if (meta && typeof meta === "object") {
+        item.name = meta.name ?? "";
+        item.price = meta.price ?? 0;
+        item.imageUrl = meta.imageUrl ?? "";
+      }
+      cart.push(item);
+    }
   }
+
   saveCart(cart);
+
+  // If we're on cart page, re-render immediately for UI consistency
+  if (document.getElementById("cart-items-container")) renderCart();
+
   updateCartCount();
 }
 
 function adjustCartItem(productId, delta) {
   const cart = getCart();
   const item = cart.find((i) => i.id === productId);
-  const nextQty = (item ? item.qty : 0) + delta;
-  setCartItemQty(productId, nextQty);
+  const nextQty = (item ? Number(item.qty || 0) : 0) + delta;
+
+  // try to pull latest meta from PRODUCTS if available
+  const p = PRODUCTS.find((x) => x.id === productId);
+  const meta = p
+    ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" }
+    : undefined;
+
+  setCartItemQty(productId, nextQty, meta);
 }
 
-function addToCart(productId) {
+function addToCart(productId, meta) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
-  if (existing) existing.qty += 1;
-  else cart.push({ id: productId, qty: 1 });
+
+  if (existing) {
+    existing.qty = Number(existing.qty || 0) + 1;
+    if (meta && typeof meta === "object") {
+      existing.name = meta.name ?? existing.name;
+      existing.price = meta.price ?? existing.price;
+      existing.imageUrl = meta.imageUrl ?? existing.imageUrl;
+    }
+  } else {
+    const item = { id: productId, qty: 1 };
+    if (meta && typeof meta === "object") {
+      item.name = meta.name ?? "";
+      item.price = meta.price ?? 0;
+      item.imageUrl = meta.imageUrl ?? "";
+    }
+    cart.push(item);
+  }
+
   saveCart(cart);
+
+  if (document.getElementById("cart-items-container")) renderCart();
   updateCartCount();
 }
 
@@ -446,11 +463,11 @@ function loadProductsFromFirestore() {
         price: d.price,
         category: d.category || "",
         description: d.description || "",
-        imageUrl: d.imageUrl || "",
+        imageUrl: normalizeMediaUrl(d.imageUrl || "", (String(d.imageUrl||"").toLowerCase().includes(".pdf") ? "pdf" : "image")),
         media: Array.isArray(d.media)
-          ? d.media
+          ? normalizeMediaArray(d.media)
           : (d.imageUrl
-              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: d.imageUrl }]
+              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: normalizeMediaUrl(d.imageUrl, (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image")) }]
               : []),
         sellerId: d.sellerId || "",
         featured: !!d.featured
@@ -471,7 +488,9 @@ function handleAddToCart(productId, buttonEl) {
     return;
   }
 
-  addToCart(productId);
+  const p = PRODUCTS.find(x => x.id === productId);
+  const meta = p ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" } : undefined;
+  addToCart(productId, meta);
 
   const originalText = buttonEl.textContent;
   buttonEl.textContent = "Sepete eklendi";
@@ -518,9 +537,9 @@ function renderProducts() {
   }).forEach((product) => {
     // Medya (görsel/pdf + opsiyonel video) -> kaydırmalı alan
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? product.media
+      ? normalizeMediaArray(product.media)
       : (product.imageUrl
-          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: normalizeMediaUrl(product.imageUrl, (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')) }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
@@ -540,7 +559,7 @@ function renderProducts() {
       } else {
         mediaHtml = `
           <div class="card-img">
-            <img src="${m.url}" alt="${product.name}" />
+            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
           </div>`;
       }
     } else if (mediaItems.length > 1) {
@@ -551,7 +570,7 @@ function renderProducts() {
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         }
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join("");
 
       mediaHtml = `
@@ -606,10 +625,17 @@ function renderFeatured() {
   }
 
   featured.forEach((product) => {
+    // Featured/Vitrin kartlarında da Drive linklerini görüntülenebilir URL'lere normalize et
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? product.media
+      ? normalizeMediaArray(product.media)
       : (product.imageUrl
-          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
+          ? [{
+              type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'),
+              url: normalizeMediaUrl(
+                product.imageUrl,
+                (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')
+              )
+            }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
@@ -620,13 +646,13 @@ function renderFeatured() {
       } else if (m.type === 'pdf') {
         mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" /></div>`;
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join('');
       mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası">${slides}</div></div>`;
     }
@@ -657,6 +683,7 @@ function renderFeatured() {
 
 // ---------------- SEPET ----------------
 
+
 function renderCart() {
   const container = document.getElementById("cart-items-container");
   if (!container) return;
@@ -666,12 +693,40 @@ function renderCart() {
   const warningEl = document.getElementById("limit-warning");
 
   const cart = getCart();
+
+  // Bind once (event delegation) so +/- never breaks after rerender
+  if (!container.dataset.bound) {
+    container.dataset.bound = "1";
+    container.addEventListener("click", (e) => {
+      const incBtn = e.target.closest("[data-qty-inc]");
+      const decBtn = e.target.closest("[data-qty-dec]");
+      const rmBtn = e.target.closest("[data-remove-from-cart]");
+
+      if (incBtn) {
+        const id = incBtn.getAttribute("data-qty-inc");
+        adjustCartItem(id, +1);
+        return;
+      }
+      if (decBtn) {
+        const id = decBtn.getAttribute("data-qty-dec");
+        adjustCartItem(id, -1);
+        return;
+      }
+      if (rmBtn) {
+        const id = rmBtn.getAttribute("data-remove-from-cart");
+        setCartItemQty(id, 0);
+        return;
+      }
+    });
+  }
+
   if (!cart.length) {
     container.innerHTML = `<p class="empty-cart">Sepetiniz boş.</p>`;
     if (subEl) subEl.textContent = "0 TL";
     if (totalEl) totalEl.textContent = "0 TL";
     if (warningEl) warningEl.textContent = "";
     updateCartProgress(0);
+    updateCartCount();
     return;
   }
 
@@ -679,27 +734,40 @@ function renderCart() {
   let subtotal = 0;
 
   cart.forEach((item) => {
-    const product = PRODUCTS.find((p) => p.id === item.id);
-    if (!product) return;
-    const price = Number(product.price || 0);
-    const lineTotal = price * item.qty;
+    const product = PRODUCTS.find((p) => p.id === item.id) || null;
+
+    const name = (product?.name ?? item.name ?? "").toString() || "Ürün";
+    const price = Number(product?.price ?? item.price ?? 0);
+    const qty = Number(item.qty || 0);
+
+    const imgUrlRaw = product?.imageUrl ?? item.imageUrl ?? "";
+    const imgUrl = normalizeMediaUrl(imgUrlRaw, "image");
+
+    const lineTotal = price * qty;
     subtotal += lineTotal;
 
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML = `
-      <div>
-        <h4>${product.name}</h4>
-        <p>${price} TL</p>
+      <div class="cart-item-left">
+        <div class="cart-item-thumb">
+          <img src="${imgUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer"
+               onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+        </div>
+        <div class="cart-item-info">
+          <h4>${name}</h4>
+          <p>${price} TL</p>
+        </div>
       </div>
+
       <div class="cart-item-actions">
         <div class="cart-qty">
-          <button class="qty-btn" data-qty-dec="${product.id}" aria-label="Azalt">−</button>
-          <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn" data-qty-inc="${product.id}" aria-label="Arttır">+</button>
+          <button class="qty-btn" data-qty-dec="${item.id}" aria-label="Azalt">−</button>
+          <span class="qty-val">${qty}</span>
+          <button class="qty-btn" data-qty-inc="${item.id}" aria-label="Arttır">+</button>
         </div>
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${product.id}">Kaldır</button>
+        <button class="btn-link" data-remove-from-cart="${item.id}">Kaldır</button>
       </div>
     `;
     container.appendChild(row);
@@ -713,24 +781,13 @@ function renderCart() {
       warningEl.textContent =
         "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
     } else if (subtotal >= 400) {
-      warningEl.textContent =
-        "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
+      warningEl.textContent = "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
     } else {
       warningEl.textContent = "";
     }
   }
 
-  container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-remove-from-cart");
-      let cartNow = getCart();
-      cartNow = cartNow.filter((item) => item.id !== id);
-      saveCart(cartNow);
-      renderCart();
-      updateCartCount();
-    });
-  });
-
+  updateCartProgress(subtotal);
   updateCartCount();
 }
 
@@ -981,14 +1038,33 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = (document.getElementById("sp-category").value || "").trim();
-      const imgFileEl = document.getElementById("sp-image-file");
-      const videoFileEl = document.getElementById("sp-video-file");
-      const imgFile = imgFileEl && imgFileEl.files ? imgFileEl.files[0] : null;
-      const videoFile = videoFileEl && videoFileEl.files ? videoFileEl.files[0] : null;
+      
       const desc = document.getElementById("sp-description").value.trim();
 
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve Drive görsel linki alanına en az 1 adet .jpg veya .png uzantılı bağlantı girin.";
+      // Drive link inputs (ana medya zorunlu, diğerleri opsiyonel)
+      const driveImgInput = document.getElementById("driveImageLink");
+      const driveImgTypeEl = document.getElementById("driveImageType");
+      const driveImg2Input = document.getElementById("driveSecondImageLink");
+      const driveVidInput = document.getElementById("driveVideoLink");
+
+      const imgRaw = driveImgInput ? String(driveImgInput.value || "").trim() : "";
+      const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image"; // image | pdf
+      const img2Raw = driveImg2Input ? String(driveImg2Input.value || "").trim() : "";
+      const vidRaw = driveVidInput ? String(driveVidInput.value || "").trim() : "";
+
+      // Basit URL uzantı kontrolü (Drive linkleri uzantı taşımaz: Drive ise uzantı aramayız)
+      const hasAllowedExt = (url, allowedExts) => {
+        const s = String(url || "").trim().toLowerCase();
+        if (!s) return false;
+        const clean = s.split("?")[0].split("#")[0];
+        return allowedExts.some((ext) => clean.endsWith("." + ext));
+      };
+
+      const isDrive = (raw) => !!extractDriveId(raw);
+
+      // Zorunlu alanlar
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgRaw) {
+        msg.textContent = "Lütfen tüm alanları doldurun ve Drive Görsel/PDF Linki (Zorunlu) alanına bir Drive paylaşım linki veya fileId girin.";
         msg.style.color = "red";
         return;
       }
@@ -999,23 +1075,40 @@ async function setupSellerPanel() {
         return;
       }
 
-      // Görsel/PDF uzantı kontrolü
-      const allowedImgExts = ["jpg", "jpeg", "png", "pdf"];
-      const imgName = (imgFile.name || "").toLowerCase();
-      const imgExt = imgName.includes(".") ? imgName.split(".").pop() : "";
-      if (!allowedImgExts.includes(imgExt)) {
-        msg.textContent = "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yüklenebilir.";
-        msg.style.color = "red";
-        return;
+      // Ana medya doğrulama: Drive ise kabul; Drive değilse seçilen türe göre uzantı zorunlu
+      if (isDrive(imgRaw)) {
+        // ok
+      } else if (imgTypeSel === "pdf") {
+        if (!hasAllowedExt(imgRaw, ["pdf"])) {
+          msg.textContent = "Ana medya PDF seçildi. Drive linki/fileId girin veya .pdf uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
+      } else {
+        if (!hasAllowedExt(imgRaw, ["jpg", "jpeg", "png"])) {
+          msg.textContent = "Ana medya görsel seçildi. Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
       }
 
-      // Video uzantı kontrolü (opsiyonel)
-      const allowedVideoExts = ["mp4", "webm", "mov", "m4v"];
-      if (videoFile) {
-        const vName = (videoFile.name || "").toLowerCase();
-        const vExt = vName.includes(".") ? vName.split(".").pop() : "";
-        if (!allowedVideoExts.includes(vExt)) {
-          msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v yükleyebilirsiniz.";
+      // Opsiyonel 2. görsel: Drive veya .jpg/.jpeg/.png
+      if (img2Raw) {
+        if (isDrive(img2Raw)) {
+          // ok
+        } else if (!hasAllowedExt(img2Raw, ["jpg", "jpeg", "png"])) {
+          msg.textContent = "İkinci görsel için Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
+          msg.style.color = "red";
+          return;
+        }
+      }
+
+      // Opsiyonel video: Drive veya mp4/webm/mov/m4v
+      if (vidRaw) {
+        if (isDrive(vidRaw)) {
+          // ok
+        } else if (!hasAllowedExt(vidRaw, ["mp4", "webm", "mov", "m4v"])) {
+          msg.textContent = "Video için Drive linki/fileId girin veya .mp4/.webm/.mov/.m4v uzantılı bir bağlantı girin.";
           msg.style.color = "red";
           return;
         }
@@ -1023,13 +1116,11 @@ async function setupSellerPanel() {
 
       msg.style.color = "black";
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
+msg.style.color = "black";
+      msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
         // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
-        const driveImgInput = document.getElementById("driveImageLink");
-        const driveImgTypeEl = document.getElementById("driveImageType");
-        const driveImg2Input = document.getElementById("driveSecondImageLink");
-        const driveVidInput = document.getElementById("driveVideoLink");
 
         const imgRaw = driveImgInput ? driveImgInput.value : "";
         const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
@@ -1144,61 +1235,6 @@ async function setupAdminPanel() {
   const sellerBox = document.getElementById("admin-seller-requests");
   const productBox = document.getElementById("admin-product-requests");
   const productsManageBox = document.getElementById("admin-products-list");
-
-  // --- Bakım Modu Kontrolleri (Admin) ---
-  const maintStatusEl = document.getElementById("admin-maint-status");
-  const maintMsgEl = document.getElementById("admin-maint-message");
-  const btnSchedule = document.getElementById("admin-maint-schedule");
-  const btnStartNow = document.getElementById("admin-maint-startnow");
-  const btnStop = document.getElementById("admin-maint-stop");
-
-  // Durumu admin panelde göster
-  onSnapshot(MAINT_REF, (snap) => {
-    const d = snap.exists() ? (snap.data() || {}) : {};
-    const status = d.status || "off";
-    const startAtMs = typeof d.startAtMs === "number" ? d.startAtMs : null;
-    const message = d.message || "";
-    if (maintMsgEl && !maintMsgEl.value) maintMsgEl.value = message;
-
-    const now = Date.now();
-    const scheduledLeft = (status === "scheduled" && startAtMs) ? Math.max(0, startAtMs - now) : 0;
-    const effective = (status === "on") || (status === "scheduled" && startAtMs && now >= startAtMs) ? "AKTİF" : (status === "scheduled" ? "PLANLI" : "KAPALI");
-
-    if (maintStatusEl) {
-      let extra = "";
-      if (status === "scheduled" && startAtMs && now < startAtMs) extra = ` • Başlamasına: ${fmtTime(scheduledLeft)}`;
-      maintStatusEl.textContent = `Durum: ${effective}${extra}`;
-    }
-  });
-
-  const writeMaint = async (payload) => {
-    await setDoc(MAINT_REF, { ...payload, updatedAt: serverTimestamp() }, { merge: true });
-  };
-
-  if (btnSchedule) {
-    btnSchedule.addEventListener("click", async () => {
-      const message = maintMsgEl ? maintMsgEl.value.trim() : "";
-      const startAtMs = Date.now() + 15 * 60 * 1000;
-      await writeMaint({ status: "scheduled", startAtMs, message });
-      alert("Bakım planı oluşturuldu: 15 dakika geri sayım başladı.");
-    });
-  }
-
-  if (btnStartNow) {
-    btnStartNow.addEventListener("click", async () => {
-      const message = maintMsgEl ? maintMsgEl.value.trim() : "";
-      await writeMaint({ status: "on", startAtMs: Date.now(), message });
-      alert("Bakım modu AKTİF edildi.");
-    });
-  }
-
-  if (btnStop) {
-    btnStop.addEventListener("click", async () => {
-      await writeMaint({ status: "off", startAtMs: null });
-      alert("Bakım modu kapatıldı.");
-    });
-  }
-
 
   // Kullanıcı listesi & roller
   if (usersBox) {
@@ -1489,7 +1525,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
   setupNavbar();
-  startMaintenanceWatch();
   applyTheme(localStorage.getItem(THEME_KEY) || "light");
 
 
@@ -1529,11 +1564,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(
-        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
-          2
-        )} TL`
-      );
+      const message = encodeURIComponent(buildWhatsAppOrderMessage(subtotal));
       window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
