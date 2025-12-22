@@ -1,148 +1,173 @@
 <!DOCTYPE html>
-
 <html lang="tr">
 <head>
-<meta charset="utf-8"/>
-<title>Giriş Yap - ÖğrenciFy</title>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<link href="style.css" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <title>Giriş Yap - ÖğrenciFy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<header class="site-header">
-<nav class="navbar">
-<a class="logo" href="index.html"><img alt="ÖğrenciFy" src="logo.png"/></a>
-<div class="nav-main">
-<ul class="nav-links">
-<li><a href="index.html">Ana Sayfa</a></li>
-<li class="nav-dropdown">
-<a class="nav-products-link" href="products.html">Ürünler</a>
-<ul class="dropdown-menu">
-<li><a href="products.html?cat=ev">Ev</a></li>
-<li><a href="products.html?cat=dekorasyon">Dekorasyon</a></li>
-<li><a href="products.html?cat=aksesuar">Aksesuar</a></li>
-<li><a href="products.html?cat=elektronik">Elektronik</a></li>
-<li><a href="products.html?cat=hediyelik">Hediyelik</a></li>
-</ul>
-</li>
-<li class="nav-guest-only"><a class="nav-seller-cta" href="seller.html">Satıcı Ol</a></li>
-<li><a href="about.html">Hakkımızda</a></li>
-<li><a href="help.html">Yardım</a></li>
-<li><a class="nav-admin-link" href="admin.html" style="display:none;">Yönetici Paneli</a></li>
-<li><a class="nav-seller-panel" href="seller-dashboard.html" style="display:none;">Satıcı Panelim</a></li>
-</ul>
-<div class="nav-actions">
-<a aria-label="Sepetim" class="nav-cart" href="cart.html">
-<span class="nav-cart-text">Sepetim</span>
-<span class="cart-count" id="cart-count">0</span>
-<span class="cart-progress">
-<span class="cart-progress-fill" id="cart-progress-fill"></span>
-</span>
-<span aria-hidden="true" class="nav-cart-icon">
-<svg height="18" viewbox="0 0 24 24" width="18">
-<path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2ZM7.2 14h9.9c.75 0 1.4-.41 1.74-1.03L21 6H6.21L5.27 4H2v2h2l3.6 7.59-1.35 2.44C5.52 17.37 6.48 19 8 19h12v-2H8l1.2-2Z"></path>
-</svg>
-</span>
-</a>
-<div class="nav-auth nav-auth-guest">
-<a class="btn-nav btn-nav-outline" href="login.html">Giriş Yap</a>
-<a class="btn-nav btn-nav-primary" href="signup.html">Kayıt Ol</a>
-</div>
-<div class="nav-auth nav-auth-user" style="display:none;">
-<button aria-label="Profil Menüsü" class="nav-user-button" type="button">
-<span class="nav-user-avatar" id="nav-user-initial">U</span>
-<span class="nav-user-name" id="nav-user-name">Kullanıcı</span>
-</button>
-<div class="nav-user-dropdown">
-<div class="nav-user-meta">
-<div class="nav-user-title" id="nav-user-title">Kullanıcı</div>
-<div class="nav-user-email" id="nav-user-email">user@mail.com</div>
-</div>
-<a class="nav-user-link" href="profile.html">Profil Ayarları</a>
-<a class="nav-user-link nav-seller-panel-dd" href="seller-dashboard.html" style="display:none;">Satıcı Panelim</a>
-<button class="nav-user-link nav-user-logout" id="logout-btn" type="button">Çıkış Yap</button>
-</div>
-</div>
-<button aria-label="Menü" class="nav-toggle" type="button">☰</button>
-</div>
-</div>
-<div class="nav-mobile-menu">
-<a href="index.html">Ana Sayfa</a>
-<a href="products.html">Ürünler</a>
-<a href="products.html?cat=ev">Ev</a>
-<a href="products.html?cat=dekorasyon">Dekorasyon</a>
-<a href="products.html?cat=aksesuar">Aksesuar</a>
-<a href="products.html?cat=elektronik">Elektronik</a>
-<a href="products.html?cat=hediyelik">Hediyelik</a>
-<a class="nav-seller-cta-mobile nav-auth-guest" href="seller.html">Satıcı Ol</a>
-<a href="about.html">Hakkımızda</a>
-<a href="help.html">Yardım</a>
-<a class="nav-admin-link-mobile" href="admin.html" style="display:none;">Yönetici Paneli</a>
-<a class="nav-seller-panel-mobile" href="seller-dashboard.html" style="display:none;">Satıcı Panelim</a>
-<a class="nav-mobile-login nav-auth-guest" href="login.html">Giriş Yap</a>
-<a class="nav-signup-mobile nav-auth-guest" href="signup.html">Kayıt Ol</a>
-<a href="cart.html">Sepetim</a>
-</div>
-</nav>
-</header>
-<div class="auth-page">
-<div class="auth-card">
-<a class="auth-logo" href="index.html">
-<img alt="ÖğrenciFy" src="logo.png">
-</img></a>
-<h1>Tekrar hoş geldin 👋</h1>
-<p>Hesabına giriş yap ve öğrencilerin el emeği ürünlerini keşfet.</p>
-<form class="auth-form" id="login-form" novalidate="">
-<label for="login-email">E-posta</label>
-<input autocomplete="email" id="login-email" required="" type="email"/>
-<small aria-live="polite" class="field-error" id="err-login-email"></small>
-<label for="login-password">Şifre</label>
-<input autocomplete="current-password" id="login-password" required="" type="password"/>
-<small aria-live="polite" class="field-error" id="err-login-password"></small>
-<div class="message-box" id="login-message" style="display:none;"></div>
-<button class="btn-primary" type="submit">Giriş Yap</button>
-</form>
 
+  <header class="site-header">
+  <nav class="navbar">
+    <a href="index.html" class="logo"><img src="logo.png" alt="ÖğrenciFy"></a>
+
+    <div class="nav-main">
+      <ul class="nav-links">
+        <li><a href="index.html">Ana Sayfa</a></li>
+
+        <li class="nav-dropdown">
+          <a href="products.html" class="nav-products-link">Ürünler</a>
+          <ul class="dropdown-menu">
+            <li><a href="products.html?cat=ev">Ev</a></li>
+            <li><a href="products.html?cat=dekorasyon">Dekorasyon</a></li>
+            <li><a href="products.html?cat=aksesuar">Aksesuar</a></li>
+            <li><a href="products.html?cat=elektronik">Elektronik</a></li>
+            <li><a href="products.html?cat=hediyelik">Hediyelik</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-guest-only"><a href="seller.html" class="nav-seller-cta">Satıcı Ol</a></li>
+        <li><a href="about.html">Hakkımızda</a></li>
+        <li><a href="help.html">Yardım</a></li>
+
+        <li><a href="admin.html" class="nav-admin-link" style="display:none;">Yönetici Paneli</a></li>
+        <li><a href="seller-dashboard.html" class="nav-seller-panel" style="display:none;">Satıcı Panelim</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="cart.html" class="nav-cart" aria-label="Sepetim">
+          <span class="nav-cart-text">Sepetim</span>
+          <span id="cart-count" class="cart-count">0</span>
+          <span class="cart-progress">
+            <span id="cart-progress-fill" class="cart-progress-fill"></span>
+          </span>
+
+          <span class="nav-cart-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2Zm10 0c-1.1 0-1.99.9-1.99 2S15.9 22 17 22s2-.9 2-2-.9-2-2-2ZM7.2 14h9.9c.75 0 1.4-.41 1.74-1.03L21 6H6.21L5.27 4H2v2h2l3.6 7.59-1.35 2.44C5.52 17.37 6.48 19 8 19h12v-2H8l1.2-2Z"></path>
+            </svg>
+          </span>
+        </a>
+
+        <div class="nav-auth nav-auth-guest">
+          <a href="login.html" class="btn-nav btn-nav-outline">Giriş Yap</a>
+          <a href="signup.html" class="btn-nav btn-nav-primary">Kayıt Ol</a>
+        </div>
+
+        <div class="nav-auth nav-auth-user" style="display:none;">
+          <button class="nav-user-button" type="button" aria-label="Profil Menüsü">
+            <span class="nav-user-avatar" id="nav-user-initial">U</span>
+            <span class="nav-user-name" id="nav-user-name">Kullanıcı</span>
+          </button>
+
+          <div class="nav-user-dropdown">
+            <div class="nav-user-meta">
+              <div class="nav-user-title" id="nav-user-title">Kullanıcı</div>
+              <div class="nav-user-email" id="nav-user-email">user@mail.com</div>
+            </div>
+            <a class="nav-user-link" href="profile.html">Profil Ayarları</a>
+            <a class="nav-user-link nav-seller-panel-dd" href="seller-dashboard.html" style="display:none;">Satıcı Panelim</a>
+            <button class="nav-user-link nav-user-logout" id="logout-btn" type="button">Çıkış Yap</button>
+          </div>
+        </div>
+
+        <button class="nav-toggle" type="button" aria-label="Menü">☰</button>
+      </div>
+    </div>
+
+    <div class="nav-mobile-menu">
+      <a href="index.html">Ana Sayfa</a>
+      <a href="products.html">Ürünler</a>
+      <a href="products.html?cat=ev">Ev</a>
+      <a href="products.html?cat=dekorasyon">Dekorasyon</a>
+      <a href="products.html?cat=aksesuar">Aksesuar</a>
+      <a href="products.html?cat=elektronik">Elektronik</a>
+      <a href="products.html?cat=hediyelik">Hediyelik</a>
+      <a href="seller.html" class="nav-seller-cta-mobile nav-auth-guest">Satıcı Ol</a>
+      <a href="about.html">Hakkımızda</a>
+      <a href="help.html">Yardım</a>
+      <a href="admin.html" class="nav-admin-link-mobile" style="display:none;">Yönetici Paneli</a>
+      <a href="seller-dashboard.html" class="nav-seller-panel-mobile" style="display:none;">Satıcı Panelim</a>
+      <a href="login.html" class="nav-mobile-login nav-auth-guest">Giriş Yap</a>
+      <a href="signup.html" class="nav-signup-mobile nav-auth-guest">Kayıt Ol</a>
+      <a href="cart.html">Sepetim</a>
+    </div>
+  </nav>
+</header>
+
+
+  <div class="auth-page">
+    <div class="auth-card">
+      <a href="index.html" class="auth-logo">
+        <img src="logo.png" alt="ÖğrenciFy" />
+      </a>
+      <h1>Tekrar hoş geldin 👋</h1>
+      <p>Hesabına giriş yap ve öğrencilerin el emeği ürünlerini keşfet.</p>
+
+      <form id="login-form" class="auth-form" novalidate>
+        <label for="login-email">E-posta</label>
+        <input type="email" id="login-email" required autocomplete="email" />
+        <small id="err-login-email" class="field-error" aria-live="polite"></small>
+
+        <label for="login-password">Şifre</label>
+        <input type="password" id="login-password" required autocomplete="current-password" />
+        <small id="err-login-password" class="field-error" aria-live="polite"></small>
+
+        <div id="login-message" class="message-box" style="display:none;"></div>
+
+        <button type="submit" class="btn-primary">Giriş Yap</button>
+      </form>
 <p class="auth-switch">
         Hesabın yok mu?
         <a href="signup.html">Kayıt Ol</a>
-</p>
-</div>
-</div>
-<footer class="mega-footer">
-<div class="footer-container">
-<div class="footer-col">
-<a class="footer-logo" href="index.html">
-<img alt="ÖğrenciFy logosu" src="logo.png"/>
-</a>
-<p class="footer-tagline">Geleceğin emeği, bugünün değeri.</p>
-<div class="social-icons">
-<a href="#">📷</a>
-<a href="#">🐦</a>
-<a href="#">▶️</a>
-</div>
-</div>
-<div class="footer-col">
-<h3>Kurumsal</h3>
-<ul class="footer-links">
-<li><a href="about.html">Hakkımızda</a></li>
-<li><a href="seller.html">Satıcı Ol</a></li>
-<li><a href="contact.html">İletişim</a></li>
-</ul>
-</div>
-<div class="footer-col">
-<h3>Keşfet</h3>
-<ul class="footer-links">
-<li><a href="products.html">Tüm Ürünler</a></li>
-<li><a href="help.html">Yardım Merkezi</a></li>
-<li><a href="cart.html">Sepetim</a></li>
-</ul>
-</div>
-</div>
-<div class="footer-bottom">
-<p>© 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-</div>
+      </p>
+    </div>
+  </div>
+
+  <footer class="mega-footer">
+  <div class="footer-container">
+    <div class="footer-col">
+      <a href="index.html" class="footer-logo">
+        <img src="logo.png" alt="ÖğrenciFy logosu">
+      </a>
+      <p class="footer-tagline">Geleceğin emeği, bugünün değeri.</p>
+      <div class="social-icons">
+        <a href="#">📷</a>
+        <a href="#">🐦</a>
+        <a href="#">▶️</a>
+      </div>
+    </div>
+
+    <div class="footer-col">
+      <h3>Kurumsal</h3>
+      <ul class="footer-links">
+        <li><a href="about.html">Hakkımızda</a></li>
+        <li><a href="seller.html">Satıcı Ol</a></li>
+        <li><a href="contact.html">İletişim</a></li>
+      </ul>
+    </div>
+
+    <div class="footer-col">
+      <h3>Keşfet</h3>
+      <ul class="footer-links">
+        <li><a href="products.html">Tüm Ürünler</a></li>
+        <li><a href="help.html">Yardım Merkezi</a></li>
+        <li><a href="cart.html">Sepetim</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
+  </div>
 </footer>
-<script src="auth.js" type="module"></script>
-<script src="script.js" type="module"></script>
+
+  
+
+
+  <script type="module" src="auth.js"></script>  
+
+  <script type="module" src="script.js"></script>
 </body>
 </html>
