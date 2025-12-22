@@ -1042,3 +1042,18 @@ body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
   border-radius:10px;
   box-sizing:border-box;
 }
+
+
+/* === Form field errors === */
+.field-error{display:block;margin-top:6px;margin-bottom:8px;font-size:.85rem;color:#b42318;min-height:1em}
+input.is-invalid, textarea.is-invalid, select.is-invalid{border-color:#b42318 !important; box-shadow: 0 0 0 1px rgba(180,35,24,0.12) !important}
+
+/* === Maintenance banner === */
+.maintenance-banner{position:fixed;left:0;right:0;top:0;z-index:9999;background:#111827;color:#fff;padding:12px 16px;font-size:.95rem;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.maintenance-banner strong{font-weight:700}
+.maintenance-banner .mb-left{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.maintenance-banner .mb-actions{display:flex;gap:8px;align-items:center}
+.maintenance-banner .btn-mini{background:#fff;color:#111827;border:none;border-radius:999px;padding:8px 12px;font-weight:600;cursor:pointer}
+.maintenance-banner .btn-mini.danger{background:#ef4444;color:#fff}
+body.has-maintenance-banner{padding-top:52px}
+@media(max-width:600px){.maintenance-banner{font-size:.9rem; padding:10px 12px} body.has-maintenance-banner{padding-top:64px}}

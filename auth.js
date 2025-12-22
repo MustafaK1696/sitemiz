@@ -39,6 +39,28 @@ function showMsg(box, text, type) {
   box.className = "auth-message " + (type || "");
 }
 
+function setFieldError(inputId, errorId, message) {
+  const input = document.getElementById(inputId);
+  const err = document.getElementById(errorId);
+  if (input) input.classList.toggle("is-invalid", !!message);
+  if (err) err.textContent = message || "";
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||"").trim());
+}
+
+function normalizeTRMobile(phone) {
+  return String(phone||"").replace(/\s+/g,"").replace(/^\+90/,"").replace(/^0/,"");
+}
+
+function isValidTRMobile(phone) {
+  const p = normalizeTRMobile(phone);
+  return p === "" || /^5\d{9}$/.test(p);
+}
+
+
+
 function safeVal(id) {
   const el = document.getElementById(id);
   return el ? (el.value || "").trim() : "";
@@ -58,39 +80,79 @@ function setupSignup(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const username = safeVal("signup-username");
-    const phone = safeVal("signup-phone");
+    setFieldError("signup-name","err-signup-name","");
+    setFieldError("signup-phone","err-signup-phone","");
+    setFieldError("signup-email","err-signup-email","");
+    setFieldError("signup-password","err-signup-password","");
+    showMsg(msgBox, "", "");
+
+    const name = safeVal("signup-name");
+    const phoneRaw = safeVal("signup-phone");
+    const phone = normalizeTRMobile(phoneRaw);
     const email = safeVal("signup-email");
     const password = document.getElementById("signup-password")?.value || "";
 
-    if (!username || !phone || !email || !password) {
-      showMsg(msgBox, "Lütfen tüm alanları doldurun.", "error");
+    let hasError = false;
+
+    if (!name || name.length < 2) {
+      setFieldError("signup-name","err-signup-name","Ad Soyad en az 2 karakter olmalı.");
+      hasError = true;
+    }
+
+    if (!isValidTRMobile(phoneRaw)) {
+      setFieldError("signup-phone","err-signup-phone","Telefon 5XXXXXXXXX formatında olmalı (opsiyonel).");
+      hasError = true;
+    }
+
+    if (!email || !isValidEmail(email)) {
+      setFieldError("signup-email","err-signup-email","Geçerli bir e-posta girin.");
+      hasError = true;
+    }
+
+    if (!password || password.length < 8) {
+      setFieldError("signup-password","err-signup-password","Şifre en az 8 karakter olmalı.");
+      hasError = true;
+    }
+
+    if (hasError) {
+      showMsg(msgBox, "Lütfen hatalı alanları düzeltin.", "error");
       return;
     }
+
+    const btn = form.querySelector("button");
+    if (btn) btn.disabled = true;
 
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-      // displayName
-      await updateProfile(cred.user, { displayName: username });
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: name });
+      }
 
-      // users/{uid} (role varsayılan customer)
       await setDoc(doc(db, "users", cred.user.uid), {
-        username,
-        phone,
+        name,
+        phone: phone || "",
         email,
-        role: "customer",
+        role: "buyer",
         createdAt: serverTimestamp()
-      }, { merge: true });
+      });
 
-      // mail doğrulama (opsiyonel)
-      try { await sendEmailVerification(cred.user); } catch {}
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+      }
 
-      showMsg(msgBox, "Kayıt başarılı! Giriş sayfasına yönlendiriliyorsun...", "success");
-      setTimeout(() => { window.location.href = "login.html"; }, 900);
+      showMsg(msgBox, "Kayıt başarılı! Lütfen e-postanı doğrula ve sonra giriş yap.", "success");
+      setTimeout(() => { window.location.href = "login.html"; }, 1200);
     } catch (err) {
       console.error(err);
-      showMsg(msgBox, "Kayıt olurken hata oluştu. E-posta zaten kayıtlı olabilir.", "error");
+      const code = err?.code || "";
+      let message = "Kayıt başarısız. Lütfen tekrar deneyin.";
+      if (code === "auth/email-already-in-use") message = "Bu e-posta zaten kullanılıyor.";
+      if (code === "auth/invalid-email") message = "E-posta formatı geçersiz.";
+      if (code === "auth/weak-password") message = "Şifre çok zayıf. Daha güçlü bir şifre deneyin.";
+      showMsg(msgBox, message, "error");
+    } finally {
+      if (btn) btn.disabled = false;
     }
   });
 }
@@ -101,11 +163,25 @@ function setupLogin(form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    // Clear field errors
+    setFieldError("login-email","err-login-email","");
+    setFieldError("login-password","err-login-password","");
+    showMsg(msgBox, "", "");
+
     const email = safeVal("login-email");
     const password = document.getElementById("login-password")?.value || "";
 
-    if (!email || !password) {
-      showMsg(msgBox, "Lütfen e-posta ve şifreyi girin.", "error");
+    let hasError = false;
+    if (!email || !isValidEmail(email)) {
+      setFieldError("login-email","err-login-email","Geçerli bir e-posta girin.");
+      hasError = true;
+    }
+    if (!password || password.length < 8) {
+      setFieldError("login-password","err-login-password","Şifre en az 8 karakter olmalı.");
+      hasError = true;
+    }
+    if (hasError) {
+      showMsg(msgBox, "Lütfen hatalı alanları düzeltin.", "error");
       return;
     }
 
@@ -114,12 +190,17 @@ function setupLogin(form) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-
       showMsg(msgBox, "Giriş başarılı, ana sayfaya yönlendiriliyorsun...", "success");
       setTimeout(() => { window.location.href = "index.html"; }, 600);
     } catch (err) {
       console.error(err);
-      showMsg(msgBox, "Giriş başarısız. E-posta veya şifre hatalı.", "error");
+      const code = err?.code || "";
+      let message = "Giriş başarısız. E-posta veya şifre hatalı.";
+      if (code === "auth/user-not-found") message = "Bu e-posta ile kayıtlı bir hesap bulunamadı.";
+      if (code === "auth/wrong-password") message = "Şifre hatalı. Lütfen tekrar deneyin.";
+      if (code === "auth/invalid-email") message = "E-posta formatı geçersiz.";
+      if (code === "auth/too-many-requests") message = "Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.";
+      showMsg(msgBox, message, "error");
     } finally {
       if (btn) btn.disabled = false;
     }

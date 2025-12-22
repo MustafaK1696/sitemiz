@@ -23,39 +23,10 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-  // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
-  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
-  if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
+  // image/video direct (public file)
   return `https://drive.google.com/uc?export=download&id=${id}`;
 }
-
-
-function normalizeMediaUrl(rawUrl, kind) {
-  const s = String(rawUrl || "").trim();
-  if (!s) return "";
-  // If it's a Drive share link or raw fileId, convert to direct/preview URL.
-  const id = extractDriveId(s);
-  if (id) return driveDirectUrl(id, kind);
-  return s;
-}
-
-function normalizeMediaItem(raw) {
-  if (!raw) return null;
-  const type = String(raw.type || "").toLowerCase() || "image";
-  const url = String(raw.url || "").trim();
-  const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
-  return { type: kind, url: normalizeMediaUrl(url, kind) };
-}
-
-function normalizeMediaArray(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(normalizeMediaItem).filter(Boolean).filter(m => m.url);
-}
-
-
 
 import { initializeApp, getApp, getApps } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
 
@@ -107,6 +78,7 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
+  Timestamp,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js";
 
@@ -164,7 +136,139 @@ async function uploadFileWithProgress(fileRef, file, onPct) {
 }
 
 let currentUser = null;
-let currentUserRole = "customer";
+let currentUserRole = "customer";// ===================== MAINTENANCE MODE =====================
+// Firestore doc: site/maintenance
+// { scheduled: true/false, startAt: Timestamp|null, message: string, startedBy: uid, createdAt: Timestamp }
+let maintenanceState = null;
+let maintenanceUnsub = null;
+let maintenanceTimer = null;
+
+function msFromTimestamp(ts) {
+  try {
+    if (!ts) return 0;
+    if (typeof ts.toMillis === "function") return ts.toMillis();
+    if (ts.seconds) return ts.seconds * 1000;
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+function getMaintenanceEffective(state) {
+  if (!state) return { show:false, active:false, startsInMs:0, message:"" };
+  const now = Date.now();
+  const startAtMs = msFromTimestamp(state.startAt);
+  const scheduled = state.scheduled === true;
+  const activeFlag = state.active === true;
+
+  const active = activeFlag || (scheduled && startAtMs > 0 && now >= startAtMs);
+  const show = scheduled || activeFlag;
+  const startsInMs = startAtMs > 0 ? Math.max(0, startAtMs - now) : 0;
+  return { show, active, startsInMs, message: state.message || "" };
+}
+
+function ensureMaintenanceBanner() {
+  let banner = document.getElementById("maintenance-banner");
+  if (banner) return banner;
+
+  banner = document.createElement("div");
+  banner.id = "maintenance-banner";
+  banner.className = "maintenance-banner";
+  banner.style.display = "none";
+        document.body.classList.remove("has-maintenance-banner");
+  banner.innerHTML = `
+    <div class="mb-left">
+      <strong>Bakım Uyarısı</strong>
+      <span id="maintenance-banner-text"></span>
+    </div>
+    <div class="mb-actions">
+      <span id="maintenance-countdown" style="font-variant-numeric: tabular-nums;"></span>
+      <a href="login.html" id="maintenance-go-login" class="btn-mini" style="display:none;">Giriş Sayfası</a>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  return banner;
+}
+
+function formatMMSS(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2,"0")}:${String(r).padStart(2,"0")}`;
+}
+
+function applyMaintenanceGate(effective, isAdmin) {
+  // Only login is allowed during active maintenance (admin bypass)
+  const page = (location.pathname.split("/").pop() || "").toLowerCase();
+  const isLogin = page === "login.html";
+  if (effective.active && !isAdmin && !isLogin) {
+    // Remember reason
+    try { localStorage.setItem("maintenance_redirect", "1"); } catch {}
+    location.href = "login.html?maintenance=1";
+  }
+}
+
+function updateMaintenanceUI() {
+  const banner = ensureMaintenanceBanner();
+  const textEl = document.getElementById("maintenance-banner-text");
+  const cdEl = document.getElementById("maintenance-countdown");
+  const goLogin = document.getElementById("maintenance-go-login");
+
+  const effective = getMaintenanceEffective(maintenanceState);
+  const isAdmin = currentUserRole === "admin";
+
+  if (!effective.show) {
+    banner.style.display = "none";
+        document.body.classList.remove("has-maintenance-banner");
+    if (maintenanceTimer) { clearInterval(maintenanceTimer); maintenanceTimer = null; }
+    return;
+  }
+
+  banner.style.display = "flex";
+      document.body.classList.add("has-maintenance-banner");
+
+  if (effective.active) {
+    if (textEl) textEl.textContent = effective.message ? `Bakım aktif. ${effective.message}` : "Bakım aktif. Site geçici olarak kapalı.";
+    if (cdEl) cdEl.textContent = "Aktif";
+    if (goLogin) goLogin.style.display = isAdmin ? "none" : "";
+  } else {
+    if (textEl) textEl.textContent = effective.message ? `15 dakika sonra bakım başlayacak. ${effective.message}` : "15 dakika sonra bakım başlayacak.";
+    if (goLogin) goLogin.style.display = "none";
+  }
+
+  // Live countdown until start
+  if (maintenanceTimer) { clearInterval(maintenanceTimer); maintenanceTimer = null; }
+  if (!effective.active) {
+    maintenanceTimer = setInterval(() => {
+      const eff = getMaintenanceEffective(maintenanceState);
+      if (cdEl) cdEl.textContent = `Kalan: ${formatMMSS(eff.startsInMs)}`;
+      if (eff.active) {
+        clearInterval(maintenanceTimer);
+        maintenanceTimer = null;
+        // Re-render + gate
+        updateMaintenanceUI();
+        applyMaintenanceGate(eff, currentUserRole === "admin");
+      }
+    }, 500);
+  } else {
+    if (cdEl) cdEl.textContent = "Aktif";
+  }
+
+  // Gate
+  applyMaintenanceGate(effective, isAdmin);
+}
+
+function startMaintenanceListener() {
+  if (maintenanceUnsub) return;
+  const maintRef = doc(db, "site", "maintenance");
+  maintenanceUnsub = onSnapshot(maintRef, (snap) => {
+    maintenanceState = snap.exists() ? snap.data() : null;
+    updateMaintenanceUI();
+  }, (err) => {
+    console.warn("Maintenance listener error:", err);
+  });
+}
+// =================== END MAINTENANCE MODE ===================
 let currentTwoFactorEnabled = false;
 
 // Kategori kısıtı
@@ -242,59 +346,11 @@ function getCartCount() {
 function getCartSubtotal() {
   const cart = getCart();
   let subtotal = 0;
-
   cart.forEach((item) => {
-    // Prefer price stored in cart (works even before PRODUCTS loads)
-    const itemPrice = Number(item.price ?? 0);
-    if (itemPrice > 0) {
-      subtotal += itemPrice * Number(item.qty || 0);
-      return;
-    }
-
-    // Fallback: look up from PRODUCTS if available
     const product = PRODUCTS.find((p) => p.id === item.id);
-    if (product) subtotal += Number(product.price || 0) * Number(item.qty || 0);
+    if (product) subtotal += Number(product.price || 0) * item.qty;
   });
-
   return subtotal;
-}
-
-function getCartLineItems() {
-  const cart = getCart();
-  return cart
-    .map((item) => {
-      const id = String(item.id || "");
-      const qty = Number(item.qty || 0);
-      if (!id || qty <= 0) return null;
-
-      const p = PRODUCTS.find((x) => x.id === id);
-      const name = String(item.name || (p ? p.name : "") || "Ürün").trim();
-      const price = Number(item.price ?? (p ? p.price : 0) ?? 0);
-
-      return {
-        id,
-        name,
-        qty,
-        price,
-        lineTotal: price * qty
-      };
-    })
-    .filter(Boolean);
-}
-
-function buildWhatsAppOrderMessage(subtotal) {
-  const items = getCartLineItems();
-  const lines = items.map((it) => {
-    const priceTxt = Number.isFinite(it.price) ? `${it.price.toFixed(2)} TL` : "-";
-    const lineTotalTxt = Number.isFinite(it.lineTotal) ? `${it.lineTotal.toFixed(2)} TL` : "-";
-    return `• ${it.name} (Kod: ${it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
-  });
-
-  const header = "Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.";
-  const detailHeader = lines.length ? "\n\nSipariş Detayları:\n" + lines.join("\n") : "";
-  const totalLine = `\n\nToplam: ${Number(subtotal || 0).toFixed(2)} TL`;
-
-  return header + detailHeader + totalLine;
 }
 
 function updateCartProgress(subtotal) {
@@ -315,78 +371,32 @@ function updateCartCount() {
   updateCartProgress(getCartSubtotal());
 }
 
-function setCartItemQty(productId, qty, meta) {
+function setCartItemQty(productId, qty) {
   const cart = getCart();
   const idx = cart.findIndex((i) => i.id === productId);
-
   if (qty <= 0) {
     if (idx >= 0) cart.splice(idx, 1);
   } else {
-    if (idx >= 0) {
-      cart[idx].qty = qty;
-      // refresh meta if provided
-      if (meta && typeof meta === "object") {
-        cart[idx].name = meta.name ?? cart[idx].name;
-        cart[idx].price = meta.price ?? cart[idx].price;
-        cart[idx].imageUrl = meta.imageUrl ?? cart[idx].imageUrl;
-      }
-    } else {
-      const item = { id: productId, qty };
-      if (meta && typeof meta === "object") {
-        item.name = meta.name ?? "";
-        item.price = meta.price ?? 0;
-        item.imageUrl = meta.imageUrl ?? "";
-      }
-      cart.push(item);
-    }
+    if (idx >= 0) cart[idx].qty = qty;
+    else cart.push({ id: productId, qty });
   }
-
   saveCart(cart);
-
-  // If we're on cart page, re-render immediately for UI consistency
-  if (document.getElementById("cart-items-container")) renderCart();
-
   updateCartCount();
 }
 
 function adjustCartItem(productId, delta) {
   const cart = getCart();
   const item = cart.find((i) => i.id === productId);
-  const nextQty = (item ? Number(item.qty || 0) : 0) + delta;
-
-  // try to pull latest meta from PRODUCTS if available
-  const p = PRODUCTS.find((x) => x.id === productId);
-  const meta = p
-    ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" }
-    : undefined;
-
-  setCartItemQty(productId, nextQty, meta);
+  const nextQty = (item ? item.qty : 0) + delta;
+  setCartItemQty(productId, nextQty);
 }
 
-function addToCart(productId, meta) {
+function addToCart(productId) {
   const cart = getCart();
   const existing = cart.find((item) => item.id === productId);
-
-  if (existing) {
-    existing.qty = Number(existing.qty || 0) + 1;
-    if (meta && typeof meta === "object") {
-      existing.name = meta.name ?? existing.name;
-      existing.price = meta.price ?? existing.price;
-      existing.imageUrl = meta.imageUrl ?? existing.imageUrl;
-    }
-  } else {
-    const item = { id: productId, qty: 1 };
-    if (meta && typeof meta === "object") {
-      item.name = meta.name ?? "";
-      item.price = meta.price ?? 0;
-      item.imageUrl = meta.imageUrl ?? "";
-    }
-    cart.push(item);
-  }
-
+  if (existing) existing.qty += 1;
+  else cart.push({ id: productId, qty: 1 });
   saveCart(cart);
-
-  if (document.getElementById("cart-items-container")) renderCart();
   updateCartCount();
 }
 
@@ -463,11 +473,11 @@ function loadProductsFromFirestore() {
         price: d.price,
         category: d.category || "",
         description: d.description || "",
-        imageUrl: normalizeMediaUrl(d.imageUrl || "", (String(d.imageUrl||"").toLowerCase().includes(".pdf") ? "pdf" : "image")),
+        imageUrl: d.imageUrl || "",
         media: Array.isArray(d.media)
-          ? normalizeMediaArray(d.media)
+          ? d.media
           : (d.imageUrl
-              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: normalizeMediaUrl(d.imageUrl, (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image")) }]
+              ? [{ type: (String(d.imageUrl).toLowerCase().includes(".pdf") ? "pdf" : "image"), url: d.imageUrl }]
               : []),
         sellerId: d.sellerId || "",
         featured: !!d.featured
@@ -488,9 +498,7 @@ function handleAddToCart(productId, buttonEl) {
     return;
   }
 
-  const p = PRODUCTS.find(x => x.id === productId);
-  const meta = p ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" } : undefined;
-  addToCart(productId, meta);
+  addToCart(productId);
 
   const originalText = buttonEl.textContent;
   buttonEl.textContent = "Sepete eklendi";
@@ -537,9 +545,9 @@ function renderProducts() {
   }).forEach((product) => {
     // Medya (görsel/pdf + opsiyonel video) -> kaydırmalı alan
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? normalizeMediaArray(product.media)
+      ? product.media
       : (product.imageUrl
-          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: normalizeMediaUrl(product.imageUrl, (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')) }]
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
@@ -559,7 +567,7 @@ function renderProducts() {
       } else {
         mediaHtml = `
           <div class="card-img">
-            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+            <img src="${m.url}" alt="${product.name}" />
           </div>`;
       }
     } else if (mediaItems.length > 1) {
@@ -570,7 +578,7 @@ function renderProducts() {
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         }
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
       }).join("");
 
       mediaHtml = `
@@ -625,17 +633,10 @@ function renderFeatured() {
   }
 
   featured.forEach((product) => {
-    // Featured/Vitrin kartlarında da Drive linklerini görüntülenebilir URL'lere normalize et
     const mediaItems = Array.isArray(product.media) && product.media.length
-      ? normalizeMediaArray(product.media)
+      ? product.media
       : (product.imageUrl
-          ? [{
-              type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'),
-              url: normalizeMediaUrl(
-                product.imageUrl,
-                (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')
-              )
-            }]
+          ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: product.imageUrl }]
           : []);
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
@@ -646,13 +647,13 @@ function renderFeatured() {
       } else if (m.type === 'pdf') {
         mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
-        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" /></div>`;
       }).join('');
       mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası">${slides}</div></div>`;
     }
@@ -683,7 +684,6 @@ function renderFeatured() {
 
 // ---------------- SEPET ----------------
 
-
 function renderCart() {
   const container = document.getElementById("cart-items-container");
   if (!container) return;
@@ -693,40 +693,12 @@ function renderCart() {
   const warningEl = document.getElementById("limit-warning");
 
   const cart = getCart();
-
-  // Bind once (event delegation) so +/- never breaks after rerender
-  if (!container.dataset.bound) {
-    container.dataset.bound = "1";
-    container.addEventListener("click", (e) => {
-      const incBtn = e.target.closest("[data-qty-inc]");
-      const decBtn = e.target.closest("[data-qty-dec]");
-      const rmBtn = e.target.closest("[data-remove-from-cart]");
-
-      if (incBtn) {
-        const id = incBtn.getAttribute("data-qty-inc");
-        adjustCartItem(id, +1);
-        return;
-      }
-      if (decBtn) {
-        const id = decBtn.getAttribute("data-qty-dec");
-        adjustCartItem(id, -1);
-        return;
-      }
-      if (rmBtn) {
-        const id = rmBtn.getAttribute("data-remove-from-cart");
-        setCartItemQty(id, 0);
-        return;
-      }
-    });
-  }
-
   if (!cart.length) {
     container.innerHTML = `<p class="empty-cart">Sepetiniz boş.</p>`;
     if (subEl) subEl.textContent = "0 TL";
     if (totalEl) totalEl.textContent = "0 TL";
     if (warningEl) warningEl.textContent = "";
     updateCartProgress(0);
-    updateCartCount();
     return;
   }
 
@@ -734,40 +706,27 @@ function renderCart() {
   let subtotal = 0;
 
   cart.forEach((item) => {
-    const product = PRODUCTS.find((p) => p.id === item.id) || null;
-
-    const name = (product?.name ?? item.name ?? "").toString() || "Ürün";
-    const price = Number(product?.price ?? item.price ?? 0);
-    const qty = Number(item.qty || 0);
-
-    const imgUrlRaw = product?.imageUrl ?? item.imageUrl ?? "";
-    const imgUrl = normalizeMediaUrl(imgUrlRaw, "image");
-
-    const lineTotal = price * qty;
+    const product = PRODUCTS.find((p) => p.id === item.id);
+    if (!product) return;
+    const price = Number(product.price || 0);
+    const lineTotal = price * item.qty;
     subtotal += lineTotal;
 
     const row = document.createElement("div");
     row.className = "cart-item";
     row.innerHTML = `
-      <div class="cart-item-left">
-        <div class="cart-item-thumb">
-          <img src="${imgUrl}" alt="${name}" loading="lazy" referrerpolicy="no-referrer"
-               onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
-        </div>
-        <div class="cart-item-info">
-          <h4>${name}</h4>
-          <p>${price} TL</p>
-        </div>
+      <div>
+        <h4>${product.name}</h4>
+        <p>${price} TL</p>
       </div>
-
       <div class="cart-item-actions">
         <div class="cart-qty">
-          <button class="qty-btn" data-qty-dec="${item.id}" aria-label="Azalt">−</button>
-          <span class="qty-val">${qty}</span>
-          <button class="qty-btn" data-qty-inc="${item.id}" aria-label="Arttır">+</button>
+          <button class="qty-btn" data-qty-dec="${product.id}" aria-label="Azalt">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn" data-qty-inc="${product.id}" aria-label="Arttır">+</button>
         </div>
         <span class="cart-item-total">${lineTotal.toFixed(2)} TL</span>
-        <button class="btn-link" data-remove-from-cart="${item.id}">Kaldır</button>
+        <button class="btn-link" data-remove-from-cart="${product.id}">Kaldır</button>
       </div>
     `;
     container.appendChild(row);
@@ -781,13 +740,24 @@ function renderCart() {
       warningEl.textContent =
         "Sepet tutarınız 400 TL altında. Siparişi tamamlamak için en az 400 TL'lik ürün eklemelisiniz.";
     } else if (subtotal >= 400) {
-      warningEl.textContent = "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
+      warningEl.textContent =
+        "Sepet tutarınız minimum limiti geçti, sipariş verebilirsiniz.";
     } else {
       warningEl.textContent = "";
     }
   }
 
-  updateCartProgress(subtotal);
+  container.querySelectorAll("[data-remove-from-cart]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-remove-from-cart");
+      let cartNow = getCart();
+      cartNow = cartNow.filter((item) => item.id !== id);
+      saveCart(cartNow);
+      renderCart();
+      updateCartCount();
+    });
+  });
+
   updateCartCount();
 }
 
@@ -1038,33 +1008,14 @@ async function setupSellerPanel() {
       const title = document.getElementById("sp-title").value.trim();
       const price = Number(document.getElementById("sp-price").value);
       const cat = (document.getElementById("sp-category").value || "").trim();
-      
+      const imgFileEl = document.getElementById("sp-image-file");
+      const videoFileEl = document.getElementById("sp-video-file");
+      const imgFile = imgFileEl && imgFileEl.files ? imgFileEl.files[0] : null;
+      const videoFile = videoFileEl && videoFileEl.files ? videoFileEl.files[0] : null;
       const desc = document.getElementById("sp-description").value.trim();
 
-      // Drive link inputs (ana medya zorunlu, diğerleri opsiyonel)
-      const driveImgInput = document.getElementById("driveImageLink");
-      const driveImgTypeEl = document.getElementById("driveImageType");
-      const driveImg2Input = document.getElementById("driveSecondImageLink");
-      const driveVidInput = document.getElementById("driveVideoLink");
-
-      const imgRaw = driveImgInput ? String(driveImgInput.value || "").trim() : "";
-      const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image"; // image | pdf
-      const img2Raw = driveImg2Input ? String(driveImg2Input.value || "").trim() : "";
-      const vidRaw = driveVidInput ? String(driveVidInput.value || "").trim() : "";
-
-      // Basit URL uzantı kontrolü (Drive linkleri uzantı taşımaz: Drive ise uzantı aramayız)
-      const hasAllowedExt = (url, allowedExts) => {
-        const s = String(url || "").trim().toLowerCase();
-        if (!s) return false;
-        const clean = s.split("?")[0].split("#")[0];
-        return allowedExts.some((ext) => clean.endsWith("." + ext));
-      };
-
-      const isDrive = (raw) => !!extractDriveId(raw);
-
-      // Zorunlu alanlar
-      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgRaw) {
-        msg.textContent = "Lütfen tüm alanları doldurun ve Drive Görsel/PDF Linki (Zorunlu) alanına bir Drive paylaşım linki veya fileId girin.";
+      if (!title || !desc || !cat || isNaN(price) || price <= 0 || !imgFile) {
+        msg.textContent = "Lütfen tüm alanları doldurun ve Drive görsel linki alanına en az 1 adet .jpg veya .png uzantılı bağlantı girin.";
         msg.style.color = "red";
         return;
       }
@@ -1075,40 +1026,23 @@ async function setupSellerPanel() {
         return;
       }
 
-      // Ana medya doğrulama: Drive ise kabul; Drive değilse seçilen türe göre uzantı zorunlu
-      if (isDrive(imgRaw)) {
-        // ok
-      } else if (imgTypeSel === "pdf") {
-        if (!hasAllowedExt(imgRaw, ["pdf"])) {
-          msg.textContent = "Ana medya PDF seçildi. Drive linki/fileId girin veya .pdf uzantılı bir bağlantı girin.";
-          msg.style.color = "red";
-          return;
-        }
-      } else {
-        if (!hasAllowedExt(imgRaw, ["jpg", "jpeg", "png"])) {
-          msg.textContent = "Ana medya görsel seçildi. Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
-          msg.style.color = "red";
-          return;
-        }
+      // Görsel/PDF uzantı kontrolü
+      const allowedImgExts = ["jpg", "jpeg", "png", "pdf"];
+      const imgName = (imgFile.name || "").toLowerCase();
+      const imgExt = imgName.includes(".") ? imgName.split(".").pop() : "";
+      if (!allowedImgExts.includes(imgExt)) {
+        msg.textContent = "Sadece .jpg, .jpeg, .png veya .pdf uzantılı dosyalar yüklenebilir.";
+        msg.style.color = "red";
+        return;
       }
 
-      // Opsiyonel 2. görsel: Drive veya .jpg/.jpeg/.png
-      if (img2Raw) {
-        if (isDrive(img2Raw)) {
-          // ok
-        } else if (!hasAllowedExt(img2Raw, ["jpg", "jpeg", "png"])) {
-          msg.textContent = "İkinci görsel için Drive linki/fileId girin veya .jpg/.jpeg/.png uzantılı bir bağlantı girin.";
-          msg.style.color = "red";
-          return;
-        }
-      }
-
-      // Opsiyonel video: Drive veya mp4/webm/mov/m4v
-      if (vidRaw) {
-        if (isDrive(vidRaw)) {
-          // ok
-        } else if (!hasAllowedExt(vidRaw, ["mp4", "webm", "mov", "m4v"])) {
-          msg.textContent = "Video için Drive linki/fileId girin veya .mp4/.webm/.mov/.m4v uzantılı bir bağlantı girin.";
+      // Video uzantı kontrolü (opsiyonel)
+      const allowedVideoExts = ["mp4", "webm", "mov", "m4v"];
+      if (videoFile) {
+        const vName = (videoFile.name || "").toLowerCase();
+        const vExt = vName.includes(".") ? vName.split(".").pop() : "";
+        if (!allowedVideoExts.includes(vExt)) {
+          msg.textContent = "Video olarak sadece .mp4, .webm, .mov veya .m4v yükleyebilirsiniz.";
           msg.style.color = "red";
           return;
         }
@@ -1116,11 +1050,13 @@ async function setupSellerPanel() {
 
       msg.style.color = "black";
       msg.textContent = "Ürün başvurunuz kaydediliyor...";
-msg.style.color = "black";
-      msg.textContent = "Ürün başvurunuz kaydediliyor...";
 
       try {
         // 1) Dosyaları Drive'a SEN yüklüyorsun: burada sadece link/fileId alıyoruz
+        const driveImgInput = document.getElementById("driveImageLink");
+        const driveImgTypeEl = document.getElementById("driveImageType");
+        const driveImg2Input = document.getElementById("driveSecondImageLink");
+        const driveVidInput = document.getElementById("driveVideoLink");
 
         const imgRaw = driveImgInput ? driveImgInput.value : "";
         const imgTypeSel = driveImgTypeEl ? driveImgTypeEl.value : "image";
@@ -1491,6 +1427,87 @@ async function setupAdminPanel() {
       });
     });
   }
+
+// --- Maintenance controls (admin only) ---
+const startBtn = document.getElementById("btn-start-maintenance");
+const endBtn = document.getElementById("btn-end-maintenance");
+const msgInput = document.getElementById("maintenance-message");
+const statusBox = document.getElementById("maintenance-status");
+
+function setMaintStatus(text, type) {
+  if (!statusBox) return;
+  statusBox.style.display = "block";
+  statusBox.textContent = text;
+  statusBox.className = "message-box " + (type || "");
+}
+
+async function startMaintenance15m() {
+  const maintRef = doc(db, "site", "maintenance");
+  const message = (msgInput?.value || "").trim();
+  const startAt = Timestamp.fromDate(new Date(Date.now() + 15 * 60 * 1000));
+  await setDoc(maintRef, {
+    scheduled: true,
+    active: false,
+    startAt,
+    message,
+    startedBy: currentUser?.uid || "",
+    createdAt: serverTimestamp()
+  }, { merge: true });
+  setMaintStatus("Bakım planlandı. 15 dakika geri sayım başladı.", "success");
+}
+
+async function endMaintenance() {
+  const maintRef = doc(db, "site", "maintenance");
+  await setDoc(maintRef, {
+    scheduled: false,
+    active: false,
+    startAt: null,
+    message: "",
+    endedAt: serverTimestamp(),
+    endedBy: currentUser?.uid || ""
+  }, { merge: true });
+  setMaintStatus("Bakım sonlandırıldı.", "success");
+}
+
+if (startBtn) startBtn.addEventListener("click", async () => {
+  try {
+    startBtn.disabled = true;
+    await startMaintenance15m();
+  } catch (e) {
+    console.error(e);
+    setMaintStatus("Bakım başlatılamadı. Yetki veya bağlantı hatası olabilir.", "error");
+  } finally {
+    startBtn.disabled = false;
+  }
+});
+
+if (endBtn) endBtn.addEventListener("click", async () => {
+  try {
+    endBtn.disabled = true;
+    await endMaintenance();
+  } catch (e) {
+    console.error(e);
+    setMaintStatus("Bakım sonlandırılamadı.", "error");
+  } finally {
+    endBtn.disabled = false;
+  }
+});
+
+// Show live status
+if (statusBox) {
+  const maintRef = doc(db, "site", "maintenance");
+  onSnapshot(maintRef, (snap) => {
+    if (!snap.exists()) {
+      statusBox.style.display = "none";
+      return;
+    }
+    const st = snap.data() || {};
+    const eff = getMaintenanceEffective(st);
+    if (!eff.show) { statusBox.style.display = "none"; return; }
+    if (eff.active) setMaintStatus("Durum: Bakım aktif.", "info");
+    else setMaintStatus(`Durum: Planlandı. Başlamasına kalan: ${formatMMSS(eff.startsInMs)}`, "info");
+  });
+}
 }
 
 // ---------------- AUTH DURUMU ----------------
@@ -1499,6 +1516,25 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
   await ensureUserDoc(user);
   updateNavbarForAuth(user);
+
+  // maintenance enforcement
+  try {
+    const eff = getMaintenanceEffective(maintenanceState);
+    if (eff.active && currentUserRole !== "admin") {
+      await signOut(auth);
+      try { localStorage.setItem("maintenance_redirect", "1"); } catch {}
+      window.location.href = "login.html?maintenance=1";
+      return;
+    }
+  } catch (e) {
+    console.warn("Maintenance check failed", e);
+  }
+
+  // Re-evaluate maintenance UI / gating after role changes
+  updateMaintenanceUI();
+
+nce UI now that role is known
+  try { updateMaintenanceUI(); } catch {}
 
   const path = window.location.pathname;
 
@@ -1521,6 +1557,24 @@ onAuthStateChanged(auth, async (user) => {
 // ---------------- DOM YÜKLENDİĞİNDE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
+  startMaintenanceListener();
+  // If redirected due to maintenance, show info on login page
+  try {
+    const page = (location.pathname.split("/").pop() || "").toLowerCase();
+    if (page === "login.html") {
+      const redirected = localStorage.getItem("maintenance_redirect");
+      if (redirected === "1") {
+        localStorage.removeItem("maintenance_redirect");
+        const box = document.getElementById("login-message");
+        if (box) {
+          box.style.display = "block";
+          box.textContent = "Site bakımda. Yalnızca yönetici giriş yapabilir.";
+          box.className = "message-box error";
+        }
+      }
+    }
+  } catch {}
+
   initTheme();
 
     // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
@@ -1564,7 +1618,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(buildWhatsAppOrderMessage(subtotal));
+      const message = encodeURIComponent(
+        `Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum. Sepet tutarım: ${subtotal.toFixed(
+          2
+        )} TL`
+      );
       window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
