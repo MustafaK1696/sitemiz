@@ -1220,6 +1220,121 @@ msg.style.color = "black";
 }
 
 
+
+// ---------------- BAKIM MODU (MAINTENANCE) ----------------
+const MAINT_REF = doc(db, "siteSettings", "maintenance");
+let maintenanceState = { enabled: false, startAt: null };
+let maintenanceTick = null;
+
+function ensureMaintenanceBanner() {
+  let banner = document.getElementById("maintenance-banner");
+  if (!banner) {
+    banner = document.createElement("div");
+    banner.id = "maintenance-banner";
+    banner.className = "maintenance-banner";
+    banner.style.display = "none";
+    const header = document.querySelector(".site-header");
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(banner, header.nextSibling);
+    } else {
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+  }
+  return banner;
+}
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function formatCountdown(ms) {
+  const totalSec = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${pad2(s)}`;
+}
+
+async function isCurrentUserAdmin() {
+  if (!currentUser) return false;
+  await refreshUserRole();
+  return currentUserRole === "admin";
+}
+
+function isAllowedDuringMaintenance() {
+  const page = (location.pathname.split("/").pop() || "").toLowerCase();
+  return page === "login.html" || page === "login-shop.html";
+}
+
+async function enforceMaintenance() {
+  const banner = ensureMaintenanceBanner();
+
+  if (!maintenanceState.enabled || !maintenanceState.startAt) {
+    banner.style.display = "none";
+    return;
+  }
+
+  const now = Date.now();
+  const startAt = Number(maintenanceState.startAt) || 0;
+  const before = now < startAt;
+
+  if (before) {
+    banner.innerHTML = `⚠️ Planlı bakım başlıyor <span class="muted">(Kalan: ${formatCountdown(startAt - now)})</span>`;
+    banner.style.display = "block";
+    return;
+  }
+
+  banner.innerHTML = `🛠️ Site bakımda. Admin harici erişim kapalı.`;
+  banner.style.display = "block";
+
+  if (isAllowedDuringMaintenance()) return;
+
+  if (!currentUser) {
+    window.location.href = "login.html?maintenance=1";
+    return;
+  }
+
+  const admin = await isCurrentUserAdmin();
+  if (!admin) {
+    try { await signOut(auth); } catch (e) {}
+    window.location.href = "login.html?maintenance=1";
+  }
+}
+
+function startMaintenanceTicker() {
+  if (maintenanceTick) return;
+  maintenanceTick = setInterval(() => {
+    enforceMaintenance().catch(() => {});
+  }, 1000);
+}
+
+function stopMaintenanceTicker() {
+  if (maintenanceTick) {
+    clearInterval(maintenanceTick);
+    maintenanceTick = null;
+  }
+}
+
+function setupMaintenanceMode() {
+  ensureMaintenanceBanner();
+
+  onSnapshot(
+    MAINT_REF,
+    (snap) => {
+      const d = snap.exists() ? snap.data() : {};
+      maintenanceState.enabled = !!d.enabled;
+      maintenanceState.startAt = d.startAt ? (typeof d.startAt === "number" ? d.startAt : (d.startAt.toMillis?.() ?? null)) : null;
+
+      if (maintenanceState.enabled && maintenanceState.startAt) startMaintenanceTicker();
+      else stopMaintenanceTicker();
+
+      enforceMaintenance().catch(() => {});
+    },
+    () => {
+      stopMaintenanceTicker();
+      const banner = ensureMaintenanceBanner();
+      banner.style.display = "none";
+    }
+  );
+}
+
+
 // ---------------- ADMİN PANELİ ----------------
 
 async function setupAdminPanel() {
@@ -1234,7 +1349,47 @@ async function setupAdminPanel() {
   const usersBox = document.getElementById("admin-users-list");
   const sellerBox = document.getElementById("admin-seller-requests");
   const productBox = document.getElementById("admin-product-requests");
-  const productsManageBox = document.getElementById("admin-products-list");
+  
+  // --- Bakım Modu kontrolleri ---
+  const maintStatus = document.getElementById("maintenance-status");
+  const maintScheduleBtn = document.getElementById("maintenance-schedule");
+  const maintEndBtn = document.getElementById("maintenance-end");
+
+  function renderMaintStatus(d) {
+    if (!maintStatus) return;
+    if (!d || !d.enabled || !d.startAt) {
+      maintStatus.textContent = "Bakım modu kapalı.";
+      return;
+    }
+    const startAt = typeof d.startAt === "number" ? d.startAt : (d.startAt.toMillis?.() ?? 0);
+    const now = Date.now();
+    if (now < startAt) {
+      maintStatus.textContent = `Planlandı: ${new Date(startAt).toLocaleString("tr-TR")} (kalan ${formatCountdown(startAt - now)})`;
+    } else {
+      maintStatus.textContent = "Bakım AKTİF (admin harici erişim kapalı).";
+    }
+  }
+
+  onSnapshot(MAINT_REF, (snap) => {
+    renderMaintStatus(snap.exists() ? snap.data() : null);
+  });
+
+  if (maintScheduleBtn) {
+    maintScheduleBtn.addEventListener("click", async () => {
+      const startAt = Date.now() + 15 * 60 * 1000;
+      await setDoc(MAINT_REF, { enabled: true, startAt, updatedAt: serverTimestamp(), scheduledBy: currentUser.uid }, { merge: true });
+      alert("Bakım planlandı: 15 dakika sonra başlayacak.");
+    });
+  }
+
+  if (maintEndBtn) {
+    maintEndBtn.addEventListener("click", async () => {
+      await setDoc(MAINT_REF, { enabled: false, startAt: null, updatedAt: serverTimestamp(), endedBy: currentUser.uid }, { merge: true });
+      alert("Bakım modu kapatıldı.");
+    });
+  }
+
+const productsManageBox = document.getElementById("admin-products-list");
 
   // Kullanıcı listesi & roller
   if (usersBox) {
@@ -1521,6 +1676,8 @@ onAuthStateChanged(auth, async (user) => {
 // ---------------- DOM YÜKLENDİĞİNDE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
+  try { setupMaintenanceMode(); } catch(e) {}
+
   initTheme();
 
     // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla

@@ -100,6 +100,16 @@
 <main class="container" id="admin-panel">
   <h1>Yönetici Paneli</h1>
 
+  <section class="profile-section" id="maintenance-section">
+    <h2>Bakım Modu</h2>
+    <p id="maintenance-status">Yükleniyor...</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <button id="maintenance-schedule" type="button" class="btn-primary">15 dk sonra bakımı başlat</button>
+      <button id="maintenance-end" type="button" class="btn-secondary">Bakımı sonlandır</button>
+    </div>
+    <p style="margin-top:10px;font-size:0.9rem;color:#6b7280;">Bu özellik planlı bakım için banner + erişim kısıtı uygular. Bakım başladığında admin harici kullanıcılar sadece giriş sayfasına erişebilir.</p>
+  </section>
+
   <section class="profile-section">
     <h2>Kullanıcılar & Roller</h2>
     <div id="admin-users-list">Yükleniyor...</div>

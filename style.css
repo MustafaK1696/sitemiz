@@ -1042,3 +1042,9 @@ body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
   border-radius:10px;
   box-sizing:border-box;
 }
+
+
+/* --- Bakım Modu Banner --- */
+.maintenance-banner{position:sticky;top:0;z-index:1600;background:#fff7ed;color:#9a3412;padding:10px 12px;text-align:center;font-weight:700;font-size:0.95rem;border-bottom:1px solid rgba(154,52,18,.18);} 
+.maintenance-banner .muted{font-weight:600;opacity:.85;margin-left:8px;font-size:0.9rem;}
+body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bottom-color:rgba(254,215,170,.18);} 
