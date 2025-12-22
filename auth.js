@@ -35,8 +35,18 @@ setPersistence(auth, browserLocalPersistence).catch(() => {});
 
 function showMsg(box, text, type) {
   if (!box) return;
-  box.textContent = text;
-  box.className = "auth-message " + (type || "");
+  const msg = String(text || "").trim();
+
+  if (!msg) {
+    box.textContent = "";
+    box.className = "message-box";
+    box.style.display = "none";
+    return;
+  }
+
+  box.textContent = msg;
+  box.className = "message-box " + (type || "");
+  box.style.display = "block";
 }
 
 function setFieldError(inputId, errorId, message) {
