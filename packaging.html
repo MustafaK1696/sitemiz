@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Profil Ayarları - ÖğrenciFy</title>
+  <title>Paketlememiz - ÖğrenciFy</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
-  <header class="site-header">
+<header class="site-header">
   <nav class="navbar">
     <a href="index.html" class="logo"><img src="logo.png" alt="ÖğrenciFy"></a>
 
@@ -27,15 +27,12 @@
           </ul>
         </li>
 
+        <li><a href="packaging.html">Paketlememiz</a></li>
         <li class="nav-guest-only"><a href="seller.html" class="nav-seller-cta">Satıcı Ol</a></li>
         <li><a href="about.html">Hakkımızda</a></li>
-        <li><a href="help.html">Yardım</a>
-      <a href="packaging.html">Paketlememiz</a>
-</li>
+        <li><a href="help.html">Yardım</a></li>
 
-        
-        <li><a href="packaging.html">Paketlememiz</a></li>
-<li><a href="admin.html" class="nav-admin-link" style="display:none;">Yönetici Paneli</a></li>
+        <li><a href="admin.html" class="nav-admin-link" style="display:none;">Yönetici Paneli</a></li>
         <li><a href="seller-dashboard.html" class="nav-seller-panel" style="display:none;">Satıcı Panelim</a></li>
       </ul>
 
@@ -88,12 +85,11 @@
       <a href="products.html?cat=aksesuar">Aksesuar</a>
       <a href="products.html?cat=elektronik">Elektronik</a>
       <a href="products.html?cat=hediyelik">Hediyelik</a>
+      <a href="packaging.html">Paketlememiz</a>
       <a href="seller.html" class="nav-seller-cta-mobile nav-auth-guest">Satıcı Ol</a>
       <a href="about.html">Hakkımızda</a>
       <a href="help.html">Yardım</a>
-      
-      <a href="packaging.html">Paketlememiz</a>
-<a href="admin.html" class="nav-admin-link-mobile" style="display:none;">Yönetici Paneli</a>
+      <a href="admin.html" class="nav-admin-link-mobile" style="display:none;">Yönetici Paneli</a>
       <a href="seller-dashboard.html" class="nav-seller-panel-mobile" style="display:none;">Satıcı Panelim</a>
       <a href="login.html" class="nav-mobile-login nav-auth-guest">Giriş Yap</a>
       <a href="signup.html" class="nav-signup-mobile nav-auth-guest">Kayıt Ol</a>
@@ -102,49 +98,14 @@
   </nav>
 </header>
 
+<main class="container">
+  <h1>Paketlememiz</h1>
+  <p class="muted" style="margin-top:-6px;">Ürünlerin hazırlanma ve paketlenme süreçlerini videolarla gösteriyoruz.</p>
 
-  <main class="container profile-page">
-    <h1>Profil Ayarları</h1>
-    <p class="page-intro">
-      Buradan görünüm ve güvenlik tercihlerinizi yönetebilirsiniz.
-    </p>
+  <div id="packaging-videos" class="product-grid"></div>
+</main>
 
-    <section id="appearance" class="profile-section">
-      <h2>Görünüm Tercihleri</h2>
-      <p>Uygulamanın tema ve görünüm seçeneklerini buradan değiştirebilirsiniz.</p>
-      <button id="theme-toggle" class="btn-secondary">
-        Koyu tema: Kapalı
-      </button>
-    </section>
-
-    <section id="security" class="profile-section">
-      <h2>Güvenlik</h2>
-      <p>
-        Şifreni unutmamak için zorlayıcı ama hatırlaması kolay bir şifre kullanmanı tavsiye ederiz.
-      </p>
-      <p>
-        Bu hesapta kayıtlı e-posta:
-        <strong id="profile-email">-</strong>
-      </p>
-      <button id="password-reset-btn" class="btn-primary">
-        Şifre sıfırlama e-postası gönder
-      </button>
-      <p class="warning-msg" id="profile-message" style="margin-top:12px;"></p>
-
-      <h3 style="margin-top:24px;">E-posta ile İkinci Adım</h3>
-<p>
-  Bu özellik açıkken satıcı / yönetici panelleri ve sipariş tamamlama için
-  e-posta adresinizin doğrulanmış olması zorunlu olur.
-</p>
-<label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-  <input type="checkbox" id="twofactor-toggle">
-  <span>Hesabım için e-posta ile ikinci adımı (2 aşamalı doğrulama) zorunlu yap</span>
-</label>
-
-    </section>
-  </main>
-
-  <footer class="mega-footer">
+<footer class="mega-footer">
   <div class="footer-container">
     <div class="footer-col">
       <a href="index.html" class="footer-logo">
@@ -157,36 +118,22 @@
         <a href="#">▶️</a>
       </div>
     </div>
-
     <div class="footer-col">
-      <h3>Kurumsal</h3>
-      <ul class="footer-links">
-        <li><a href="about.html">Hakkımızda</a></li>
-        <li><a href="seller.html">Satıcı Ol</a></li>
-        <li><a href="contact.html">İletişim</a></li>
-      </ul>
+      <h4>Hızlı Linkler</h4>
+      <a href="index.html">Ana Sayfa</a>
+      <a href="products.html">Ürünler</a>
+      <a href="packaging.html">Paketlememiz</a>
+      <a href="about.html">Hakkımızda</a>
+      <a href="help.html">Yardım</a>
     </div>
-
     <div class="footer-col">
-      <h3>Keşfet</h3>
-      <ul class="footer-links">
-        <li><a href="products.html">Tüm Ürünler</a></li>
-        <li><a href="help.html">Yardım Merkezi</a></li>
-        <li><a href="cart.html">Sepetim</a></li>
-      </ul>
+      <h4>İletişim</h4>
+      <a href="contact.html">Bize Ulaşın</a>
     </div>
   </div>
-
-  <div class="footer-bottom">
-    <p>&copy; 2025 ÖğrenciFy. Tüm hakları saklıdır.</p>
-  </div>
+  <div class="footer-bottom">© 2025 ÖğrenciFy - Tüm hakları saklıdır.</div>
 </footer>
 
-  
-  
-
-
-  <script type="module" src="script.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>
-

@@ -514,6 +514,14 @@ body.dark-theme .dropdown-menu {
   display: block;
 }
 
+/* Paketlememiz (Drive video preview iframe) */
+.packaging-video iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
 /* Kaydırmalı medya (foto+video) */
 .media-slider {
   width: 100%;
