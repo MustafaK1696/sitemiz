@@ -928,17 +928,17 @@ body.theme-dark .mega-footer {
 
 /* --- NAVBAR UI PATCH (Satıcı Ol / Sepetim / Profil dropdown) --- */
 .site-header { z-index: 1200; }
-.navbar { display:flex; align-items:center; justify-content:space-between; gap:18px; padding: 14px 22px; }
+.navbar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding: 12px 18px; }
 
 .logo img { height: 72px; width:auto; display:block; object-fit:contain; }
 .nav-main { flex: 1; display:flex; justify-content:center; }
 
-.nav-links { display:flex; align-items:center; gap: 26px; list-style:none; margin:0; padding:0; flex-wrap: nowrap; }
+.nav-links { display:flex; align-items:center; gap: 18px; list-style:none; margin:0; padding:0; flex-wrap: nowrap; }
 .nav-links a { text-decoration:none; }
 
-.nav-actions { display:flex; align-items:center; gap: 12px; }
+.nav-actions { display:flex; align-items:center; gap: 10px; }
 
-.btn-nav { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding: 10px 14px; border-radius: 16px; font-weight:600; text-decoration:none;
+.btn-nav { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding: 10px 12px; border-radius: 16px; font-weight:600; text-decoration:none;
   transition: transform .15s ease, background .15s ease, box-shadow .15s ease, color .15s ease; border: 1px solid transparent; }
 .btn-nav:hover { transform: translateY(-1px) scale(1.03); }
 
