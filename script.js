@@ -508,9 +508,6 @@ function renderProducts() {
   const listEl = document.getElementById("product-list");
   if (!listEl) return;
 
-  // Başlık (kategori filtreliyse: "Ev ürünleri" vb.)
-  const titleEl = document.getElementById("products-title");
-
   const searchBox = document.getElementById("searchBox");
   const queryText = searchBox ? searchBox.value.trim().toLowerCase() : "";
 
@@ -518,14 +515,6 @@ function renderProducts() {
   const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
-
-  if (titleEl) {
-    const label = urlCat ? (CATEGORY_LABELS[urlCat] || urlCat) : "Tüm";
-    titleEl.textContent = urlCat ? `${label} ürünleri` : "Tüm Ürünler";
-  }
-  // Sekme başlığı da kategoriye göre güncellensin
-  if (urlCat) document.title = `${(CATEGORY_LABELS[urlCat] || urlCat)} ürünleri - ÖğrenciFy`;
-  else document.title = `Ürünler - ÖğrenciFy`;
 
 
   listEl.innerHTML = "";
@@ -1237,67 +1226,6 @@ const MAINT_REF = doc(db, "siteSettings", "maintenance");
 let maintenanceState = { enabled: false, startAt: null };
 let maintenanceTick = null;
 
-// ---------------- PAKETLEMEMİZ VİDEOLARI ----------------
-// Public sayfa: packaging.html
-// Admin ekleme: admin.html
-const PACKAGING_COL = collection(db, "packagingVideos");
-
-function driveVideoEmbedUrl(raw) {
-  const id = extractDriveId(raw);
-  if (id) return `https://drive.google.com/file/d/${id}/preview`;
-  return String(raw || "").trim();
-}
-
-function renderPackagingVideos(container, items) {
-  if (!container) return;
-  if (!items.length) {
-    container.innerHTML = "<p>Henüz video eklenmemiş.</p>";
-    return;
-  }
-
-  container.innerHTML = items
-    .map((v) => {
-      const title = v.title ? String(v.title) : "Video";
-      const embed = driveVideoEmbedUrl(v.url || v.link || v.driveLink || "");
-      const created = v.createdAt ? "" : "";
-      return `
-        <div class="card packaging-card">
-          <div class="card-img packaging-video">
-            <iframe src="${embed}" allow="autoplay" loading="lazy" referrerpolicy="no-referrer"></iframe>
-          </div>
-          <div class="card-body">
-            <h3>${title}</h3>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function setupPackagingPage() {
-  const container = document.getElementById("packaging-videos");
-  if (!container) return;
-
-  // Herkese açık liste
-  onSnapshot(
-    PACKAGING_COL,
-    (snap) => {
-      const items = [];
-      snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
-      // En yeni üstte
-      items.sort((a, b) => {
-        const ta = a.createdAt?.toMillis?.() ?? a.createdAt ?? 0;
-        const tb = b.createdAt?.toMillis?.() ?? b.createdAt ?? 0;
-        return tb - ta;
-      });
-      renderPackagingVideos(container, items);
-    },
-    () => {
-      container.innerHTML = "<p>Videolar yüklenirken bir hata oluştu.</p>";
-    }
-  );
-}
-
 function ensureMaintenanceBanner() {
   let banner = document.getElementById("maintenance-banner");
   if (!banner) {
@@ -1427,12 +1355,6 @@ async function setupAdminPanel() {
   const maintScheduleBtn = document.getElementById("maintenance-schedule");
   const maintEndBtn = document.getElementById("maintenance-end");
 
-  // --- Paketlememiz video yönetimi ---
-  const packTitle = document.getElementById("packaging-title");
-  const packLink = document.getElementById("packaging-drive-link");
-  const packAddBtn = document.getElementById("packaging-add");
-  const packList = document.getElementById("packaging-admin-list");
-
   function renderMaintStatus(d) {
     if (!maintStatus) return;
     if (!d || !d.enabled || !d.startAt) {
@@ -1465,76 +1387,6 @@ async function setupAdminPanel() {
       await setDoc(MAINT_REF, { enabled: false, startAt: null, updatedAt: serverTimestamp(), endedBy: currentUser.uid }, { merge: true });
       alert("Bakım modu kapatıldı.");
     });
-  }
-
-  // Paketlememiz: video ekle/sil
-  if (packAddBtn && packLink) {
-    packAddBtn.addEventListener("click", async () => {
-      const title = (packTitle?.value || "").trim();
-      const link = (packLink.value || "").trim();
-      const id = extractDriveId(link);
-      if (!id) {
-        alert("Lütfen geçerli bir Google Drive video linki veya fileId girin.");
-        return;
-      }
-      const embedUrl = `https://drive.google.com/file/d/${id}/preview`;
-      try {
-        await addDoc(PACKAGING_COL, {
-          title: title || "Paketleme Videosu",
-          driveLink: link,
-          url: embedUrl,
-          createdAt: serverTimestamp(),
-          createdBy: currentUser.uid
-        });
-        packTitle && (packTitle.value = "");
-        packLink.value = "";
-        alert("Video eklendi.");
-      } catch (e) {
-        console.error(e);
-        alert("Video eklenirken hata oluştu. Firebase rules kontrol edin.");
-      }
-    });
-  }
-
-  if (packList) {
-    onSnapshot(
-      PACKAGING_COL,
-      (snap) => {
-        if (snap.empty) {
-          packList.innerHTML = "<p>Henüz video yok.</p>";
-          return;
-        }
-        let html = '<table class="simple-table"><thead><tr><th>Başlık</th><th>Link</th><th>İşlem</th></tr></thead><tbody>';
-        snap.forEach((d) => {
-          const data = d.data();
-          html += `<tr data-id="${d.id}">
-            <td>${data.title || "-"}</td>
-            <td style="font-size:0.85rem;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${data.driveLink || data.url || ""}</td>
-            <td><button class="btn-secondary" data-action="pack-delete">Sil</button></td>
-          </tr>`;
-        });
-        html += "</tbody></table>";
-        packList.innerHTML = html;
-
-        packList.querySelectorAll("button[data-action='pack-delete']").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const tr = btn.closest("tr");
-            const id = tr?.getAttribute("data-id");
-            if (!id) return;
-            if (!confirm("Bu videoyu silmek istiyor musunuz?")) return;
-            try {
-              await deleteDoc(doc(db, "packagingVideos", id));
-            } catch (e) {
-              console.error(e);
-              alert("Silme sırasında hata oluştu. Rules kontrol edin.");
-            }
-          });
-        });
-      },
-      () => {
-        packList.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
-      }
-    );
   }
 
 const productsManageBox = document.getElementById("admin-products-list");
@@ -1835,9 +1687,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Ürünleri Firestore'dan dinamik yükle
   loadProductsFromFirestore();
-
-  // Paketlememiz sayfası
-  setupPackagingPage();
 
   const searchBox = document.getElementById("searchBox");
   if (searchBox) searchBox.addEventListener("input", () => renderProducts());
