@@ -104,7 +104,6 @@ import {
   collection,
   addDoc,
   query,
-  orderBy,
   where,
   onSnapshot,
   serverTimestamp,
@@ -142,21 +141,6 @@ function withTimeout(promise, ms, label="işlem") {
     t = setTimeout(() => rej(new Error(`${label} zaman aşımına uğradı. İnternetinizi kontrol edip tekrar deneyin.`)), ms);
   });
   return Promise.race([promise.finally(() => clearTimeout(t)), timeout]);
-}
-
-
-function driveVideoDownloadUrlFromId(fileId) {
-  return `https://drive.google.com/uc?export=download&id=${fileId}`;
-}
-
-function escapeHtml(input) {
-  const s = String(input ?? "");
-  return s.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-}
-
-function escapeAttr(input) {
-  // attributes için de aynı kaçış yeterli
-  return escapeHtml(input);
 }
 
 async function uploadFileWithProgress(fileRef, file, onPct) {
@@ -531,20 +515,6 @@ function renderProducts() {
   const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
-
-// Kategori başlığını güncelle (örn: "Ev ürünleri")
-const catTitleMap = {
-  ev: "Ev",
-  dekorasyon: "Dekorasyon",
-  aksesuar: "Aksesuar",
-  elektronik: "Elektronik",
-  hediyelik: "Hediyelik",
-};
-const titleEl = document.getElementById("products-title");
-if (titleEl) {
-  titleEl.textContent = urlCat ? `${catTitleMap[urlCat] || urlCat} ürünleri` : "Tüm Ürünler";
-}
-
 
 
   listEl.innerHTML = "";
@@ -1419,116 +1389,6 @@ async function setupAdminPanel() {
     });
   }
 
-
-// --- Paketlememiz videoları (admin ekler, herkes görür) ---
-const packList = document.getElementById("packaging-admin-list");
-const packMsg = document.getElementById("packaging-admin-message");
-const packTitleEl = document.getElementById("pack-video-title");
-const packLinkEl = document.getElementById("pack-video-link");
-const packAddBtn = document.getElementById("pack-video-add");
-
-function setPackMsg(text, kind) {
-  if (!packMsg) return;
-  packMsg.textContent = text || "";
-  packMsg.style.display = text ? "block" : "none";
-  packMsg.className = kind === "error" ? "message-box error" : (kind === "success" ? "message-box success" : "message-box");
-}
-
-function renderPackagingAdminList() {
-  if (!packList) return;
-  const colRef = collection(db, "packagingVideos");
-  const qref = query(colRef, orderBy("createdAt", "desc"));
-  onSnapshot(qref, (snap) => {
-    if (snap.empty) {
-      packList.innerHTML = "<p>Henüz video eklenmedi.</p>";
-      return;
-    }
-    let html = '<div style="display:grid;gap:12px;">';
-    snap.forEach((d) => {
-      const data = d.data() || {};
-      const title = data.title ? String(data.title) : "Paketleme videosu";
-      const driveId = data.driveId ? String(data.driveId) : "";
-      const url = driveId ? driveVideoDownloadUrlFromId(driveId) : (data.urlRaw ? String(data.urlRaw) : "");
-      html += `
-        <div class="card" style="padding:14px;">
-          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-            <div style="flex:1;">
-              <div style="font-weight:800;margin-bottom:8px;">${escapeHtml(title)}</div>
-              ${url ? `
-                <video controls style="width:100%;max-height:320px;border-radius:14px;background:#0b1020;">
-                  <source src="${escapeAttr(url)}" />
-                </video>
-                <div style="margin-top:8px;">
-                  <a class="pdf-open" href="${escapeAttr(url)}" target="_blank" rel="noopener">Videoyu yeni sekmede aç</a>
-                </div>
-              ` : `<p>Video linki bulunamadı.</p>`}
-            </div>
-
-            <button class="btn-link" type="button" data-pack-del="${d.id}">Sil</button>
-          </div>
-        </div>
-      `;
-    });
-    html += "</div>";
-    packList.innerHTML = html;
-  }, (err) => {
-    console.error(err);
-    packList.innerHTML = "<p>Videolar yüklenemedi.</p>";
-  });
-}
-
-if (packAddBtn && packLinkEl) {
-  packAddBtn.addEventListener("click", async () => {
-    try {
-      const raw = (packLinkEl.value || "").trim();
-      const title = (packTitleEl?.value || "").trim();
-      if (!raw) {
-        setPackMsg("Lütfen Drive video linkini/fileId giriniz.", "error");
-        return;
-      }
-      const driveId = extractDriveFileId(raw);
-      if (!driveId) {
-        setPackMsg("Drive linki/fileId geçersiz görünüyor.", "error");
-        return;
-      }
-
-      await addDoc(collection(db, "packagingVideos"), {
-        title: title || "Paketleme videosu",
-        driveId,
-        urlRaw: raw,
-        createdAt: serverTimestamp(),
-        createdBy: currentUser.uid,
-      });
-
-      packLinkEl.value = "";
-      if (packTitleEl) packTitleEl.value = "";
-      setPackMsg("Video eklendi.", "success");
-    } catch (e) {
-      console.error(e);
-      setPackMsg("Video eklenirken hata oluştu.", "error");
-    }
-  });
-}
-
-if (packList) {
-  packList.addEventListener("click", async (e) => {
-    const btn = e.target?.closest?.("[data-pack-del]");
-    if (!btn) return;
-    const id = btn.getAttribute("data-pack-del");
-    if (!id) return;
-    if (!confirm("Bu videoyu silmek istiyor musunuz?")) return;
-    try {
-      await deleteDoc(doc(db, "packagingVideos", id));
-      setPackMsg("Video silindi.", "success");
-    } catch (err) {
-      console.error(err);
-      setPackMsg("Video silinirken hata oluştu.", "error");
-    }
-  });
-
-  renderPackagingAdminList();
-}
-
 const productsManageBox = document.getElementById("admin-products-list");
 
   // Kullanıcı listesi & roller
@@ -1813,62 +1673,61 @@ onAuthStateChanged(auth, async (user) => {
   setupAdminPanel();
 });
 
-// ---------------- DOM YÜKLENDİĞİNDE ----------------
 
-
-function setupPackagingPage() {
-  const grid = document.getElementById("packaging-videos");
-  if (!grid) return;
-
-  const empty = document.getElementById("packaging-empty");
-  grid.innerHTML = "<p>Yükleniyor...</p>";
-
-  try {
-    const colRef = collection(db, "packagingVideos");
-    const qref = query(colRef, orderBy("createdAt", "desc"));
-    onSnapshot(qref, (snap) => {
-      if (snap.empty) {
-        grid.innerHTML = "";
-        if (empty) empty.style.display = "block";
-        return;
+// --- Navbar cleanup patch: remove "Satıcı Ol" and "Yardım", keep single "Paketlememiz" ---
+function normalizeNavbarLinks() {
+  const removeBy = (rootSel) => {
+    const root = document.querySelector(rootSel);
+    if (!root) return;
+    const links = Array.from(root.querySelectorAll("a"));
+    // Remove Satıcı Ol and Yardım by href or text
+    links.forEach((a) => {
+      const text = (a.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const href = (a.getAttribute("href") || "").toLowerCase();
+      if (href.includes("seller.html") || href.includes("help.html") || text === "satıcı ol" || text === "yardım") {
+        const li = a.closest("li");
+        if (li && li.parentElement === root) li.remove();
+        else a.remove();
       }
-      if (empty) empty.style.display = "none";
-
-      let html = "";
-      snap.forEach((d) => {
-        const data = d.data() || {};
-        const title = data.title ? String(data.title) : "Paketleme videosu";
-        const driveId = data.driveId ? String(data.driveId) : "";
-        const url = driveId ? driveVideoDownloadUrlFromId(driveId) : (data.urlRaw ? String(data.urlRaw) : "");
-        html += `
-          <div class="card">
-            <div class="card-img">
-              ${url ? `
-                <video controls style="width:100%;height:100%;object-fit:contain;">
-                  <source src="${escapeAttr(url)}" />
-                </video>
-              ` : `<div>Video bulunamadı</div>`}
-            </div>
-            <div class="card-body">
-              <h3>${escapeHtml(title)}</h3>
-              ${url ? `<a class="pdf-open" href="${escapeAttr(url)}" target="_blank" rel="noopener">Videoyu yeni sekmede aç</a>` : ""}
-            </div>
-          </div>
-        `;
-      });
-
-      grid.innerHTML = html;
-    }, (err) => {
-      console.error(err);
-      grid.innerHTML = "<p>Videolar yüklenemedi.</p>";
-      if (empty) empty.style.display = "none";
     });
-  } catch (e) {
-    console.error(e);
-    grid.innerHTML = "<p>Videolar yüklenemedi.</p>";
-    if (empty) empty.style.display = "none";
+
+    // Keep only ONE "Paketlememiz" link in this root
+    const packLinks = Array.from(root.querySelectorAll("a")).filter((a) => {
+      const text = (a.textContent || "").toLowerCase();
+      const href = (a.getAttribute("href") || "").toLowerCase();
+      return text.includes("paketlememiz") || href.includes("packag");
+    });
+
+    packLinks.slice(1).forEach((a) => {
+      const li = a.closest("li");
+      if (li && li.parentElement === root) li.remove();
+      else a.remove();
+    });
+  };
+
+  // Desktop list
+  removeBy(".nav-links");
+  // Mobile menu (links are direct children)
+  const mobile = document.querySelector(".nav-mobile-menu");
+  if (mobile) {
+    const links = Array.from(mobile.querySelectorAll("a"));
+    links.forEach((a) => {
+      const text = (a.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const href = (a.getAttribute("href") || "").toLowerCase();
+      if (href.includes("seller.html") || href.includes("help.html") || text === "satıcı ol" || text === "yardım") {
+        a.remove();
+      }
+    });
+    const packLinks = Array.from(mobile.querySelectorAll("a")).filter((a) => {
+      const text = (a.textContent || "").toLowerCase();
+      const href = (a.getAttribute("href") || "").toLowerCase();
+      return text.includes("paketlememiz") || href.includes("packag");
+    });
+    packLinks.slice(1).forEach((a) => a.remove());
   }
 }
+
+// ---------------- DOM YÜKLENDİĞİNDE ----------------
 
 document.addEventListener("DOMContentLoaded", () => {
   try { setupMaintenanceMode(); } catch(e) {}
@@ -1877,6 +1736,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
   setupNavbar();
+  normalizeNavbarLinks();
   applyTheme(localStorage.getItem(THEME_KEY) || "light");
 
 
@@ -1920,8 +1780,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.location.href = `https://wa.me/${phone}?text=${message}`;
     });
   }
-
-  setupPackagingPage();
 
   setupProfilePage();
   setupSellerRequest();
