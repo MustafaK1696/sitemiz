@@ -29,7 +29,9 @@
 
         <li class="nav-guest-only"><a href="seller.html" class="nav-seller-cta">Satıcı Ol</a></li>
         <li><a href="about.html">Hakkımızda</a></li>
-        <li><a href="help.html">Yardım</a></li>
+        <li><a href="help.html">Yardım</a>
+      <a href="paketlememiz.html">Paketlememiz</a></li>
+        <li><a href="paketlememiz.html">Paketlememiz</a></li>
 
         <li><a href="admin.html" class="nav-admin-link" style="display:none;">Yönetici Paneli</a></li>
         <li><a href="seller-dashboard.html" class="nav-seller-panel" style="display:none;">Satıcı Panelim</a></li>
@@ -109,6 +111,34 @@
     </div>
     <p style="margin-top:10px;font-size:0.9rem;color:#6b7280;">Bu özellik planlı bakım için banner + erişim kısıtı uygular. Bakım başladığında admin harici kullanıcılar sadece giriş sayfasına erişebilir.</p>
   </section>
+
+  <section class="profile-section" id="packaging-section">
+    <h2>Paketlememiz Videoları</h2>
+    <p class="page-intro" style="text-align:left;max-width:unset;margin:0 0 12px;">
+      Buraya eklediğin Drive video linkleri <b>Paketlememiz</b> sayfasında görünecektir.
+      (Linkler herkese açık olmalı.)
+    </p>
+
+    <div class="form-group">
+      <label for="pack-video-title">Video Başlığı (Opsiyonel)</label>
+      <input type="text" id="pack-video-title" placeholder="Örn: Paketleme süreci" />
+    </div>
+
+    <div class="form-group">
+      <label for="pack-video-link">Drive Video Linki / fileId (Zorunlu)</label>
+      <input type="text" id="pack-video-link" placeholder="Drive paylaşım linki veya fileId" />
+    </div>
+
+    <p id="packaging-admin-message" class="form-message"></p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <button id="pack-video-add" type="button" class="btn-primary">Video Ekle</button>
+    </div>
+
+    <div id="packaging-admin-list" style="margin-top:14px;">Yükleniyor...</div>
+  </section>
+
+
 
   <section class="profile-section">
     <h2>Kullanıcılar & Roller</h2>
