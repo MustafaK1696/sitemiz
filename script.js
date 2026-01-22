@@ -297,6 +297,19 @@ function buildWhatsAppOrderMessage(subtotal) {
   return header + detailHeader + totalLine;
 }
 
+function openWhatsAppOrder(phone, message) {
+  const encoded = encodeURIComponent(message);
+  const waMeUrl = `https://wa.me/${phone}?text=${encoded}`;
+  const apiUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+  const opened = window.open(waMeUrl, "_blank");
+  if (!opened) {
+    window.location.href = apiUrl;
+    return;
+  }
+  opened.opener = null;
+  opened.location.href = waMeUrl;
+}
+
 function updateCartProgress(subtotal) {
   const bar = document.getElementById("cart-progress-fill");
   if (!bar) return;
@@ -1766,7 +1779,12 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login-shop.html";
         return;
       }
-      await refreshUserRole();
+      
+      try {
+        await refreshUserRole();
+      } catch (err) {
+        console.warn("Kullanıcı rolü güncellenemedi, WhatsApp yönlendirmesi devam ediyor.", err);
+      }
       if (currentTwoFactorEnabled && !currentUser.emailVerified) {
         alert(
           "Siparişi tamamlamak için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama maili gönderebilirsiniz."
@@ -1776,14 +1794,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(buildWhatsAppOrderMessage(subtotal));
-      window.location.href = `https://wa.me/${phone}?text=${message}`;
+      const message = buildWhatsAppOrderMessage(subtotal);
+      openWhatsAppOrder(phone, message);
     });
   }
 
   setupProfilePage();
   setupSellerRequest();
 });
-
-
-
