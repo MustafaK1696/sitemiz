@@ -1462,11 +1462,12 @@ function setupPackagingAdmin() {
   const qPack = query(packCol, orderBy("createdAt", "desc"));
 
   if (list) {
+    list.textContent = "Videolar yükleniyor...";
     onSnapshot(
       qPack,
       (snap) => {
         if (snap.empty) {
-          list.innerHTML = "<p>Henüz video eklenmedi.</p>";
+          list.innerHTML = "<p>Yüklenmiş bir video yoktur.</p>";
           return;
         }
         const cards = [];
