@@ -1991,6 +1991,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login-shop.html";
         return;
       }
+      
       try {
         await refreshUserRole();
       } catch (err) {
