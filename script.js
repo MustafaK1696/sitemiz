@@ -311,17 +311,9 @@ function resolvePackagingVideoSource(raw) {
   const input = String(raw || "").trim();
   const driveId = extractDriveId(input);
   if (driveId) {
-    return { url: driveDirectUrl(driveId, "video"), isDrive: true, id: driveId };
+    return { url: driveVideoPreviewUrlFromId(driveId), isDrive: true, id: driveId };
   }
   return { url: input, isDrive: false, id: "" };
-}
-
-function isValidVideoUrl(raw) {
-  const input = String(raw || "").trim();
-  if (!input) return false;
-  if (extractDriveId(input)) return true;
-  const clean = input.split("?")[0].split("#")[0].toLowerCase();
-  return [".mp4", ".webm", ".mov", ".m4v"].some((ext) => clean.endsWith(ext));
 }
 
 function getPackagingMediaMarkup(video) {
@@ -1504,6 +1496,15 @@ function setupPackagingAdmin() {
       const title = titleInput ? titleInput.value.trim() : "";
       const rawUrl = linkInput ? linkInput.value.trim() : "";
 
+      const hasAllowedExt = (url, allowedExts) => {
+        const s = String(url || "").trim().toLowerCase();
+        if (!s) return false;
+        const clean = s.split("?")[0].split("#")[0];
+        return allowedExts.some((ext) => clean.endsWith("." + ext));
+      };
+
+      const driveId = extractDriveId(rawUrl);
+
       if (!rawUrl) {
         if (message) {
           message.textContent = "Drive video linki veya fileId zorunludur.";
@@ -1512,7 +1513,7 @@ function setupPackagingAdmin() {
         return;
       }
 
-      if (!isValidVideoUrl(rawUrl)) {
+      if (!driveId && !hasAllowedExt(rawUrl, ["mp4", "webm", "mov", "m4v"])) {
         if (message) {
           message.textContent = "Lütfen geçerli bir Drive linki/fileId veya .mp4/.webm/.mov/.m4v uzantılı bir video linki girin.";
           message.style.color = "red";
@@ -1520,8 +1521,8 @@ function setupPackagingAdmin() {
         return;
       }
 
-      const source = resolvePackagingVideoSource(rawUrl);
-      if (!source.url) {
+      const sourceUrl = driveId ? driveVideoPreviewUrlFromId(driveId) : rawUrl;
+      if (!sourceUrl) {
         if (message) {
           message.textContent = "Video linki çözümlenemedi. Lütfen Drive linkini kontrol edin.";
           message.style.color = "red";
@@ -1537,8 +1538,9 @@ function setupPackagingAdmin() {
       try {
         await addDoc(packCol, {
           title: title || "Paketleme Videosu",
-          url: source.url,
+          url: sourceUrl,
           rawUrl,
+          driveId: driveId || "",
           createdAt: serverTimestamp(),
           createdBy: currentUser.uid
         });
@@ -1991,7 +1993,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login-shop.html";
         return;
       }
-      
       try {
         await refreshUserRole();
       } catch (err) {
