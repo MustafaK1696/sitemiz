@@ -105,6 +105,7 @@ import {
   addDoc,
   query,
   where,
+  orderBy,
   onSnapshot,
   serverTimestamp,
   deleteDoc
@@ -295,6 +296,109 @@ function buildWhatsAppOrderMessage(subtotal) {
   const totalLine = `\n\nToplam: ${Number(subtotal || 0).toFixed(2)} TL`;
 
   return header + detailHeader + totalLine;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function resolvePackagingVideoSource(raw) {
+  const input = String(raw || "").trim();
+  const driveId = extractDriveId(input);
+  if (driveId) {
+    return { url: driveVideoPreviewUrlFromId(driveId), isDrive: true, id: driveId };
+  }
+  return { url: input, isDrive: false, id: "" };
+}
+
+function getPackagingMediaMarkup(video) {
+  const title = escapeHtml(video.title || "Paketleme Videosu");
+  const source = resolvePackagingVideoSource(video.url);
+  return source.isDrive
+    ? `<iframe class="packaging-video-embed" src="${source.url}" title="${title}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`
+    : `<video class="packaging-video-embed" src="${source.url}" controls preload="metadata"></video>`;
+}
+
+function renderPackagingVideoCard(video) {
+  const title = escapeHtml(video.title || "Paketleme Videosu");
+  const media = getPackagingMediaMarkup(video);
+
+  return `
+    <div class="card packaging-card">
+      <div class="card-img packaging-media">
+        ${media}
+      </div>
+      <div class="card-body">
+        <h3>${title}</h3>
+      </div>
+    </div>
+  `;
+}
+
+function renderPackagingAdminCard(video, docId) {
+  const title = escapeHtml(video.title || "Paketleme Videosu");
+  const url = escapeHtml(video.url || "");
+  return `
+    <div class="card packaging-card" data-packaging-id="${docId}">
+      <div class="card-img packaging-media">
+        ${getPackagingMediaMarkup(video)}
+      </div>
+      <div class="card-body">
+        <h3>${title}</h3>
+        <a class="packaging-admin-link" href="${url}" target="_blank" rel="noopener">Videoyu Aç</a>
+        <button class="btn-link packaging-delete" type="button">Sil</button>
+      </div>
+    </div>
+  `;
+}
+
+function openWhatsAppOrder(phone, message) {
+  const encoded = encodeURIComponent(message);
+  const waMeUrl = `https://wa.me/${phone}?text=${encoded}`;
+  const apiUrl = `https://api.whatsapp.com/send?phone=${phone}&text=${encoded}`;
+  const opened = window.open(waMeUrl, "_blank");
+  if (!opened) {
+    window.location.href = apiUrl;
+    return;
+  }
+  opened.opener = null;
+  opened.location.href = waMeUrl;
+}
+
+function setupPackagingPage() {
+  const container = document.getElementById("packaging-videos");
+  if (!container) return;
+  const emptyEl = document.getElementById("packaging-empty");
+  const packCol = collection(db, "packagingVideos");
+  const qPack = query(packCol, orderBy("createdAt", "desc"));
+
+  onSnapshot(
+    qPack,
+    (snap) => {
+      if (snap.empty) {
+        container.innerHTML = "";
+        if (emptyEl) emptyEl.style.display = "block";
+        return;
+      }
+      if (emptyEl) emptyEl.style.display = "none";
+      const cards = [];
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        if (!d || !d.url) return;
+        cards.push(renderPackagingVideoCard(d));
+      });
+      container.innerHTML = cards.join("");
+    },
+    () => {
+      container.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
+      if (emptyEl) emptyEl.style.display = "none";
+    }
+  );
 }
 
 function updateCartProgress(subtotal) {
@@ -1337,6 +1441,126 @@ function setupMaintenanceMode() {
 
 // ---------------- ADMİN PANELİ ----------------
 
+function setupPackagingAdmin() {
+  const list = document.getElementById("packaging-admin-list");
+  const message = document.getElementById("packaging-admin-message");
+  const titleInput = document.getElementById("pack-video-title");
+  const linkInput = document.getElementById("pack-video-link");
+  const addBtn = document.getElementById("pack-video-add");
+
+  if (!list && !addBtn) return;
+
+  const packCol = collection(db, "packagingVideos");
+  const qPack = query(packCol, orderBy("createdAt", "desc"));
+
+  if (list) {
+    list.textContent = "Videolar yükleniyor...";
+    onSnapshot(
+      qPack,
+      (snap) => {
+        if (snap.empty) {
+          list.innerHTML = "<p>Yüklenmiş bir video yoktur.</p>";
+          return;
+        }
+        const cards = [];
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (!d || !d.url) return;
+          cards.push(renderPackagingAdminCard(d, docSnap.id));
+        });
+        list.innerHTML = `<div class="product-grid">${cards.join("")}</div>`;
+
+        list.querySelectorAll(".packaging-delete").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const card = btn.closest("[data-packaging-id]");
+            const id = card ? card.getAttribute("data-packaging-id") : null;
+            if (!id) return;
+            if (!confirm("Bu videoyu silmek istediğinize emin misiniz?")) return;
+            try {
+              await deleteDoc(doc(db, "packagingVideos", id));
+            } catch (err) {
+              console.error(err);
+              alert("Video silinirken hata oluştu.");
+            }
+          });
+        });
+      },
+      () => {
+        list.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
+      }
+    );
+  }
+
+  if (addBtn) {
+    addBtn.addEventListener("click", async () => {
+      const title = titleInput ? titleInput.value.trim() : "";
+      const rawUrl = linkInput ? linkInput.value.trim() : "";
+
+      const hasAllowedExt = (url, allowedExts) => {
+        const s = String(url || "").trim().toLowerCase();
+        if (!s) return false;
+        const clean = s.split("?")[0].split("#")[0];
+        return allowedExts.some((ext) => clean.endsWith("." + ext));
+      };
+
+      const driveId = extractDriveId(rawUrl);
+
+      if (!rawUrl) {
+        if (message) {
+          message.textContent = "Drive video linki veya fileId zorunludur.";
+          message.style.color = "red";
+        }
+        return;
+      }
+
+      if (!driveId && !hasAllowedExt(rawUrl, ["mp4", "webm", "mov", "m4v"])) {
+        if (message) {
+          message.textContent = "Lütfen geçerli bir Drive linki/fileId veya .mp4/.webm/.mov/.m4v uzantılı bir video linki girin.";
+          message.style.color = "red";
+        }
+        return;
+      }
+
+      const sourceUrl = driveId ? driveVideoPreviewUrlFromId(driveId) : rawUrl;
+      if (!sourceUrl) {
+        if (message) {
+          message.textContent = "Video linki çözümlenemedi. Lütfen Drive linkini kontrol edin.";
+          message.style.color = "red";
+        }
+        return;
+      }
+
+      if (message) {
+        message.textContent = "Video ekleniyor...";
+        message.style.color = "black";
+      }
+
+      try {
+        await addDoc(packCol, {
+          title: title || "Paketleme Videosu",
+          url: sourceUrl,
+          rawUrl,
+          driveId: driveId || "",
+          createdAt: serverTimestamp(),
+          createdBy: currentUser.uid
+        });
+        if (message) {
+          message.textContent = "Video başarıyla eklendi.";
+          message.style.color = "green";
+        }
+        if (titleInput) titleInput.value = "";
+        if (linkInput) linkInput.value = "";
+      } catch (err) {
+        console.error(err);
+        if (message) {
+          message.textContent = "Video eklenirken hata oluştu.";
+          message.style.color = "red";
+        }
+      }
+    });
+  }
+}
+
 async function setupAdminPanel() {
   if (adminPanelInitialized) return;
   const panel = document.getElementById("admin-panel");
@@ -1345,6 +1569,8 @@ async function setupAdminPanel() {
 
   const ok = await requireRole(["admin"]);
   if (!ok) return;
+
+  setupPackagingAdmin();
 
   const usersBox = document.getElementById("admin-users-list");
   const sellerBox = document.getElementById("admin-seller-requests");
@@ -1747,6 +1973,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (searchBox) searchBox.addEventListener("input", () => renderProducts());
 
   renderCart();
+  setupPackagingPage();
 
   // Sepeti onayla
   const checkoutBtn = document.getElementById("checkout-btn");
@@ -1766,7 +1993,11 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login-shop.html";
         return;
       }
-      await refreshUserRole();
+      try {
+        await refreshUserRole();
+      } catch (err) {
+        console.warn("Kullanıcı rolü güncellenemedi, WhatsApp yönlendirmesi devam ediyor.", err);
+      }
       if (currentTwoFactorEnabled && !currentUser.emailVerified) {
         alert(
           "Siparişi tamamlamak için e-posta adresinizi doğrulamanız gerekiyor. Profil > Güvenlik bölümünden doğrulama maili gönderebilirsiniz."
@@ -1776,14 +2007,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const phone = "905425029440";
-      const message = encodeURIComponent(buildWhatsAppOrderMessage(subtotal));
-      window.location.href = `https://wa.me/${phone}?text=${message}`;
+      const message = buildWhatsAppOrderMessage(subtotal);
+      openWhatsAppOrder(phone, message);
     });
   }
 
   setupProfilePage();
   setupSellerRequest();
 });
-
-
-
