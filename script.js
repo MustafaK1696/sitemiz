@@ -105,6 +105,7 @@ import {
   addDoc,
   query,
   where,
+  orderBy,
   onSnapshot,
   serverTimestamp,
   deleteDoc
@@ -402,12 +403,26 @@ function setupPackagingPage() {
       const data = snap.exists() ? snap.data() : {};
       const videos = sortVideos(normalizeVideos(Array.isArray(data.videos) ? data.videos : []));
       if (!videos.length) {
+  const packCol = collection(db, "packagingVideos");
+  const qPack = query(packCol, orderBy("createdAt", "desc"));
+
+  onSnapshot(
+    qPack,
+    (snap) => {
+      if (snap.empty) {
         container.innerHTML = "";
         if (emptyEl) emptyEl.style.display = "block";
         return;
       }
       if (emptyEl) emptyEl.style.display = "none";
       container.innerHTML = videos.map(renderPackagingVideoCard).join("");
+      const cards = [];
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        if (!d || !d.url) return;
+        cards.push(renderPackagingVideoCard(d));
+      });
+      container.innerHTML = cards.join("");
     },
     () => {
       container.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
@@ -1488,6 +1503,8 @@ function setupPackagingAdmin() {
       return bTime - aTime;
     });
   };
+  const packCol = collection(db, "packagingVideos");
+  const qPack = query(packCol, orderBy("createdAt", "desc"));
 
   if (list) {
     list.textContent = "Videolar yükleniyor...";
@@ -1503,6 +1520,19 @@ function setupPackagingAdmin() {
         list.innerHTML = `<div class="product-grid">${currentVideos
           .map((video, index) => renderPackagingAdminCard(video, video.id || `legacy-${index}`))
           .join("")}</div>`;
+      qPack,
+      (snap) => {
+        if (snap.empty) {
+          list.innerHTML = "<p>Yüklenmiş bir video yoktur.</p>";
+          return;
+        }
+        const cards = [];
+        snap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (!d || !d.url) return;
+          cards.push(renderPackagingAdminCard(d, docSnap.id));
+        });
+        list.innerHTML = `<div class="product-grid">${cards.join("")}</div>`;
 
         list.querySelectorAll(".packaging-delete").forEach((btn) => {
           btn.addEventListener("click", async () => {
@@ -1516,6 +1546,7 @@ function setupPackagingAdmin() {
                 return fallbackId !== id;
               });
               await setDoc(packRef, { videos: nextVideos }, { merge: true });
+              await deleteDoc(doc(db, "packagingVideos", id));
             } catch (err) {
               console.error(err);
               alert("Video silinirken hata oluştu.");
@@ -1579,6 +1610,7 @@ function setupPackagingAdmin() {
         const existing = normalizeVideos(Array.isArray(data.videos) ? data.videos : []);
         const newVideo = {
           id: (crypto?.randomUUID && crypto.randomUUID()) || `pack-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        await addDoc(packCol, {
           title: title || "Paketleme Videosu",
           url: sourceUrl,
           rawUrl,
@@ -1587,6 +1619,9 @@ function setupPackagingAdmin() {
           createdBy: currentUser.uid
         };
         await setDoc(packRef, { videos: [...existing, newVideo] }, { merge: true });
+          createdAt: serverTimestamp(),
+          createdBy: currentUser.uid
+        });
         if (message) {
           message.textContent = "Video başarıyla eklendi.";
           message.style.color = "green";
