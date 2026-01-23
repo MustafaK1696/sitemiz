@@ -374,6 +374,35 @@ function setupPackagingPage() {
   const container = document.getElementById("packaging-videos");
   if (!container) return;
   const emptyEl = document.getElementById("packaging-empty");
+  const packRef = doc(db, "siteSettings", "packaging");
+
+  const normalizeVideos = (videos) => {
+    return videos
+      .map((video) => ({
+        id: video.id || "",
+        title: video.title || "Paketleme Videosu",
+        url: video.url || "",
+        rawUrl: video.rawUrl || "",
+        driveId: video.driveId || "",
+        createdAt: video.createdAt || 0
+      }))
+      .filter((video) => video.url);
+  };
+
+  const sortVideos = (videos) => {
+    return videos.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() ?? Number(a.createdAt || 0);
+      const bTime = b.createdAt?.toMillis?.() ?? Number(b.createdAt || 0);
+      return bTime - aTime;
+    });
+  };
+
+  onSnapshot(
+    packRef,
+    (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      const videos = sortVideos(normalizeVideos(Array.isArray(data.videos) ? data.videos : []));
+      if (!videos.length) {
   const packCol = collection(db, "packagingVideos");
   const qPack = query(packCol, orderBy("createdAt", "desc"));
 
@@ -386,6 +415,7 @@ function setupPackagingPage() {
         return;
       }
       if (emptyEl) emptyEl.style.display = "none";
+      container.innerHTML = videos.map(renderPackagingVideoCard).join("");
       const cards = [];
       snap.forEach((docSnap) => {
         const d = docSnap.data();
@@ -1450,12 +1480,46 @@ function setupPackagingAdmin() {
 
   if (!list && !addBtn) return;
 
+  const packRef = doc(db, "siteSettings", "packaging");
+  let currentVideos = [];
+
+  const normalizeVideos = (videos) => {
+    return videos
+      .map((video) => ({
+        id: video.id || "",
+        title: video.title || "Paketleme Videosu",
+        url: video.url || "",
+        rawUrl: video.rawUrl || "",
+        driveId: video.driveId || "",
+        createdAt: video.createdAt || 0
+      }))
+      .filter((video) => video.url);
+  };
+
+  const sortVideos = (videos) => {
+    return videos.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() ?? Number(a.createdAt || 0);
+      const bTime = b.createdAt?.toMillis?.() ?? Number(b.createdAt || 0);
+      return bTime - aTime;
+    });
+  };
   const packCol = collection(db, "packagingVideos");
   const qPack = query(packCol, orderBy("createdAt", "desc"));
 
   if (list) {
     list.textContent = "Videolar yükleniyor...";
     onSnapshot(
+      packRef,
+      (snap) => {
+        const data = snap.exists() ? snap.data() : {};
+        currentVideos = sortVideos(normalizeVideos(Array.isArray(data.videos) ? data.videos : []));
+        if (!currentVideos.length) {
+          list.innerHTML = "<p>Yüklenmiş bir video yoktur.</p>";
+          return;
+        }
+        list.innerHTML = `<div class="product-grid">${currentVideos
+          .map((video, index) => renderPackagingAdminCard(video, video.id || `legacy-${index}`))
+          .join("")}</div>`;
       qPack,
       (snap) => {
         if (snap.empty) {
@@ -1477,6 +1541,11 @@ function setupPackagingAdmin() {
             if (!id) return;
             if (!confirm("Bu videoyu silmek istediğinize emin misiniz?")) return;
             try {
+              const nextVideos = currentVideos.filter((video, index) => {
+                const fallbackId = video.id || `legacy-${index}`;
+                return fallbackId !== id;
+              });
+              await setDoc(packRef, { videos: nextVideos }, { merge: true });
               await deleteDoc(doc(db, "packagingVideos", id));
             } catch (err) {
               console.error(err);
@@ -1536,11 +1605,20 @@ function setupPackagingAdmin() {
       }
 
       try {
+        const snap = await getDoc(packRef);
+        const data = snap.exists() ? snap.data() : {};
+        const existing = normalizeVideos(Array.isArray(data.videos) ? data.videos : []);
+        const newVideo = {
+          id: (crypto?.randomUUID && crypto.randomUUID()) || `pack-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         await addDoc(packCol, {
           title: title || "Paketleme Videosu",
           url: sourceUrl,
           rawUrl,
           driveId: driveId || "",
+          createdAt: Date.now(),
+          createdBy: currentUser.uid
+        };
+        await setDoc(packRef, { videos: [...existing, newVideo] }, { merge: true });
           createdAt: serverTimestamp(),
           createdBy: currentUser.uid
         });
