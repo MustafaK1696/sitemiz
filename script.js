@@ -28,8 +28,8 @@ function driveDirectUrl(fileId, kind) {
   // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: preview iframe için en uyumlu seçenek
-  return `https://drive.google.com/file/d/${id}/preview`;
+  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
+  return `https://drive.google.com/uc?export=download&id=${id}`;
 }
 
 
