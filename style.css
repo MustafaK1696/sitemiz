@@ -1135,3 +1135,46 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
   visibility: visible;
   opacity: 1;
 }
+
+/* --- Ürün medya slider (görsel + video) --- */
+/* Amaç: Kart içindeki medya alanını slider gibi göstermek, scrollbar taşmasını engellemek. */
+
+.card-img { overflow: hidden; border-radius: 18px; }
+.card-img { aspect-ratio: 16 / 9; } /* İstersen 1/1 yapabilirsin */
+
+.card-img img,
+.card-img video,
+.card-img iframe{
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+
+.media-slider{
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: 0;
+  scrollbar-width: none;
+}
+.media-slider::-webkit-scrollbar{ display: none; }
+
+.media-slide{
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+}
+
+.media-slide > img,
+.media-slide > video,
+.media-slide > iframe{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.media-slide video,
+.media-iframe{ background: #000; }
+
