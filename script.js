@@ -23,13 +23,13 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-  // PDF: iframe preview
+  // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images: stable thumbnail
+  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
+  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // VIDEO: iframe preview (NEVER download)
-  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
-  return "";
+  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
+  return `https://drive.google.com/uc?export=download&id=${id}`;
 }
 
 
@@ -274,6 +274,7 @@ function getCartLineItems() {
 
       return {
         id,
+        code: String(item.code || (p ? p.productCode : "") || id),
         name,
         qty,
         price,
@@ -288,7 +289,7 @@ function buildWhatsAppOrderMessage(subtotal) {
   const lines = items.map((it) => {
     const priceTxt = Number.isFinite(it.price) ? `${it.price.toFixed(2)} TL` : "-";
     const lineTotalTxt = Number.isFinite(it.lineTotal) ? `${it.lineTotal.toFixed(2)} TL` : "-";
-    return `• ${it.name} (Kod: ${it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
+    return `• ${it.name} (Kod: ${it.code}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
   });
 
   const header = "Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.";
@@ -305,6 +306,30 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+
+// ---------------- ÜRÜN KODU ----------------
+// Firestore doc id'leri uzun göründüğü için kullanıcıya/adminde gösterilecek kısa bir ürün kodu üretir.
+// Format: <TITLE_SLUG_FIRST8>-<DOCID_LAST4>  (örn: CAMKAVAN-3F2A)
+function slugifyTr(input) {
+  const s = String(input || "").toLowerCase().trim();
+  const map = { "ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u" };
+  const cleaned = s
+    .split("")
+    .map((ch) => (map[ch] ? map[ch] : ch))
+    .join("")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return cleaned;
+}
+
+function makeProductCode(title, docId) {
+  const slug = slugifyTr(title);
+  const left = (slug || "urun").replace(/-/g, "").slice(0, 8).toUpperCase();
+  const right = String(docId || "").slice(-4).toUpperCase();
+  return `${left}-${right}`;
 }
 
 function resolvePackagingVideoSource(raw) {
@@ -454,6 +479,7 @@ function setCartItemQty(productId, qty, meta) {
         cart[idx].name = meta.name ?? cart[idx].name;
         cart[idx].price = meta.price ?? cart[idx].price;
         cart[idx].imageUrl = meta.imageUrl ?? cart[idx].imageUrl;
+        cart[idx].code = meta.code ?? cart[idx].code;
       }
     } else {
       const item = { id: productId, qty };
@@ -461,6 +487,7 @@ function setCartItemQty(productId, qty, meta) {
         item.name = meta.name ?? "";
         item.price = meta.price ?? 0;
         item.imageUrl = meta.imageUrl ?? "";
+        item.code = meta.code ?? "";
       }
       cart.push(item);
     }
@@ -482,8 +509,7 @@ function adjustCartItem(productId, delta) {
   // try to pull latest meta from PRODUCTS if available
   const p = PRODUCTS.find((x) => x.id === productId);
   const meta = p
-    ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" }
-    : undefined;
+    ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "", code: p.productCode || "" } : undefined;
 
   setCartItemQty(productId, nextQty, meta);
 }
@@ -505,6 +531,7 @@ function addToCart(productId, meta) {
       item.name = meta.name ?? "";
       item.price = meta.price ?? 0;
       item.imageUrl = meta.imageUrl ?? "";
+        item.code = meta.code ?? "";
     }
     cart.push(item);
   }
@@ -584,6 +611,7 @@ function loadProductsFromFirestore() {
       const d = docSnap.data();
       PRODUCTS.push({
         id: docSnap.id,
+        productCode: d.productCode || makeProductCode(d.title, docSnap.id),
         name: d.title,
         price: d.price,
         category: d.category || "",
@@ -614,7 +642,7 @@ function handleAddToCart(productId, buttonEl) {
   }
 
   const p = PRODUCTS.find(x => x.id === productId);
-  const meta = p ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "" } : undefined;
+  const meta = p ? { name: p.name, price: Number(p.price || 0), imageUrl: p.imageUrl || "", code: p.productCode || "" } : undefined;
   addToCart(productId, meta);
 
   const originalText = buttonEl.textContent;
@@ -1319,6 +1347,19 @@ msg.style.color = "black";
         return;
       }
 
+      const __missingProductCodes = [];
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        if (!d.productCode) __missingProductCodes.push({ id: docSnap.id, title: d.title });
+      });
+      if (__missingProductCodes.length) {
+        await Promise.all(
+          __missingProductCodes.map((x) =>
+            updateDoc(doc(db, "products", x.id), { productCode: makeProductCode(x.title, x.id) }).catch(() => {})
+          )
+        );
+      }
+
       let html =
         '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat</th><th>Durum</th></tr></thead><tbody>';
 
@@ -1778,8 +1819,8 @@ const productsManageBox = document.getElementById("admin-products-list");
 
           try {
             if (action === "approve-product") {
-              await addDoc(collection(db, "products"), {
-                title: d.title,
+              const newRef = await addDoc(collection(db, "products"), {
+title: d.title,
                 price: d.price,
                 category: d.category,
                 imageUrl: d.imageUrl || (Array.isArray(d.media) && d.media[0] ? d.media[0].url : ""),
@@ -1789,7 +1830,9 @@ const productsManageBox = document.getElementById("admin-products-list");
                 featured: false,
                 createdAt: serverTimestamp()
               });
-              await updateDoc(reqRef, {
+              // ürün kodu (kısa gösterim)
+              await updateDoc(newRef, { productCode: makeProductCode(d.title, newRef.id) });
+await updateDoc(reqRef, {
                 status: "approved",
                 processedAt: serverTimestamp(),
                 processedBy: currentUser.uid
@@ -1812,13 +1855,13 @@ const productsManageBox = document.getElementById("admin-products-list");
   // Onaylanmış ürünler & vitrin yönetimi
   if (productsManageBox) {
     const prodCol = collection(db, "products");
-    onSnapshot(prodCol, (snap) => {
+    onSnapshot(prodCol, async (snap) => {
       if (snap.empty) {
         productsManageBox.innerHTML = "<p>Henüz onaylanmış ürün bulunmuyor.</p>";
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Ürün Kodu</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
@@ -1828,6 +1871,9 @@ const productsManageBox = document.getElementById("admin-products-list");
           </td>
           <td>
             <input type="text" class="admin-prod-cat" value="${d.category || ""}">
+          </td>
+          <td>
+            <input type="text" class="admin-prod-code" value="${escapeHtml(d.productCode || makeProductCode(d.title, docSnap.id))}" readonly>
           </td>
           <td style="text-align:center;">
             <input type="checkbox" class="admin-prod-featured" ${d.featured ? "checked" : ""}>
