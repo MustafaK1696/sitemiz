@@ -28,8 +28,9 @@ function driveDirectUrl(fileId, kind) {
   // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
-  return `https://drive.google.com/uc?export=download&id=${id}`;
+  // Video: iframe preview (NEVER download)
+  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
+  return "";
 }
 
 
@@ -327,25 +328,10 @@ function isValidVideoUrl(raw) {
 function getPackagingMediaMarkup(video) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
   const source = resolvePackagingVideoSource(video.url);
-
-  if (source.isDrive) {
-    // Google Drive iframe UI içindeki "Drive'da aç" / "yeni sekme" butonuna tıklamayı engellemek için
-    // sadece sağ-üst bölgeyi kapatan bir overlay kullanıyoruz. (Sandbox kullanmıyoruz; bazı tarayıcılarda videoyu bozabiliyor.)
-    return `
-      <div class="packaging-iframe-wrap">
-        <iframe class="packaging-video-embed"
-                src="${source.url}"
-                title="${title}"
-                allow="autoplay; encrypted-media"
-                allowfullscreen></iframe>
-        <div class="drive-open-blocker" aria-hidden="true"></div>
-      </div>
-    `;
-  }
-
-  return `<video class="packaging-video-embed" src="${source.url}" controls preload="metadata"></video>`;
+  return source.isDrive
+    ? `<iframe class="packaging-video-embed" src="${source.url}" title="${title}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`
+    : `<video class="packaging-video-embed" src="${source.url}" controls preload="metadata"></video>`;
 }
-
 
 function renderPackagingVideoCard(video) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
@@ -365,6 +351,7 @@ function renderPackagingVideoCard(video) {
 
 function renderPackagingAdminCard(video, docId) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
+  const url = escapeHtml(video.url || "");
   return `
     <div class="card packaging-card" data-packaging-id="${docId}">
       <div class="card-img packaging-media">
@@ -372,7 +359,8 @@ function renderPackagingAdminCard(video, docId) {
       </div>
       <div class="card-body">
         <h3>${title}</h3>
-                <button class="btn-link packaging-delete" type="button">Sil</button>
+        <a class="packaging-admin-link" href="${url}" target="_blank" rel="noopener">Videoyu Aç</a>
+        <button class="btn-link packaging-delete" type="button">Sil</button>
       </div>
     </div>
   `;
@@ -641,19 +629,19 @@ function renderProducts() {
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
 
-  // Başlık: sadece products.html sayfasında kategoriye göre değişsin
-  const isProductsPage = /products\.html$/i.test((window.location.pathname || "").toLowerCase());
-  if (isProductsPage) {
-    const titleEl =
-      document.getElementById("products-title") ||
-      document.querySelector("[data-products-title]") ||
-      document.querySelector("main.container h1, main h1");
-    if (titleEl) {
-      titleEl.textContent = urlCat
-        ? `${(CATEGORY_LABELS[urlCat] || urlCat)} Ürünleri`
-        : "Tüm Ürünler";
-    }
+
+// Başlık (sadece products.html'de var): kategori seçildiyse "X Ürünleri", değilse "Tüm Ürünler"
+const titleEl = document.getElementById("products-title");
+if (titleEl) {
+  if (urlCat) {
+    const label = (CATEGORY_LABELS && CATEGORY_LABELS[urlCat]) ? CATEGORY_LABELS[urlCat] : (urlCat.charAt(0).toUpperCase() + urlCat.slice(1));
+    titleEl.textContent = `${label} Ürünleri`;
+  } else {
+    titleEl.textContent = "Tüm Ürünler";
   }
+}
+
+
 
   listEl.innerHTML = "";
 
