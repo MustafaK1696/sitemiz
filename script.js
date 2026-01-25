@@ -28,9 +28,10 @@ function driveDirectUrl(fileId, kind) {
   // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
-  return `https://drive.google.com/file/d/${id}/preview`;
-}
+  // Video: iframe preview (avoid download / black screen)
+  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
+
+  }
 
 
 function normalizeMediaUrl(rawUrl, kind) {
@@ -44,7 +45,7 @@ function normalizeMediaUrl(rawUrl, kind) {
 
 function normalizeMediaItem(raw) {
   if (!raw) return null;
-  const type = String(raw.type || "").toLowerCase() || "image";
+  const type = String(raw.type || raw.kind || "").toLowerCase() || "image";
   const url = String(raw.url || "").trim();
   const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
   return { type: kind, url: normalizeMediaUrl(url, kind) };
@@ -53,33 +54,6 @@ function normalizeMediaItem(raw) {
 function normalizeMediaArray(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.map(normalizeMediaItem).filter(Boolean).filter(m => m.url);
-}
-
-
-function isDrivePreviewUrl(url) {
-  const s = String(url || "");
-  return /https?:\/\/drive\.google\.com\/file\/d\/[a-zA-Z0-9_-]+\/preview/.test(s);
-}
-
-function renderMediaElement(media, altText) {
-  if (!media || !media.url) return "";
-  const t = String(media.type || "image");
-  const u = String(media.url || "");
-  const alt = String(altText || "Ürün");
-
-  if (t === "video") {
-    // Drive preview linkleri <video> içinde oynatılmaz; iframe ile gösterilir.
-    if (isDrivePreviewUrl(u)) {
-      return `<iframe class="media-iframe" src="${u}" title="${escapeHtml(alt)} video" loading="lazy" referrerpolicy="no-referrer" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
-    }
-    return `<video src="${u}" controls preload="metadata"></video>`;
-  }
-
-  if (t === "pdf") {
-    return `<a class="pdf-open" href="${u}" target="_blank" rel="noopener">PDF'yi Aç</a>`;
-  }
-
-  return `<img src="${u}" alt="${escapeHtml(alt)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />`;
 }
 
 
@@ -696,25 +670,42 @@ function renderProducts() {
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
 
-    
-if (mediaItems.length === 1) {
-  const m = mediaItems[0];
-  if (m.type === "pdf") {
-    mediaHtml = `
-      <div class="card-img pdf-icon">
-        ${renderMediaElement(m, product.name)}
-      </div>`;
-  } else {
-    mediaHtml = `
-      <div class="card-img">
-        ${renderMediaElement(m, product.name)}
-      </div>`;
-  }
-} else if (mediaItems.length > 1) {
+    if (mediaItems.length === 1) {
+      const m = mediaItems[0];
+      if (m.type === "video") {
+        const isDrivePreview = String(m.url || "").includes("drive.google.com/file/d/") && String(m.url || "").includes("/preview");
+        mediaHtml = isDrivePreview
+          ? `
+           <div class="card-img">
+             <iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe>
+           </div>`
+          : `
+           <div class="card-img">
+             <video src="${m.url}" controls preload="metadata"></video>
+           </div>`;
+      } else if (m.type === "pdf") {
+        mediaHtml = `
+          <div class="card-img pdf-icon">
+            <a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a>
+          </div>`;
+      } else {
+        mediaHtml = `
+          <div class="card-img">
+            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+          </div>`;
+      }
+    } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
-        const inner = renderMediaElement(m, product.name);
-        if (m.type === "pdf") return `<div class="media-slide pdf-slide">${inner}</div>`;
-        return `<div class="media-slide">${inner}</div>`;
+        if (m.type === "video") {
+          const isDrivePreview = String(m.url || "").includes("drive.google.com/file/d/") && String(m.url || "").includes("/preview");
+          return isDrivePreview
+            ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+            : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+        }
+        if (m.type === "pdf") {
+          return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
+        }
+        return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join("");
 
       mediaHtml = `
@@ -785,10 +776,12 @@ function renderFeatured() {
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
     if (mediaItems.length === 1) {
       const m = mediaItems[0];
-      if (m.type === "pdf") {
-        mediaHtml = `<div class="card-img pdf-icon">${renderMediaElement(m, product.name)}</div>`;
+      if (m.type === 'video') {
+        mediaHtml = `<div class="card-img"><video src="${m.url}" controls preload="metadata"></video></div>`;
+      } else if (m.type === 'pdf') {
+        mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img">${renderMediaElement(m, product.name)}</div>`;
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
