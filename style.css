@@ -1106,3 +1106,32 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 @media (max-width: 768px){
   .drive-open-blocker{ width: 84px; height: 84px; }
 }
+
+/* Menü konteyneri */
+.dropdown { position: relative; }
+
+/* Dropdown menüyü linke yapıştır (varsa margin-top/gap'i sıfırla) */
+.dropdown .dropdown-menu{
+  margin-top: 0 !important;
+  top: 100% !important;
+}
+
+/* Menü ile link arasındaki "görünmez köprü" alanı */
+.dropdown .dropdown-menu::before{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -14px;     /* köprü yüksekliği */
+  height: 14px;
+  background: transparent;
+}
+
+/* Hover davranışı farklı implement edilmişse (bazı projelerde sadece .dropdown:hover ile açılıyor)
+   Menü üstündeyken de açık kalmasını garanti eder. */
+.dropdown:hover .dropdown-menu,
+.dropdown .dropdown-menu:hover{
+  display: block;
+  visibility: visible;
+  opacity: 1;
+}
