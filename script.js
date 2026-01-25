@@ -698,7 +698,7 @@ function renderProducts() {
       if (m.type === "video") {
         mediaHtml = `
           <div class="card-img">
-            <video src="${normalizeDriveVideoPreviewUrl(m.url)}" controls preload="metadata"></video>
+            <video src="${m.url}" controls preload="metadata"></video>
           </div>`;
       } else if (m.type === "pdf") {
         mediaHtml = `
@@ -708,15 +708,13 @@ function renderProducts() {
       } else {
         mediaHtml = `
           <div class="card-img">
-            <img src="${normalizeDriveVideoPreviewUrl(m.url)}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
           </div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
-          return isDrivePreviewUrl(m.url)
-          ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${normalizeDriveVideoPreviewUrl(m.url)}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
-          : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+          return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         }
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
@@ -726,12 +724,8 @@ function renderProducts() {
 
       mediaHtml = `
         <div class="card-img">
-          <div class="media-slider" aria-label="Ürün medyası" data-media-slider="1">
-            <button class="media-nav-btn prev" type="button" aria-label="Önceki">‹</button>
-            <button class="media-nav-btn next" type="button" aria-label="Sonraki">›</button>
-            <div class="media-track">
-              ${slides}
-            </div>
+          <div class="media-slider" aria-label="Ürün medyası">
+            ${slides}
           </div>
         </div>`;
     }
@@ -758,10 +752,6 @@ function renderProducts() {
       handleAddToCart(id, btn);
     });
   });
-}
-
-  // Sliderları başlat
-  setupMediaSliders(listEl);
 }
 
 // ---------------- VİTRİN ----------------
@@ -801,15 +791,15 @@ function renderFeatured() {
     if (mediaItems.length === 1) {
       const m = mediaItems[0];
       if (m.type === 'video') {
-        mediaHtml = `<div class="card-img"><video src="${normalizeDriveVideoPreviewUrl(m.url)}" controls preload="metadata"></video></div>`;
+        mediaHtml = `<div class="card-img"><video src="${m.url}" controls preload="metadata"></video></div>`;
       } else if (m.type === 'pdf') {
         mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img"><img src="${normalizeDriveVideoPreviewUrl(m.url)}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
+        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
-        if (m.type === 'video') return `<div class="media-slide"><video src="${normalizeDriveVideoPreviewUrl(m.url)}" controls preload="metadata"></video></div>`;
+        if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join('');
@@ -2061,31 +2051,3 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
-
-function setupMediaSliders(root = document) {
-  const sliders = root.querySelectorAll('.media-slider[data-media-slider="1"]');
-  sliders.forEach((slider) => {
-    const track = slider.querySelector('.media-track');
-    if (!track) return;
-    const slides = Array.from(track.children).filter(el => el.classList.contains('media-slide'));
-    if (slides.length <= 1) return;
-
-    let idx = 0;
-    const prevBtn = slider.querySelector('.media-nav-btn.prev');
-    const nextBtn = slider.querySelector('.media-nav-btn.next');
-
-    const update = () => {
-      track.style.transform = `translateX(-${idx * 100}%)`;
-    };
-
-    const go = (dir) => {
-      idx = (idx + dir + slides.length) % slides.length;
-      update();
-    };
-
-    prevBtn && prevBtn.addEventListener('click', () => go(-1));
-    nextBtn && nextBtn.addEventListener('click', () => go(1));
-
-    update();
-  });
-}
