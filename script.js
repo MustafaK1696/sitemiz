@@ -1844,7 +1844,7 @@ const productsManageBox = document.getElementById("admin-products-list");
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Ürün Kodu</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
@@ -1854,6 +1854,9 @@ const productsManageBox = document.getElementById("admin-products-list");
           </td>
           <td>
             <input type="text" class="admin-prod-cat" value="${d.category || ""}">
+          </td>
+          <td>
+            <input type="text" class="admin-prod-code" value="${escapeHtml((d.productCode || makeProductCode(d.title, docSnap.id)))}" readonly>
           </td>
           <td style="text-align:center;">
             <input type="checkbox" class="admin-prod-featured" ${d.featured ? "checked" : ""}>
