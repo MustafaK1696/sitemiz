@@ -23,13 +23,13 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-  // PDF: embed-friendly preview
+  // PDF: iframe preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
-  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
+  // Images: stable thumbnail
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
-  return `https://drive.google.com/uc?export=download&id=${id}`;
+  // VIDEO: iframe preview (NEVER download)
+  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
+  return "";
 }
 
 
@@ -305,29 +305,6 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-
-// ---------------- ÜRÜN KODU (gösterim) ----------------
-// Uzun Firestore doc id yerine, yönetici panelinde daha okunur bir ürün kodu gösterir.
-// Format: <TITLE_FIRST8>-<DOCID_LAST4>  (örn: CAMKAVAN-3F2A)
-function slugifyTr(input) {
-  const s = String(input || "").toLowerCase().trim();
-  const map = { "ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u" };
-  return s
-    .split("")
-    .map((ch) => (map[ch] ? map[ch] : ch))
-    .join("")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function makeProductCode(title, docId) {
-  const slug = slugifyTr(title);
-  const left = (slug || "urun").replace(/-/g, "").slice(0, 8).toUpperCase();
-  const right = String(docId || "").slice(-4).toUpperCase();
-  return `${left}-${right}`;
 }
 
 function resolvePackagingVideoSource(raw) {
@@ -1841,7 +1818,7 @@ const productsManageBox = document.getElementById("admin-products-list");
         return;
       }
       let html =
-        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Ürün Kodu</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
+        '<table class="simple-table"><thead><tr><th>Ürün</th><th>Fiyat (TL)</th><th>Kategori</th><th>Vitrin</th><th>İşlem</th></tr></thead><tbody>';
       snap.forEach((docSnap) => {
         const d = docSnap.data();
         html += `<tr data-id="${docSnap.id}">
@@ -1851,9 +1828,6 @@ const productsManageBox = document.getElementById("admin-products-list");
           </td>
           <td>
             <input type="text" class="admin-prod-cat" value="${d.category || ""}">
-          </td>
-          <td>
-            <input type="text" class="admin-prod-code" value="${escapeHtml(makeProductCode(d.title, docSnap.id))}" readonly>
           </td>
           <td style="text-align:center;">
             <input type="checkbox" class="admin-prod-featured" ${d.featured ? "checked" : ""}>
