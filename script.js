@@ -23,13 +23,13 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-  // PDF: embed-friendly preview
+  // PDF: iframe preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
-  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
+  // Images: stable thumbnail
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
-  return `https://drive.google.com/uc?export=download&id=${id}`;
+  // VIDEO: iframe preview (NEVER download)
+  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
+  return "";
 }
 
 
