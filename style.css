@@ -560,6 +560,39 @@ body.dark-theme .dropdown-menu {
   text-decoration: underline;
 }
 
+.packaging-card .card-img {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+}
+
+.packaging-media {
+  background-color: #f3f4ff;
+}
+
+.packaging-video-embed {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.packaging-card .card-body {
+  padding: 16px;
+}
+
+.packaging-admin-link {
+  display: inline-block;
+  margin-right: 12px;
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.packaging-admin-link:hover {
+  text-decoration: underline;
+}
+
 .card-body {
   padding: 16px 18px 18px;
   display: flex;
