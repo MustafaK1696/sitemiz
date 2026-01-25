@@ -28,6 +28,7 @@ function driveDirectUrl(fileId, kind) {
   // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+  // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
   if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
   return "";
 }
@@ -48,6 +49,12 @@ function normalizeMediaItem(raw) {
   const url = String(raw.url || "").trim();
   const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
   return { type: kind, url: normalizeMediaUrl(url, kind) };
+}
+
+
+function isDrivePreviewUrl(url) {
+  const u = String(url || "");
+  return u.includes("drive.google.com/file/d/") && u.includes("/preview");
 }
 
 function normalizeMediaArray(arr) {
@@ -666,19 +673,13 @@ function renderProducts() {
       : (product.imageUrl
           ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: normalizeMediaUrl(product.imageUrl, (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')) }]
           : []);
-    const extraVideoRaw = product.videoUrl || product.videoLink || product.video || product.driveVideoLink || product.driveVideoId || "";
-    if (extraVideoRaw) {
-      const extra = normalizeMediaItem({ type: "video", url: extraVideoRaw, kind: "video" });
-      if (extra && extra.url && !mediaItems.some((x) => x.url === extra.url)) mediaItems.push(extra);
-    }
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
 
     if (mediaItems.length === 1) {
       const m = mediaItems[0];
       if (m.type === "video") {
-        const isDrive = String(m.url || "").includes("drive.google.com");
-        mediaHtml = isDrive
+        mediaHtml = isDrivePreviewUrl(m.url)
           ? `
           <div class="card-img">
             <iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe>
@@ -701,10 +702,9 @@ function renderProducts() {
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
-          const isDrive = String(m.url || "").includes("drive.google.com");
-          return isDrive
-            ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
-            : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+          return isDrivePreviewUrl(m.url)
+          ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+          : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         }
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
