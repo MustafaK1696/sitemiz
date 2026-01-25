@@ -1,3 +1,22 @@
+
+function isDriveImageUrl(url) {
+  if (!url) return false;
+  return url.includes("thumbnail") || url.match(/\.(png|jpg|jpeg|webp|gif)(\?|$)/i);
+}
+
+function normalizeDriveVideoUrl(url) {
+  if (!url) return "";
+  // Only for Google Drive video preview
+  if (url.includes("drive.google.com")) {
+    if (url.includes("/preview")) return url;
+    const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (m && m[1]) {
+      return `https://drive.google.com/file/d/${m[1]}/preview`;
+    }
+  }
+  return url;
+}
+
 // script.js  (ES module)
 
 // Firebase
