@@ -23,13 +23,15 @@ function extractDriveId(input) {
 function driveDirectUrl(fileId, kind) {
   const id = String(fileId || "").trim();
   if (!id) return "";
-  // PDF: iframe preview
+  // PDF: embed-friendly preview
   if (kind === "pdf") return `https://drive.google.com/file/d/${id}/preview`;
-  // Images: stable thumbnail
+  // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
+  // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // VIDEO: iframe preview (NEVER download)
+  // Video: iframe preview (never download)
   if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
-  return "";
+  // fallback
+  return `https://drive.google.com/file/d/${id}/preview`;
 }
 
 
@@ -274,6 +276,7 @@ function getCartLineItems() {
 
       return {
         id,
+        code: String(item.code || (p && p.productCode) || makeProductCode(name, id) || id),
         name,
         qty,
         price,
@@ -288,7 +291,7 @@ function buildWhatsAppOrderMessage(subtotal) {
   const lines = items.map((it) => {
     const priceTxt = Number.isFinite(it.price) ? `${it.price.toFixed(2)} TL` : "-";
     const lineTotalTxt = Number.isFinite(it.lineTotal) ? `${it.lineTotal.toFixed(2)} TL` : "-";
-    return `• ${it.name} (Kod: ${it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
+    return `• ${it.name} (Kod: ${it.code || it.id}) x${it.qty} — ${priceTxt} (Satır: ${lineTotalTxt})`;
   });
 
   const header = "Merhaba, ÖğrenciFy üzerinden sipariş vermek istiyorum.";
@@ -305,6 +308,29 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+
+// ---------------- ÜRÜN KODU (gösterim) ----------------
+// Uzun Firestore doc id yerine daha okunur bir ürün kodu üretir.
+// Format: <TITLE_FIRST8>-<DOCID_LAST4>  (örn: CAMKAVAN-3F2A)
+function slugifyTr(input) {
+  const s = String(input || "").toLowerCase().trim();
+  const map = { "ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u" };
+  return s
+    .split("")
+    .map((ch) => (map[ch] ? map[ch] : ch))
+    .join("")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function makeProductCode(title, docId) {
+  const slug = slugifyTr(title);
+  const left = (slug || "urun").replace(/-/g, "").slice(0, 8).toUpperCase();
+  const right = String(docId || "").slice(-4).toUpperCase();
+  return `${left}-${right}`;
 }
 
 function resolvePackagingVideoSource(raw) {
