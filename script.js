@@ -311,7 +311,8 @@ function resolvePackagingVideoSource(raw) {
   const input = String(raw || "").trim();
   const driveId = extractDriveId(input);
   if (driveId) {
-    return { url: driveDirectUrl(driveId, "video"), isDrive: true, id: driveId };
+    // Drive videoları iframe ile en stabil şekilde /preview üzerinden çalışır
+    return { url: `https://drive.google.com/file/d/${driveId}/preview`, isDrive: true, id: driveId };
   }
   return { url: input, isDrive: false, id: "" };
 }
@@ -402,8 +403,10 @@ function setupPackagingPage() {
       });
       container.innerHTML = cards.join("");
     },
-    () => {
-      container.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
+    (err) => {
+      console.error("packagingVideos okunamadı:", err);
+      const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
+      container.innerHTML = `<p>Videolar yüklenirken hata oluştu.${detail}</p>`;
       if (emptyEl) emptyEl.style.display = "none";
     }
   );
@@ -1493,8 +1496,10 @@ function setupPackagingAdmin() {
           });
         });
       },
-      () => {
-        list.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
+      (err) => {
+        console.error("packagingVideos okunamadı (admin):", err);
+        const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
+        list.innerHTML = `<p>Videolar yüklenirken hata oluştu.${detail}</p>`;
       }
     );
   }
@@ -1503,6 +1508,16 @@ function setupPackagingAdmin() {
     addBtn.addEventListener("click", async () => {
       const title = titleInput ? titleInput.value.trim() : "";
       const rawUrl = linkInput ? linkInput.value.trim() : "";
+
+      // Auth state henüz gelmediyse güvenli kontrol
+      const user = currentUser || auth.currentUser;
+      if (!user) {
+        if (message) {
+          message.textContent = "Video eklemek için giriş yapmanız gerekiyor.";
+          message.style.color = "red";
+        }
+        return;
+      }
 
       if (!rawUrl) {
         if (message) {
@@ -1540,7 +1555,7 @@ function setupPackagingAdmin() {
           url: source.url,
           rawUrl,
           createdAt: serverTimestamp(),
-          createdBy: currentUser.uid
+          createdBy: user.uid
         });
         if (message) {
           message.textContent = "Video başarıyla eklendi.";
@@ -1549,9 +1564,10 @@ function setupPackagingAdmin() {
         if (titleInput) titleInput.value = "";
         if (linkInput) linkInput.value = "";
       } catch (err) {
-        console.error(err);
+        console.error("Video ekleme hatası:", err);
+        const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
         if (message) {
-          message.textContent = "Video eklenirken hata oluştu.";
+          message.textContent = `Video eklenirken hata oluştu.${detail}`;
           message.style.color = "red";
         }
       }
