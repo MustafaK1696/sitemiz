@@ -315,7 +315,7 @@ function ensureMediaSliderStyles() {
   style.textContent = `
   .media-slider{position:relative;overflow:hidden;border-radius:22px}
   .media-track{display:flex;transition:transform 220ms ease;will-change:transform}
-  .media-slide{flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06)}
+  .media-slide{flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);padding-left:6px;padding-right:6px}
   .media-slide img,.media-slide video,.media-slide iframe{width:100%;height:100%;object-fit:contain;border:0;display:block}
   .media-nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:999px;border:0;background:rgba(255,255,255,.75);color:#111;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5}
   .media-nav-btn:hover{background:rgba(255,255,255,.9)}
@@ -731,7 +731,9 @@ function renderProducts() {
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
-          return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+          return (String(m.url||"").includes("drive.google.com")
+  ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${normalizeDriveVideoPreviewUrl(m.url)}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+  : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`);
         }
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
@@ -815,7 +817,9 @@ function renderFeatured() {
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
-        if (m.type === 'video') return `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+        if (m.type === 'video') return (String(m.url||"").includes("drive.google.com")
+  ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${normalizeDriveVideoPreviewUrl(m.url)}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+  : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`);
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join('');
