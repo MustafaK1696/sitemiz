@@ -308,6 +308,23 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function ensureMediaSliderStyles() {
+  if (document.getElementById("media-slider-styles")) return;
+  const style = document.createElement("style");
+  style.id = "media-slider-styles";
+  style.textContent = `
+  .media-slider{position:relative;overflow:hidden;border-radius:22px}
+  .media-track{display:flex;transition:transform 220ms ease;will-change:transform}
+  .media-slide{flex:0 0 100%;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06)}
+  .media-slide img,.media-slide video,.media-slide iframe{width:100%;height:100%;object-fit:contain;border:0;display:block}
+  .media-nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:999px;border:0;background:rgba(255,255,255,.75);color:#111;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5}
+  .media-nav-btn:hover{background:rgba(255,255,255,.9)}
+  .media-nav-btn.prev{left:14px}
+  .media-nav-btn.next{right:14px}
+  `;
+  document.head.appendChild(style);
+}
+
 
 // ---- Drive video URL normalizasyonu (indirime düşmesini engeller) ----
 function normalizeDriveVideoPreviewUrl(input) {
@@ -724,9 +741,7 @@ function renderProducts() {
 
       mediaHtml = `
         <div class="card-img">
-          <div class="media-slider" aria-label="Ürün medyası">
-            ${slides}
-          </div>
+          <div class="media-slider" aria-label="Ürün medyası" data-slider="product"><button class="media-nav-btn prev" type="button" aria-label="Önceki">‹</button><button class="media-nav-btn next" type="button" aria-label="Sonraki">›</button><div class="media-track">${slides}</div></div>
         </div>`;
     }
 
@@ -752,6 +767,7 @@ function renderProducts() {
       handleAddToCart(id, btn);
     });
   });
+  initMediaSliders(listEl);
 }
 
 // ---------------- VİTRİN ----------------
@@ -803,7 +819,7 @@ function renderFeatured() {
         if (m.type === 'pdf') return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
         return `<div class="media-slide"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }).join('');
-      mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası">${slides}</div></div>`;
+      mediaHtml = `<div class="card-img"><div class="media-slider" aria-label="Ürün medyası" data-slider="product"><button class="media-nav-btn prev" type="button" aria-label="Önceki">‹</button><button class="media-nav-btn next" type="button" aria-label="Sonraki">›</button><div class="media-track">${slides}</div></div></div>`;
     }
 
     const card = document.createElement("div");
@@ -2051,3 +2067,29 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
+
+function initMediaSliders(root = document) {
+  ensureMediaSliderStyles();
+  const sliders = root.querySelectorAll('.media-slider[data-slider="product"]');
+  sliders.forEach((slider) => {
+    if (slider.dataset.inited === "1") return;
+    slider.dataset.inited = "1";
+    const track = slider.querySelector(".media-track");
+    if (!track) return;
+    const slides = Array.from(track.children).filter(el => el.classList.contains("media-slide"));
+    if (slides.length <= 1) return;
+
+    let idx = 0;
+    const prevBtn = slider.querySelector(".media-nav-btn.prev");
+    const nextBtn = slider.querySelector(".media-nav-btn.next");
+
+    const update = () => { track.style.transform = `translateX(-${idx * 100}%)`; };
+    const go = (dir) => { idx = (idx + dir + slides.length) % slides.length; update(); };
+
+    prevBtn && prevBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); go(-1); });
+    nextBtn && nextBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); go(1); });
+
+    update();
+  });
+}
