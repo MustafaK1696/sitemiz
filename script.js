@@ -29,7 +29,8 @@ function driveDirectUrl(fileId, kind) {
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
   // Video: keep as direct download (playback depends on Drive/CORS, but this is the most compatible here)
-  return `https://drive.google.com/uc?export=download&id=${id}`;
+  if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
+  return "";
 }
 
 
@@ -42,18 +43,18 @@ function normalizeMediaUrl(rawUrl, kind) {
   return s;
 }
 
+function normalizeMediaItem(raw) {
+  if (!raw) return null;
+  const type = String(raw.type || raw.kind || "").toLowerCase() || "image";
+  const url = String(raw.url || "").trim();
+  const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
+  return { type: kind, url: normalizeMediaUrl(url, kind) };
+}
+
 
 function isDrivePreviewUrl(url) {
   const u = String(url || "");
   return u.includes("drive.google.com/file/d/") && u.includes("/preview");
-}
-
-function normalizeMediaItem(raw) {
-  if (!raw) return null;
-  const type = String(raw.type || "").toLowerCase() || "image";
-  const url = String(raw.url || "").trim();
-  const kind = (type === "pdf") ? "pdf" : (type === "video" ? "video" : "image");
-  return { type: kind, url: normalizeMediaUrl(url, kind) };
 }
 
 function normalizeMediaArray(arr) {
@@ -681,7 +682,7 @@ function renderProducts() {
         mediaHtml = isDrivePreviewUrl(m.url)
           ? `
           <div class="card-img">
-            <iframe class="drive-video" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy" style="width:100%;height:100%;border:0;"></iframe>
+            <iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe>
           </div>`
           : `
           <div class="card-img">
@@ -702,8 +703,8 @@ function renderProducts() {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
           return isDrivePreviewUrl(m.url)
-            ? `<div class="media-slide"><iframe class="drive-video" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy" style="width:100%;height:100%;border:0;"></iframe></div>`
-            : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
+          ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+          : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         }
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
@@ -713,12 +714,8 @@ function renderProducts() {
 
       mediaHtml = `
         <div class="card-img">
-          <div class="media-carousel" aria-label="Ürün medyası">
-            <button class="media-nav media-prev" type="button" aria-label="Önceki">‹</button>
-            <div class="media-slider" aria-label="Ürün medyası">
-              ${slides}
-            </div>
-            <button class="media-nav media-next" type="button" aria-label="Sonraki">›</button>
+          <div class="media-slider" aria-label="Ürün medyası">
+            ${slides}
           </div>
         </div>`;
     }
@@ -746,43 +743,6 @@ function renderProducts() {
     });
   });
 }
-
-// Ürün kartlarındaki medya slider'ını butonlarla kontrol et
-function setupMediaCarouselNav() {
-  if (window.__mediaCarouselNavBound) return;
-  window.__mediaCarouselNavBound = true;
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest(".media-nav");
-    if (!btn) return;
-
-    const carousel = btn.closest(".media-carousel");
-    if (!carousel) return;
-
-    const slider = carousel.querySelector(".media-slider");
-    if (!slider) return;
-
-    const slideW = slider.clientWidth || 1;
-    const dir = btn.classList.contains("media-next") ? 1 : -1;
-    slider.scrollBy({ left: dir * slideW, behavior: "smooth" });
-  });
-}
-
-// products.html başlığı: kategoriye göre "X Ürünleri", sadece Ürünler'de "Tüm Ürünler"
-function setupProductsPageTitle() {
-  const titleEl = document.getElementById("products-title");
-  if (!titleEl) return;
-
-  const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
-  const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
-  const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
-
-  if (!urlCat) { titleEl.textContent = "Tüm Ürünler"; return; }
-
-  const map = { ev: "Ev", dekorasyon: "Dekorasyon", aksesuar: "Aksesuar", elektronik: "Elektronik", hediyelik: "Hediyelik" };
-  titleEl.textContent = `${map[urlCat] || urlCat} Ürünleri`;
-}
-
 
 // ---------------- VİTRİN ----------------
 
@@ -2039,9 +1999,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderCart();
   setupPackagingPage();
-
-  setupMediaCarouselNav();
-  setupProductsPageTitle();
 
   // Sepeti onayla
   const checkoutBtn = document.getElementById("checkout-btn");
