@@ -328,28 +328,24 @@ function getPackagingMediaMarkup(video) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
   const source = resolvePackagingVideoSource(video.url);
 
-  // Google Drive iframe içindeki "Drive'da aç" gibi çıkış butonlarını tamamen kaldırmak mümkün değil.
-  // Bu yüzden (1) sağ üst köşeye şeffaf bir kalkan koyup tıklamayı engelliyoruz,
-  // (2) sandbox ile popup / üst sekmeye yönlendirme gibi davranışları kısıtlıyoruz.
   if (source.isDrive) {
+    // Google Drive iframe UI içindeki "Drive'da aç" / "yeni sekme" butonuna tıklamayı engellemek için
+    // sadece sağ-üst bölgeyi kapatan bir overlay kullanıyoruz. (Sandbox kullanmıyoruz; bazı tarayıcılarda videoyu bozabiliyor.)
     return `
       <div class="packaging-iframe-wrap">
-        <iframe
-          class="packaging-video-embed"
-          src="${source.url}"
-          title="${title}"
-          allow="autoplay; encrypted-media"
-          allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-        ></iframe>
-        <div class="packaging-iframe-shield" aria-hidden="true"></div>
+        <iframe class="packaging-video-embed"
+                src="${source.url}"
+                title="${title}"
+                allow="autoplay; encrypted-media"
+                allowfullscreen></iframe>
+        <div class="drive-open-blocker" aria-hidden="true"></div>
       </div>
     `;
   }
 
-  // Drive dışı videolarda indirme/remote playback seçeneklerini kısıtla (tam engel değildir).
-  return `<video class="packaging-video-embed" src="${source.url}" controls controlslist="nodownload noremoteplayback" preload="metadata"></video>`;
+  return `<video class="packaging-video-embed" src="${source.url}" controls preload="metadata"></video>`;
 }
+
 
 function renderPackagingVideoCard(video) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
@@ -369,7 +365,6 @@ function renderPackagingVideoCard(video) {
 
 function renderPackagingAdminCard(video, docId) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
-  const url = escapeHtml(video.url || "");
   return `
     <div class="card packaging-card" data-packaging-id="${docId}">
       <div class="card-img packaging-media">
@@ -377,8 +372,7 @@ function renderPackagingAdminCard(video, docId) {
       </div>
       <div class="card-body">
         <h3>${title}</h3>
-        <a class="packaging-admin-link" href="${url}" target="_blank" rel="noopener">Videoyu Aç</a>
-        <button class="btn-link packaging-delete" type="button">Sil</button>
+                <button class="btn-link packaging-delete" type="button">Sil</button>
       </div>
     </div>
   `;
