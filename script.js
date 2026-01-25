@@ -1,22 +1,3 @@
-
-function isDriveImageUrl(url) {
-  if (!url) return false;
-  return url.includes("thumbnail") || url.match(/\.(png|jpg|jpeg|webp|gif)(\?|$)/i);
-}
-
-function normalizeDriveVideoUrl(url) {
-  if (!url) return "";
-  // Only for Google Drive video preview
-  if (url.includes("drive.google.com")) {
-    if (url.includes("/preview")) return url;
-    const m = url.match(/\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (m && m[1]) {
-      return `https://drive.google.com/file/d/${m[1]}/preview`;
-    }
-  }
-  return url;
-}
-
 // script.js  (ES module)
 
 // Firebase
@@ -332,9 +313,7 @@ function escapeHtml(value) {
 function normalizeDriveVideoPreviewUrl(input) {
   const s = String(input || "").trim();
   if (!s) return "";
-    // IMPORTANT: do not touch Drive thumbnail image URLs
-  if (s.includes("thumbnail")) return s;
-if (s.includes("drive.google.com/file/d/") && s.includes("/preview")) return s;
+  if (s.includes("drive.google.com/file/d/") && s.includes("/preview")) return s;
 
   let m = s.match(/drive\.google\.com\/file\/d\/([^\/\?]+)\//);
   if (m && m[1]) return `https://drive.google.com/file/d/${m[1]}/preview`;
@@ -729,13 +708,15 @@ function renderProducts() {
       } else {
         mediaHtml = `
           <div class="card-img">
-            <img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
+            <img src="${normalizeDriveVideoPreviewUrl(m.url)}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" />
           </div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
-          return `<div class="media-slide"><video src="${normalizeDriveVideoPreviewUrl(m.url)}" controls preload="metadata"></video></div>`;
+          return isDrivePreviewUrl(m.url)
+          ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${normalizeDriveVideoPreviewUrl(m.url)}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
+          : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         }
         if (m.type === "pdf") {
           return `<div class="media-slide pdf-slide"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
@@ -745,8 +726,12 @@ function renderProducts() {
 
       mediaHtml = `
         <div class="card-img">
-          <div class="media-slider" aria-label="Ürün medyası">
-            ${slides}
+          <div class="media-slider" aria-label="Ürün medyası" data-media-slider="1">
+            <button class="media-nav-btn prev" type="button" aria-label="Önceki">‹</button>
+            <button class="media-nav-btn next" type="button" aria-label="Sonraki">›</button>
+            <div class="media-track">
+              ${slides}
+            </div>
           </div>
         </div>`;
     }
@@ -773,6 +758,10 @@ function renderProducts() {
       handleAddToCart(id, btn);
     });
   });
+}
+
+  // Sliderları başlat
+  setupMediaSliders(listEl);
 }
 
 // ---------------- VİTRİN ----------------
@@ -816,7 +805,7 @@ function renderFeatured() {
       } else if (m.type === 'pdf') {
         mediaHtml = `<div class="card-img pdf-icon"><a class="pdf-open" href="${m.url}" target="_blank" rel="noopener">PDF'yi Aç</a></div>`;
       } else {
-        mediaHtml = `<div class="card-img"><img src="${m.url}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
+        mediaHtml = `<div class="card-img"><img src="${normalizeDriveVideoPreviewUrl(m.url)}" alt="${product.name}" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='600'%20height='400'%3E%3Crect%20width='100%25'%20height='100%25'%20fill='%23f2f2f2'/%3E%3Ctext%20x='50%25'%20y='50%25'%20dominant-baseline='middle'%20text-anchor='middle'%20fill='%23999'%20font-size='20'%20font-family='Arial'%3EG%C3%B6rsel%20yok%3C/text%3E%3C/svg%3E';" /></div>`;
       }
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
@@ -2072,3 +2061,31 @@ document.addEventListener("DOMContentLoaded", () => {
   setupProfilePage();
   setupSellerRequest();
 });
+
+function setupMediaSliders(root = document) {
+  const sliders = root.querySelectorAll('.media-slider[data-media-slider="1"]');
+  sliders.forEach((slider) => {
+    const track = slider.querySelector('.media-track');
+    if (!track) return;
+    const slides = Array.from(track.children).filter(el => el.classList.contains('media-slide'));
+    if (slides.length <= 1) return;
+
+    let idx = 0;
+    const prevBtn = slider.querySelector('.media-nav-btn.prev');
+    const nextBtn = slider.querySelector('.media-nav-btn.next');
+
+    const update = () => {
+      track.style.transform = `translateX(-${idx * 100}%)`;
+    };
+
+    const go = (dir) => {
+      idx = (idx + dir + slides.length) % slides.length;
+      update();
+    };
+
+    prevBtn && prevBtn.addEventListener('click', () => go(-1));
+    nextBtn && nextBtn.addEventListener('click', () => go(1));
+
+    update();
+  });
+}
