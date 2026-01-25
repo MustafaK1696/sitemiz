@@ -577,6 +577,23 @@ body.dark-theme .dropdown-menu {
   display: block;
 }
 
+
+.packaging-iframe-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Drive player'ın sağ üst köşesindeki "Drive'da aç" ikonunu tıklanamaz yapmak için şeffaf kalkan */
+.packaging-iframe-shield {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 76px;
+  height: 76px;
+  z-index: 5;
+  background: transparent;
+}
 .packaging-card .card-body {
   padding: 16px;
 }

@@ -311,8 +311,7 @@ function resolvePackagingVideoSource(raw) {
   const input = String(raw || "").trim();
   const driveId = extractDriveId(input);
   if (driveId) {
-    // Drive videoları iframe ile en stabil şekilde /preview üzerinden çalışır
-    return { url: `https://drive.google.com/file/d/${driveId}/preview`, isDrive: true, id: driveId };
+    return { url: driveDirectUrl(driveId, "video"), isDrive: true, id: driveId };
   }
   return { url: input, isDrive: false, id: "" };
 }
@@ -328,9 +327,28 @@ function isValidVideoUrl(raw) {
 function getPackagingMediaMarkup(video) {
   const title = escapeHtml(video.title || "Paketleme Videosu");
   const source = resolvePackagingVideoSource(video.url);
-  return source.isDrive
-    ? `<iframe class="packaging-video-embed" src="${source.url}" title="${title}" allow="autoplay; encrypted-media" allowfullscreen></iframe>`
-    : `<video class="packaging-video-embed" src="${source.url}" controls preload="metadata"></video>`;
+
+  // Google Drive iframe içindeki "Drive'da aç" gibi çıkış butonlarını tamamen kaldırmak mümkün değil.
+  // Bu yüzden (1) sağ üst köşeye şeffaf bir kalkan koyup tıklamayı engelliyoruz,
+  // (2) sandbox ile popup / üst sekmeye yönlendirme gibi davranışları kısıtlıyoruz.
+  if (source.isDrive) {
+    return `
+      <div class="packaging-iframe-wrap">
+        <iframe
+          class="packaging-video-embed"
+          src="${source.url}"
+          title="${title}"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+        ></iframe>
+        <div class="packaging-iframe-shield" aria-hidden="true"></div>
+      </div>
+    `;
+  }
+
+  // Drive dışı videolarda indirme/remote playback seçeneklerini kısıtla (tam engel değildir).
+  return `<video class="packaging-video-embed" src="${source.url}" controls controlslist="nodownload noremoteplayback" preload="metadata"></video>`;
 }
 
 function renderPackagingVideoCard(video) {
@@ -403,10 +421,8 @@ function setupPackagingPage() {
       });
       container.innerHTML = cards.join("");
     },
-    (err) => {
-      console.error("packagingVideos okunamadı:", err);
-      const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
-      container.innerHTML = `<p>Videolar yüklenirken hata oluştu.${detail}</p>`;
+    () => {
+      container.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
       if (emptyEl) emptyEl.style.display = "none";
     }
   );
@@ -1496,10 +1512,8 @@ function setupPackagingAdmin() {
           });
         });
       },
-      (err) => {
-        console.error("packagingVideos okunamadı (admin):", err);
-        const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
-        list.innerHTML = `<p>Videolar yüklenirken hata oluştu.${detail}</p>`;
+      () => {
+        list.innerHTML = "<p>Videolar yüklenirken hata oluştu.</p>";
       }
     );
   }
@@ -1508,16 +1522,6 @@ function setupPackagingAdmin() {
     addBtn.addEventListener("click", async () => {
       const title = titleInput ? titleInput.value.trim() : "";
       const rawUrl = linkInput ? linkInput.value.trim() : "";
-
-      // Auth state henüz gelmediyse güvenli kontrol
-      const user = currentUser || auth.currentUser;
-      if (!user) {
-        if (message) {
-          message.textContent = "Video eklemek için giriş yapmanız gerekiyor.";
-          message.style.color = "red";
-        }
-        return;
-      }
 
       if (!rawUrl) {
         if (message) {
@@ -1555,7 +1559,7 @@ function setupPackagingAdmin() {
           url: source.url,
           rawUrl,
           createdAt: serverTimestamp(),
-          createdBy: user.uid
+          createdBy: currentUser.uid
         });
         if (message) {
           message.textContent = "Video başarıyla eklendi.";
@@ -1564,10 +1568,9 @@ function setupPackagingAdmin() {
         if (titleInput) titleInput.value = "";
         if (linkInput) linkInput.value = "";
       } catch (err) {
-        console.error("Video ekleme hatası:", err);
-        const detail = err && (err.code || err.message) ? ` (${err.code || err.message})` : "";
+        console.error(err);
         if (message) {
-          message.textContent = `Video eklenirken hata oluştu.${detail}`;
+          message.textContent = "Video eklenirken hata oluştu.";
           message.style.color = "red";
         }
       }
