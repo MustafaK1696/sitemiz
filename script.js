@@ -28,10 +28,9 @@ function driveDirectUrl(fileId, kind) {
   // Images: Drive "uc?export=view" linki bazı durumlarda HTML/redirect döndürebiliyor.
   // Thumbnail endpoint'i görselleri hotlink için daha stabil servis ediyor.
   if (kind === "image") return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
-  // Video: iframe preview (avoid download / black screen)
   if (kind === "video") return `https://drive.google.com/file/d/${id}/preview`;
-
-  }
+  return "";
+}
 
 
 function normalizeMediaUrl(rawUrl, kind) {
@@ -667,22 +666,27 @@ function renderProducts() {
       : (product.imageUrl
           ? [{ type: (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image'), url: normalizeMediaUrl(product.imageUrl, (String(product.imageUrl).toLowerCase().includes('.pdf') ? 'pdf' : 'image')) }]
           : []);
+    const extraVideoRaw = product.videoUrl || product.videoLink || product.video || product.driveVideoLink || product.driveVideoId || "";
+    if (extraVideoRaw) {
+      const extra = normalizeMediaItem({ type: "video", url: extraVideoRaw, kind: "video" });
+      if (extra && extra.url && !mediaItems.some((x) => x.url === extra.url)) mediaItems.push(extra);
+    }
 
     let mediaHtml = `<div class="card-img placeholder">Ürün Görseli</div>`;
 
     if (mediaItems.length === 1) {
       const m = mediaItems[0];
       if (m.type === "video") {
-        const isDrivePreview = String(m.url || "").includes("drive.google.com/file/d/") && String(m.url || "").includes("/preview");
-        mediaHtml = isDrivePreview
+        const isDrive = String(m.url || "").includes("drive.google.com");
+        mediaHtml = isDrive
           ? `
-           <div class="card-img">
-             <iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe>
-           </div>`
+          <div class="card-img">
+            <iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe>
+          </div>`
           : `
-           <div class="card-img">
-             <video src="${m.url}" controls preload="metadata"></video>
-           </div>`;
+          <div class="card-img">
+            <video src="${m.url}" controls preload="metadata"></video>
+          </div>`;
       } else if (m.type === "pdf") {
         mediaHtml = `
           <div class="card-img pdf-icon">
@@ -697,8 +701,8 @@ function renderProducts() {
     } else if (mediaItems.length > 1) {
       const slides = mediaItems.map((m) => {
         if (m.type === "video") {
-          const isDrivePreview = String(m.url || "").includes("drive.google.com/file/d/") && String(m.url || "").includes("/preview");
-          return isDrivePreview
+          const isDrive = String(m.url || "").includes("drive.google.com");
+          return isDrive
             ? `<div class="media-slide"><iframe class="drive-video" style="width:100%;height:100%;border:0;" src="${m.url}" allow="autoplay" allowfullscreen loading="lazy"></iframe></div>`
             : `<div class="media-slide"><video src="${m.url}" controls preload="metadata"></video></div>`;
         }
