@@ -135,6 +135,73 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
+// --- Kategoriler (Firestore -> fallback) ---
+function slugifyTR(input) {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/ğ/g,"g").replace(/ü/g,"u").replace(/ş/g,"s").replace(/ı/g,"i").replace(/ö/g,"o").replace(/ç/g,"c")
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"");
+}
+
+async function refreshCategoriesFromFirestore() {
+  try {
+    const colRef = collection(db, "categories");
+    const q = query(colRef, orderBy("name"));
+    const snap = await getDocs(q);
+
+    const cats = [];
+    snap.forEach(d => {
+      const v = d.data() || {};
+      const slug = String(v.slug || d.id || "").trim();
+      const name = String(v.name || "").trim();
+      if (slug && name) cats.push({ slug, name });
+    });
+
+    if (cats.length) {
+      ALLOWED_CATEGORIES = cats.map(c => c.slug);
+      CATEGORY_LABELS = cats.reduce((acc, c) => (acc[c.slug] = c.name, acc), {});
+      CATEGORIES_READY = true;
+    } else {
+      // boşsa fallback
+      ALLOWED_CATEGORIES = [...DEFAULT_ALLOWED_CATEGORIES];
+      CATEGORY_LABELS = { ...DEFAULT_CATEGORY_LABELS };
+      CATEGORIES_READY = true;
+    }
+
+    populateCategoryUIs();
+  } catch (e) {
+    // erişim yoksa fallback ile devam
+    ALLOWED_CATEGORIES = [...DEFAULT_ALLOWED_CATEGORIES];
+    CATEGORY_LABELS = { ...DEFAULT_CATEGORY_LABELS };
+    CATEGORIES_READY = true;
+    populateCategoryUIs();
+  }
+}
+
+function populateCategoryUIs() {
+  // Navbar dropdown
+  const menu = document.getElementById("nav-category-menu") || document.querySelector(".nav-dropdown .dropdown-menu");
+  if (menu) {
+    menu.innerHTML = ALLOWED_CATEGORIES.map(slug => {
+      const label = CATEGORY_LABELS[slug] || slug;
+      return `<li><a href="/products?cat=${encodeURIComponent(slug)}">${label}</a></li>`;
+    }).join("");
+  }
+
+  // Seller dashboard select
+  const sel = document.getElementById("sp-category");
+  if (sel) {
+    const first = sel.querySelector('option[value=""]') ? sel.querySelector('option[value=""]').outerHTML : '<option value="" selected disabled>Kategori seçiniz</option>';
+    sel.innerHTML = first + ALLOWED_CATEGORIES.map(slug => {
+      const label = CATEGORY_LABELS[slug] || slug;
+      return `<option value="${slug}">${label}</option>`;
+    }).join("");
+  }
+}
+
+
 
 // --- Upload yardımcıları ---
 function withTimeout(promise, ms, label="işlem") {
@@ -169,9 +236,12 @@ let currentUser = null;
 let currentUserRole = "customer";
 let currentTwoFactorEnabled = false;
 
-// Kategori kısıtı
-const ALLOWED_CATEGORIES = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
-const CATEGORY_LABELS = {ev:"Ev", dekorasyon:"Dekorasyon", aksesuar:"Aksesuar", elektronik:"Elektronik", hediyelik:"Hediyelik"};
+// Kategori kısıtı (varsayılanlar + Firestore dinamik)
+const DEFAULT_ALLOWED_CATEGORIES = ["ev","dekorasyon","aksesuar","elektronik","hediyelik"];
+const DEFAULT_CATEGORY_LABELS = {ev:"Ev", dekorasyon:"Dekorasyon", aksesuar:"Aksesuar", elektronik:"Elektronik", hediyelik:"Hediyelik"};
+let ALLOWED_CATEGORIES = [...DEFAULT_ALLOWED_CATEGORIES];
+let CATEGORY_LABELS = {...DEFAULT_CATEGORY_LABELS};
+let CATEGORIES_READY = false;
 
 let adminPanelInitialized = false;
 let sellerPanelInitialized = false;
@@ -686,13 +756,6 @@ function renderProducts() {
   const allowedCats = ["ev", "dekorasyon", "aksesuar", "elektronik", "hediyelik"];
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
-
-  // Başlık: sadece ürünler sayfasında "Tüm Ürünler", kategori seçilince "<Kategori> Ürünleri"
-  const titleEl = document.getElementById("products-title");
-  if (titleEl) {
-    const catLabelMap = { ev: "Ev", dekorasyon: "Dekorasyon", aksesuar: "Aksesuar", elektronik: "Elektronik", hediyelik: "Hediyelik" };
-    titleEl.textContent = urlCat ? `${catLabelMap[urlCat] || "Kategori"} Ürünleri` : "Tüm Ürünler";
-  }
 
 
   listEl.innerHTML = "";
@@ -1628,7 +1691,98 @@ function setupPackagingAdmin() {
   }
 }
 
-async function setupAdminPanel() {
+async 
+// --- Admin: Kategori Yönetimi ---
+function setupCategoriesAdmin() {
+  const listEl = document.getElementById("admin-categories-list");
+  const nameEl = document.getElementById("cat-name");
+  const slugEl = document.getElementById("cat-slug");
+  const addBtn = document.getElementById("cat-add-btn");
+  const msgEl = document.getElementById("admin-categories-msg");
+  if (!listEl || !nameEl || !slugEl || !addBtn) return;
+
+  const setMsg = (t, ok=true) => {
+    if (!msgEl) return;
+    msgEl.textContent = t || "";
+    msgEl.style.color = ok ? "#22c55e" : "#ef4444";
+  };
+
+  nameEl.addEventListener("input", () => {
+    slugEl.value = slugifyTR(nameEl.value);
+  });
+
+  const render = (items) => {
+    if (!items.length) {
+      listEl.innerHTML = "<div class='muted'>Henüz kategori yok.</div>";
+      return;
+    }
+    listEl.innerHTML = items.map(it => {
+      return `
+        <div class="cat-row">
+          <div class="cat-info">
+            <div class="cat-name">${it.name}</div>
+            <div class="cat-slug">${it.slug}</div>
+          </div>
+          <button class="danger-btn cat-del" data-id="${it.slug}" type="button">Sil</button>
+        </div>
+      `;
+    }).join("");
+
+    listEl.querySelectorAll(".cat-del").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        if (!id) return;
+        try {
+          await deleteDoc(doc(db, "categories", id));
+          setMsg("Kategori silindi.");
+          refreshCategoriesFromFirestore();
+        } catch (e) {
+          setMsg("Silinemedi: " + (e?.message || e), false);
+        }
+      });
+    });
+  };
+
+  // realtime
+  const q = query(collection(db, "categories"), orderBy("name"));
+  onSnapshot(q, (snap) => {
+    const items = [];
+    snap.forEach(d => {
+      const v = d.data() || {};
+      const slug = String(v.slug || d.id || "").trim();
+      const name = String(v.name || "").trim();
+      if (slug && name) items.push({ slug, name });
+    });
+    render(items);
+  }, (err) => {
+    listEl.innerHTML = "<div class='muted'>Kategoriler yüklenemedi.</div>";
+  });
+
+  addBtn.addEventListener("click", async () => {
+    const name = String(nameEl.value || "").trim();
+    const slug = slugifyTR(name);
+    if (!name || !slug) {
+      setMsg("Lütfen kategori adı giriniz.", false);
+      return;
+    }
+    try {
+      await setDoc(doc(db, "categories", slug), {
+        name,
+        slug,
+        createdAt: serverTimestamp()
+      }, { merge: true });
+      setMsg("Kategori eklendi.");
+      nameEl.value = "";
+      slugEl.value = "";
+      refreshCategoriesFromFirestore();
+    } catch (e) {
+      setMsg("Eklenemedi: " + (e?.message || e), false);
+    }
+  });
+}
+
+
+function setupAdminPanel() {
   if (adminPanelInitialized) return;
   const panel = document.getElementById("admin-panel");
   if (!panel) return;
@@ -1639,7 +1793,9 @@ async function setupAdminPanel() {
 
   setupPackagingAdmin();
 
-  const usersBox = document.getElementById("admin-users-list");
+  
+  setupCategoriesAdmin();
+const usersBox = document.getElementById("admin-users-list");
   const sellerBox = document.getElementById("admin-seller-requests");
   const productBox = document.getElementById("admin-product-requests");
   
@@ -1947,6 +2103,10 @@ onAuthStateChanged(auth, async (user) => {
   currentUser = user || null;
   await ensureUserDoc(user);
   updateNavbarForAuth(user);
+
+  // Kategorileri yükle (navbar + form)
+  refreshCategoriesFromFirestore();
+
 
   const path = window.location.pathname;
 

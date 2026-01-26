@@ -1196,3 +1196,15 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
   border: 0;
   background: #000;
 }
+
+
+/* --- Admin Kategori Yönetimi (EK) --- */
+.category-admin .form-row{display:flex;gap:16px;flex-wrap:wrap}
+.category-admin .form-group{flex:1;min-width:220px}
+.soft-divider{border:none;border-top:1px solid rgba(255,255,255,.08);margin:16px 0}
+.cat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:10px;background:rgba(255,255,255,.03)}
+.cat-info{display:flex;flex-direction:column;gap:4px}
+.cat-name{font-weight:700}
+.cat-slug{opacity:.75;font-size:12px}
+.danger-btn{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fecaca;border-radius:12px;padding:8px 12px;cursor:pointer}
+.danger-btn:hover{background:rgba(239,68,68,.22)}
