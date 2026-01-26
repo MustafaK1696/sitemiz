@@ -1213,3 +1213,54 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 .admin-category-item .meta { display:flex; flex-direction:column; }
 .admin-category-item .btn-danger { padding:10px 14px; border-radius: 12px; border:1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; cursor:pointer; }
 .admin-category-item .btn-danger:hover { background: rgba(255,255,255,0.10); }
+
+/* --- İnteraktif Logo Stilleri --- */
+
+/* Logonun genel kapsayıcısı */
+.interactive-brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    gap: 10px; /* İkon ve metin arasındaki boşluk */
+}
+
+/* SVG İkon boyutu */
+.brand-icon.svg-icon {
+    width: 40px;
+    height: auto;
+    /* İsteğe bağlı: İkona da hafif bir hareket katalım */
+    transition: transform 0.3s ease;
+}
+
+.interactive-brand:hover .brand-icon.svg-icon {
+    transform: rotate(-5deg) scale(1.05);
+}
+
+/* Metin kapsayıcısı */
+.brand-text.magnifier-effect {
+    display: flex;
+    /* Eski logonuzdaki font özelliklerini buraya taşıyoruz */
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700; /* Kalın yazı tipi */
+    font-size: 24px; /* Boyutu buradan ayarlayabilirsiniz */
+    color: #333; /* Metin rengi (Koyu gri) */
+    cursor: pointer;
+}
+
+/* Her bir harfin temel stili */
+.magnifier-effect span {
+    display: inline-block;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Yumuşak ve esnek bir geçiş efekti */
+    position: relative;
+    z-index: 1;
+}
+
+/* --- BÜYÜTEÇ EFEKTİ --- */
+
+/* Mouse üzerindeki harf */
+.magnifier-effect span:hover {
+    transform: scale(1.4) translateY(-5px); /* Büyü ve biraz yukarı çık */
+    color: #6a1b9a; /* Mouse gelince harf mor olsun (Logonuzun rengi) */
+    z-index: 2; /* Diğer harflerin üzerine çıksın */
+    text-shadow: 0 5px 15px rgba(106, 27, 154, 0.3); /* Hafif bir gölge ekle */
+}
