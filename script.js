@@ -687,6 +687,20 @@ function renderProducts() {
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
 
+  // Başlık: sadece Ürünler'de "Tüm Ürünler", kategoride "Kategori Ürünleri"
+  const titleEl = document.getElementById("products-title");
+  if (titleEl) {
+    const catNameMap = {
+      ev: "Ev",
+      dekorasyon: "Dekorasyon",
+      aksesuar: "Aksesuar",
+      elektronik: "Elektronik",
+      hediyelik: "Hediyelik",
+    };
+    titleEl.textContent = urlCat ? `${catNameMap[urlCat] || urlCat} Ürünleri` : "Tüm Ürünler";
+  }
+
+
 
   listEl.innerHTML = "";
 
@@ -2102,162 +2116,3 @@ function initMediaSliders(root = document) {
     update();
   });
 }
-
-
-
-// ===== KATEGORİLER: Canlı Yükleme + Admin CRUD (izole) =====
-function slugifyCategory(input) {
-  return String(input || "")
-    .trim()
-    .toLowerCase()
-    .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s").replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
-    .replace(/[^a-z0-9\s_-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^[-_]+|[-_]+$/g, "");
-}
-
-function getProductsBaseHref() {
-  const link = document.querySelector(".nav-products-link");
-  const href = link ? (link.getAttribute("href") || "products.html") : "products.html";
-  // strip existing query/hash
-  return href.split("?")[0].split("#")[0] || "products.html";
-}
-
-function renderCategoriesToNavbar(categories) {
-  const menu = document.querySelector(".nav-dropdown .dropdown-menu");
-  const productsBase = getProductsBaseHref();
-  if (!menu) return;
-
-  // Kategoriler yoksa mevcut hard-coded menüyü bozma
-  if (!Array.isArray(categories) || categories.length === 0) return;
-
-  menu.innerHTML = categories.map(c => {
-    const code = encodeURIComponent(c.code);
-    const name = String(c.name || c.code);
-    return `<li><a href="${productsBase}?cat=${code}">${name}</a></li>`;
-  }).join("");
-}
-
-function renderCategoriesToSeller(categories) {
-  const select = document.getElementById("sp-category");
-  if (!select) return;
-  if (!Array.isArray(categories) || categories.length === 0) return;
-
-  const firstOpt = select.querySelector('option[value=""]');
-  select.innerHTML = "";
-  if (firstOpt) select.appendChild(firstOpt);
-
-  categories.forEach(c => {
-    const opt = document.createElement("option");
-    opt.value = c.code;
-    opt.textContent = c.name;
-    select.appendChild(opt);
-  });
-}
-
-function renderCategoriesToAdminList(categories) {
-  const list = document.getElementById("admin-categories-list");
-  if (!list) return;
-  if (!Array.isArray(categories)) categories = [];
-
-  if (categories.length === 0) {
-    list.textContent = "Henüz kategori yok.";
-    return;
-  }
-
-  list.innerHTML = "";
-  categories.forEach(c => {
-    const row = document.createElement("div");
-    row.className = "admin-category-item";
-    row.innerHTML = `
-      <div class="meta">
-        <p class="name">${c.name}</p>
-        <div class="code">Kod: ${c.code}</div>
-      </div>
-      <button class="btn-danger" type="button" data-cat-id="${c.id}">Sil</button>
-    `;
-    list.appendChild(row);
-  });
-
-  // delete handlers (delegated)
-  list.querySelectorAll("button[data-cat-id]").forEach(btn => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-cat-id");
-      if (!id) return;
-      try {
-        await deleteDoc(doc(db, "categories", id));
-      } catch (e) {
-        alert("Kategori silinemedi: " + (e?.message || e));
-      }
-    });
-  });
-}
-
-// Tek bir canlı dinleyici: navbar + satıcı paneli + admin listesi aynı kaynaktan beslenir
-function setupCategoriesLive() {
-  if (!db || setupCategoriesLive._started) return;
-  setupCategoriesLive._started = true;
-
-  const q = query(collection(db, "categories"), orderBy("name"));
-  onSnapshot(q, (snap) => {
-    const cats = snap.docs.map(d => ({
-      id: d.id,
-      name: d.data().name || d.id,
-      code: d.data().code || d.id
-    }));
-    window.__ogrencifyCategories = cats;
-
-    // Sayfada hangi alanlar varsa onları güncelle
-    renderCategoriesToNavbar(cats);
-    renderCategoriesToSeller(cats);
-    renderCategoriesToAdminList(cats);
-  }, (err) => {
-    // categories koleksiyonu yoksa veya read izni yoksa mevcut hard-coded yapıyı bozma
-    console.warn("Categories live listener error:", err);
-  });
-}
-
-// Admin ekleme
-function setupAdminCategoryCreate() {
-  const nameEl = document.getElementById("admin-cat-name");
-  const codeEl = document.getElementById("admin-cat-code");
-  const btn = document.getElementById("admin-cat-add-btn");
-  if (!btn || !nameEl) return;
-
-  btn.addEventListener("click", async () => {
-    const name = String(nameEl.value || "").trim();
-    if (!name) return alert("Kategori adı zorunlu.");
-
-    let code = String(codeEl?.value || "").trim();
-    if (!code) code = slugifyCategory(name);
-    code = slugifyCategory(code);
-
-    if (!code) return alert("Kategori kodu üretilemedi. Lütfen farklı bir ad deneyin.");
-
-    try {
-      // doc id olarak code kullan: benzersiz ve kolay
-      await setDoc(doc(db, "categories", code), {
-        name,
-        code,
-        createdAt: serverTimestamp()
-      }, { merge: true });
-
-      nameEl.value = "";
-      if (codeEl) codeEl.value = "";
-      // onSnapshot zaten navbar/satıcı/admin listesini otomatik güncelleyecek
-    } catch (e) {
-      alert("Kategori eklenemedi: " + (e?.message || e));
-    }
-  });
-}
-
-// Başlat: sayfa yüklendiğinde DB hazırsa çalışır
-document.addEventListener("DOMContentLoaded", () => {
-  try {
-    setupCategoriesLive();
-    setupAdminCategoryCreate();
-  } catch (e) {
-    console.warn("Categories setup failed:", e);
-  }
-});
