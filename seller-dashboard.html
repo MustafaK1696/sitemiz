@@ -123,9 +123,13 @@
 
         <div class="form-group">
           <label for="sp-category">Kategori</label>
-          <select id="sp-category" required>
+          <select id="sp-category" required data-dynamic-categories="1">
             <option value="" selected disabled>Kategori seçiniz</option>
-            <!-- Kategoriler Firestore\'dan otomatik doldurulur -->
+            <option value="ev">Ev</option>
+            <option value="dekorasyon">Dekorasyon</option>
+            <option value="aksesuar">Aksesuar</option>
+            <option value="elektronik">Elektronik</option>
+            <option value="hediyelik">Hediyelik</option>
           </select>
         </div>
 

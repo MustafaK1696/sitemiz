@@ -156,30 +156,35 @@
     <div id="admin-product-requests">Yükleniyor...</div>
   </section>
 
-  
+  <section class="profile-section">
+    <h2>
   <section class="profile-section" id="admin-categories-section">
     <h2>Kategori Yönetimi</h2>
-    <p class="muted">Kategoriler navbar menüsünde ve ürün başvuru formunda otomatik görünür. (Sadece admin ekleyebilir.)</p>
+    <p class="muted">Yeni kategori ekleyebilir veya var olanı silebilirsin. (Kategoriler navbar ve satıcı panelinde otomatik güncellenir.)</p>
 
-    <div class="category-admin">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="cat-name">Kategori Adı</label>
-          <input id="cat-name" type="text" placeholder="Örn: Kırtasiye" />
-        </div>
-        <div class="form-group">
-          <label for="cat-slug">Kategori Kodu</label>
-          <input id="cat-slug" type="text" placeholder="orn: kirtasiye" disabled />
-        </div>
+    <div class="admin-form-row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:220px;">
+        <label for="new-category-name"><strong>Kategori Adı</strong></label>
+        <input id="new-category-name" type="text" placeholder="Örn: Kırtasiye" />
       </div>
-      <button class="primary-btn" id="cat-add-btn" type="button">Kategori Ekle</button>
-      <div id="admin-categories-msg" class="form-msg"></div>
-      <hr class="soft-divider" />
-      <div id="admin-categories-list">Yükleniyor...</div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:220px;">
+        <label for="new-category-code"><strong>Kategori Kodu</strong> <span class="muted">(opsiyonel)</span></label>
+        <input id="new-category-code" type="text" placeholder="Örn: kirtasiye" />
+      </div>
+
+      <button id="add-category-btn" class="btn-primary" type="button">Kategori Ekle</button>
     </div>
+
+    <div id="admin-categories-msg" class="muted" style="margin-top:10px;"></div>
+    <div id="admin-categories-list" style="margin-top:14px;">Yükleniyor...</div>
+
+    <p class="muted" style="margin-top:10px;font-size:13px;">
+      Not: Firestore Rules içine <code>match /categories/{id} ...</code> eklemen gerekir (admin yazma, herkese okuma).
+    </p>
   </section>
-<section class="profile-section">
-    <h2>Ürünler & Vitrin Yönetimi</h2>
+
+Ürünler & Vitrin Yönetimi</h2>
     <div id="admin-products-list">Yükleniyor...</div>
   </section>
 </main>
