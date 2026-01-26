@@ -1184,16 +1184,15 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 .media-nav-btn.next{ right:14px; }
 
 
-/* ===== Öğrencify Logo Hover Efekti ===== */
-.nav-logo,
-.nav-logo a {
-  pointer-events: none;
+/* === MEDIA SLIDER SAFE FIX === */
+.media-slide img,
+.media-slide iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.nav-logo img {
-  transition: transform 0.35s ease;
-}
-
-.nav-logo:hover img {
-  transform: scale(1.08);
+.media-slide iframe {
+  border: 0;
+  background: #000;
 }
