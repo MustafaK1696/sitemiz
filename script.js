@@ -2102,3 +2102,34 @@ function initMediaSliders(root = document) {
     update();
   });
 }
+
+// ===== Avatar (Harf + Renk) Ayarları | EK =====
+async function saveAvatarSettings(letter, color) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  await updateDoc(doc(db, "users", user.uid), {
+    avatarLetter: letter.toUpperCase().slice(0,1),
+    avatarColor: color
+  });
+
+  applyAvatar(letter, color);
+}
+
+function applyAvatar(letter, color) {
+  const el = document.getElementById("nav-user-initial");
+  if (!el) return;
+  el.textContent = letter;
+  el.style.backgroundColor = color;
+}
+
+async function loadAvatarSettings(uid) {
+  const snap = await getDoc(doc(db, "users", uid));
+  if (!snap.exists()) return;
+
+  const { avatarLetter, avatarColor } = snap.data();
+  if (avatarLetter && avatarColor) {
+    applyAvatar(avatarLetter, avatarColor);
+  }
+}
+
