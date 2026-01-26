@@ -1198,13 +1198,18 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 }
 
 
-/* --- Admin Kategori Yönetimi (EK) --- */
-.category-admin .form-row{display:flex;gap:16px;flex-wrap:wrap}
-.category-admin .form-group{flex:1;min-width:220px}
-.soft-divider{border:none;border-top:1px solid rgba(255,255,255,.08);margin:16px 0}
-.cat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:10px;background:rgba(255,255,255,.03)}
-.cat-info{display:flex;flex-direction:column;gap:4px}
-.cat-name{font-weight:700}
-.cat-slug{opacity:.75;font-size:12px}
-.danger-btn{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.35);color:#fecaca;border-radius:12px;padding:8px 12px;cursor:pointer}
-.danger-btn:hover{background:rgba(239,68,68,.22)}
+
+/* ===== Admin: Kategori Yönetimi (izole) ===== */
+.admin-categories-section h2 { font-size: 28px; margin-bottom: 8px; }
+.admin-categories-sub { font-size: 14px; opacity: 0.85; margin-bottom: 14px; }
+.admin-categories-form { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom: 18px; }
+.admin-categories-form .form-group { margin: 0; }
+.admin-categories-form label { font-size: 13px; }
+.admin-categories-form input { height: 38px; min-width: 240px; }
+.admin-categories-list { display:flex; flex-direction:column; gap:12px; }
+.admin-category-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 14px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+.admin-category-item .name { font-size: 18px; font-weight: 700; margin:0; }
+.admin-category-item .code { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+.admin-category-item .meta { display:flex; flex-direction:column; }
+.admin-category-item .btn-danger { padding:10px 14px; border-radius: 12px; border:1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; cursor:pointer; }
+.admin-category-item .btn-danger:hover { background: rgba(255,255,255,0.10); }

@@ -157,36 +157,31 @@
   </section>
 
   <section class="profile-section">
-    <h2>
-  <section class="profile-section" id="admin-categories-section">
-    <h2>Kategori Yönetimi</h2>
-    <p class="muted">Yeni kategori ekleyebilir veya var olanı silebilirsin. (Kategoriler navbar ve satıcı panelinde otomatik güncellenir.)</p>
-
-    <div class="admin-form-row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
-      <div style="display:flex;flex-direction:column;gap:6px;min-width:220px;">
-        <label for="new-category-name"><strong>Kategori Adı</strong></label>
-        <input id="new-category-name" type="text" placeholder="Örn: Kırtasiye" />
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:6px;min-width:220px;">
-        <label for="new-category-code"><strong>Kategori Kodu</strong> <span class="muted">(opsiyonel)</span></label>
-        <input id="new-category-code" type="text" placeholder="Örn: kirtasiye" />
-      </div>
-
-      <button id="add-category-btn" class="btn-primary" type="button">Kategori Ekle</button>
-    </div>
-
-    <div id="admin-categories-msg" class="muted" style="margin-top:10px;"></div>
-    <div id="admin-categories-list" style="margin-top:14px;">Yükleniyor...</div>
-
-    <p class="muted" style="margin-top:10px;font-size:13px;">
-      Not: Firestore Rules içine <code>match /categories/{id} ...</code> eklemen gerekir (admin yazma, herkese okuma).
-    </p>
-  </section>
-
-Ürünler & Vitrin Yönetimi</h2>
+    <h2>Ürünler & Vitrin Yönetimi</h2>
     <div id="admin-products-list">Yükleniyor...</div>
   </section>
+
+  <section class="profile-section admin-categories-section">
+    <h2>Kategori Yönetimi</h2>
+    <p class="admin-categories-sub">Yeni kategori ekleyebilir veya var olanı silebilirsin. (Navbar ve satıcı paneli otomatik güncellenir.)</p>
+
+    <div class="admin-categories-form">
+      <div class="form-group">
+        <label for="admin-cat-name">Kategori Adı</label>
+        <input type="text" id="admin-cat-name" placeholder="Örn: Kırtasiye" />
+      </div>
+
+      <div class="form-group">
+        <label for="admin-cat-code">Kategori Kodu (opsiyonel)</label>
+        <input type="text" id="admin-cat-code" placeholder="Örn: kirtasiye" />
+      </div>
+
+      <button class="btn primary" id="admin-cat-add-btn" type="button">Kategori Ekle</button>
+    </div>
+
+    <div id="admin-categories-list" class="admin-categories-list">Yükleniyor...</div>
+  </section>
+
 </main>
 
 <footer class="mega-footer">
