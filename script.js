@@ -687,6 +687,13 @@ function renderProducts() {
   const urlCatRaw = (new URLSearchParams(window.location.search).get("cat") || "").trim().toLowerCase();
   const urlCat = allowedCats.includes(urlCatRaw) ? urlCatRaw : "";
 
+  // Başlık: sadece ürünler sayfasında "Tüm Ürünler", kategori seçilince "<Kategori> Ürünleri"
+  const titleEl = document.getElementById("products-title");
+  if (titleEl) {
+    const catLabelMap = { ev: "Ev", dekorasyon: "Dekorasyon", aksesuar: "Aksesuar", elektronik: "Elektronik", hediyelik: "Hediyelik" };
+    titleEl.textContent = urlCat ? `${catLabelMap[urlCat] || "Kategori"} Ürünleri` : "Tüm Ürünler";
+  }
+
 
   listEl.innerHTML = "";
 
