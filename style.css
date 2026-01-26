@@ -91,45 +91,9 @@ img {
   gap: 16px;
 }
 
-/* --- YENİ İNTERAKTİF LOGO KODLARI --- */
-.logo {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
+.logo img {
+  height: 80px; /* 2 katına çıkarıldı */
 }
-
-.ogrencify-brand {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 800;
-  font-size: 32px;
-  display: flex;
-  gap: 1px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.ogrencify-brand span {
-  display: inline-block;
-  color: var(--secondary-color);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.ogrencify-brand span.brand-fy {
-  color: var(--primary-color);
-}
-
-.ogrencify-brand:hover span {
-  opacity: 0.4;
-}
-
-.ogrencify-brand span:hover {
-  transform: scale(1.8) translateY(-10px);
-  opacity: 1 !important;
-  color: #ff6a88;
-  text-shadow: 0 10px 20px rgba(123, 63, 228, 0.2);
-  z-index: 10;
-}
-/* --- ESKİ .logo img KODLARI ÇIKARILDI --- */
 
 /* Masaüstü menü */
 
@@ -999,7 +963,7 @@ body.theme-dark .mega-footer {
 .site-header { z-index: 1200; }
 .navbar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding: 12px 18px; }
 
-/* --- ESKİ .logo img KODLARI ÇIKARILDI --- */
+.logo img { height: 72px; width:auto; display:block; object-fit:contain; }
 .nav-main { flex: 1; display:flex; justify-content:center; }
 
 .nav-links { display:flex; align-items:center; gap: 18px; list-style:none; margin:0; padding:0; flex-wrap: nowrap; }
@@ -1021,7 +985,7 @@ body.dark-theme .btn-nav-outline { background: transparent; }
 .btn-nav-accent { background: rgba(255,138,0,.12); color: #ff8a00; border-color: rgba(255,138,0,.25); }
 .btn-nav-accent:hover { background: rgba(255,138,0,.18); }
 
-.nav-cart { display:inline-flex; align-items:center; gap:10px; padding: 10px 14px; border-radius: 999px; background: rgba(123, 63, 228, 0.08);
+.nav-cart { display:inline-flex; align-items:center; gap:10px; padding: 10px 14px; border-radius: 999px; background: rgba(123,63,228,.08);
   color: var(--primary-color); text-decoration:none; font-weight: 700; }
 .nav-cart:hover { transform: translateY(-1px) scale(1.03); transition: transform .15s ease; }
 .nav-cart-count { width: 26px; height: 26px; border-radius: 999px; background: var(--primary-color); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size: 0.9rem; }
@@ -1051,7 +1015,7 @@ body.dark-theme .nav-user-card { border-bottom-color: rgba(255,255,255,.10); }
 
 .nav-drop-item { width:100%; display:flex; padding: 10px 10px; border-radius: 14px; text-decoration:none; color: var(--text-color);
   background: transparent; border: 0; cursor:pointer; font-weight: 600; align-items:center; }
-.nav-drop-item:hover { background: rgba(123, 63, 228, 0.08); transform: scale(1.01); transition: transform .15s ease; }
+.nav-drop-item:hover { background: rgba(123,63,228,.08); transform: scale(1.01); transition: transform .15s ease; }
 .nav-drop-danger { color: #dc2626; background: rgba(220,38,38,.08); }
 .nav-drop-danger:hover { background: rgba(220,38,38,.12); }
 
@@ -1249,43 +1213,3 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 .admin-category-item .meta { display:flex; flex-direction:column; }
 .admin-category-item .btn-danger { padding:10px 14px; border-radius: 12px; border:1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; cursor:pointer; }
 .admin-category-item .btn-danger:hover { background: rgba(255,255,255,0.10); }
-
-/* --- ÖĞRENCİFY İNTERAKTİF LOGO (GÜNCEL) --- */
-.logo {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-}
-
-.ogrencify-brand {
-  font-family: 'Poppins', sans-serif; /* */
-  font-weight: 800;
-  font-size: 30px; 
-  display: flex;
-  gap: 0; 
-  cursor: pointer;
-  user-select: none;
-}
-
-.ogrencify-brand span {
-  display: inline-block;
-  color: #ff9a1f; /* Orijinal Turuncu */
-  transition: all 0.25s ease-out;
-}
-
-.ogrencify-brand span.brand-fy {
-  color: #7b3fe4; /* Orijinal Mor */
-}
-
-/* Mütevazı Büyüteç Efekti */
-.ogrencify-brand:hover span {
-  opacity: 0.6; 
-}
-
-.ogrencify-brand span:hover {
-  transform: scale(1.3) translateY(-3px); /* Daha vakur bir büyüme */
-  opacity: 1 !important;
-  color: #ff6a88; 
-  text-shadow: 0 4px 8px rgba(123, 63, 228, 0.15);
-  z-index: 10;
-}
