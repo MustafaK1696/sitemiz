@@ -1196,3 +1196,18 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
   border: 0;
   background: #000;
 }
+
+
+/* ===== Öğrencify Logo Hover (Tıklanamaz) | EK ===== */
+.nav-logo,
+.nav-logo a {
+  pointer-events: none;
+}
+
+.nav-logo img {
+  transition: transform 0.35s ease;
+}
+
+.nav-logo:hover img {
+  transform: scale(1.08);
+}
