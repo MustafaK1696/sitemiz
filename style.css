@@ -1182,7 +1182,17 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 .media-nav-btn:hover{ background: rgba(255,255,255,0.9); }
 .media-nav-btn.prev{ left:14px; }
 .media-nav-btn.next{ right:14px; }
-/* ===== Logo büyüteç efekti (yönlendirme JS ile engellenir) ===== */
-a.logo { cursor: default; }
-a.logo img { transition: transform 0.35s ease; }
-a.logo:hover img { transform: scale(1.08); }
+
+
+/* === MEDIA SLIDER SAFE FIX === */
+.media-slide img,
+.media-slide iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.media-slide iframe {
+  border: 0;
+  background: #000;
+}
