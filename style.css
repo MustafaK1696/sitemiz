@@ -1249,3 +1249,43 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
 .admin-category-item .meta { display:flex; flex-direction:column; }
 .admin-category-item .btn-danger { padding:10px 14px; border-radius: 12px; border:1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); color: inherit; cursor:pointer; }
 .admin-category-item .btn-danger:hover { background: rgba(255,255,255,0.10); }
+
+/* --- ÖĞRENCİFY İNTERAKTİF LOGO (GÜNCEL) --- */
+.logo {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ogrencify-brand {
+  font-family: 'Poppins', sans-serif; /* */
+  font-weight: 800;
+  font-size: 30px; 
+  display: flex;
+  gap: 0; 
+  cursor: pointer;
+  user-select: none;
+}
+
+.ogrencify-brand span {
+  display: inline-block;
+  color: #ff9a1f; /* Orijinal Turuncu */
+  transition: all 0.25s ease-out;
+}
+
+.ogrencify-brand span.brand-fy {
+  color: #7b3fe4; /* Orijinal Mor */
+}
+
+/* Mütevazı Büyüteç Efekti */
+.ogrencify-brand:hover span {
+  opacity: 0.6; 
+}
+
+.ogrencify-brand span:hover {
+  transform: scale(1.3) translateY(-3px); /* Daha vakur bir büyüme */
+  opacity: 1 !important;
+  color: #ff6a88; 
+  text-shadow: 0 4px 8px rgba(123, 63, 228, 0.15);
+  z-index: 10;
+}
