@@ -167,8 +167,6 @@ async function uploadFileWithProgress(fileRef, file, onPct) {
 
 let currentUser = null;
 let currentUserRole = "customer";
-let currentAvatarLetter = "";
-let currentAvatarColor = "";
 let currentTwoFactorEnabled = false;
 
 // Kategori kısıtı
@@ -574,8 +572,6 @@ async function ensureUserDoc(user) {
       email: user.email || "",
       role: "customer",
       twoFactorEmailEnabled: false,
-      avatarLetter: ((user.displayName || (user.email ? user.email.split("@")[0] : "K")).charAt(0).toUpperCase()),
-      avatarColor: "#7C3AED",
       createdAt: serverTimestamp()
     });
     currentUserRole = "customer";
@@ -584,20 +580,7 @@ async function ensureUserDoc(user) {
     const d = snap.data();
     currentUserRole = d.role || "customer";
     currentTwoFactorEnabled = !!d.twoFactorEmailEnabled;
-  
-    currentAvatarLetter = (d.avatarLetter || "");
-    currentAvatarColor = (d.avatarColor || "");
-
-    // Avatar alanları yoksa varsayılan yaz (mevcut değerleri bozmaz)
-    const updates = {};
-    if (!d.avatarLetter) updates.avatarLetter = ((user.displayName || (user.email ? user.email.split("@")[0] : "K")).charAt(0).toUpperCase());
-    if (!d.avatarColor) updates.avatarColor = "#7C3AED";
-    if (Object.keys(updates).length) {
-      try { await updateDoc(ref, updates); } catch(e) {}
-      if (updates.avatarLetter) currentAvatarLetter = updates.avatarLetter;
-      if (updates.avatarColor) currentAvatarColor = updates.avatarColor;
-    }
-}
+  }
   updateProfilePageUser(user);
 }
 
@@ -1051,13 +1034,6 @@ function updateNavbarForAuth(user) {
     });
   };
 
-  const setStyleAll = (selector, styles) => {
-    document.querySelectorAll(selector).forEach((el) => {
-      if (!el) return;
-      Object.keys(styles || {}).forEach((k) => { el.style[k] = styles[k]; });
-    });
-  };
-
   if (user) {
     const displayName = user.displayName || (user.email ? user.email.split("@")[0] : "Kullanıcı");
     const firstLetter = (displayName || "K").charAt(0).toUpperCase();
@@ -1065,16 +1041,8 @@ function updateNavbarForAuth(user) {
     setTextAll("#nav-user-name", displayName);
     setTextAll("#nav-user-name-big", displayName);
     setTextAll("#nav-user-avatar", firstLetter);
-    setTextAll("#nav-user-initial", currentAvatarLetter || firstLetter);
     setTextAll("#nav-user-avatar-big", firstLetter);
-    setTextAll("#nav-user-initial-big", currentAvatarLetter || firstLetter);
     if (user.email) setTextAll("#nav-user-email", user.email);
-
-    // Avatar rengi
-    if (currentAvatarColor) {
-      setStyleAll("#nav-user-initial, #nav-user-avatar", { backgroundColor: currentAvatarColor });
-      setStyleAll("#nav-user-initial-big, #nav-user-avatar-big", { backgroundColor: currentAvatarColor });
-    }
 
     guests.forEach((g) => (g.style.display = "none"));
     userBoxes.forEach((u) => (u.style.display = "flex"));
@@ -2047,68 +2015,6 @@ function normalizeNavbarLinks() {
 
 // ---------------- DOM YÜKLENDİĞİNDE ----------------
 
-// ---------------- AVATAR AYARLARI ----------------
-async function updateAvatarSettings(letter, color) {
-  const user = auth.currentUser;
-  if (!user) return { ok:false, msg:"Giriş yapmalısın." };
-
-  const l = (String(letter || "").trim().toUpperCase().charAt(0)) || "U";
-  const c = String(color || "").trim() || "#7C3AED";
-
-  try {
-    await updateDoc(doc(db, "users", user.uid), { avatarLetter: l, avatarColor: c });
-    currentAvatarLetter = l;
-    currentAvatarColor = c;
-    updateNavbarForAuth(user);
-    return { ok:true, msg:"Kaydedildi." };
-  } catch (e) {
-    return { ok:false, msg:"Kaydedilemedi." };
-  }
-}
-
-function setupAvatarSettingsUI() {
-  const letterEl = document.getElementById("avatarLetterInput");
-  const colorEl = document.getElementById("avatarColorInput");
-  const saveBtn = document.getElementById("avatarSaveBtn");
-  const preview = document.getElementById("avatarPreview");
-  const msgEl = document.getElementById("avatarSaveMsg");
-
-  if (!letterEl || !colorEl || !saveBtn || !preview) return;
-
-  // init from current values
-  const initLetter = currentAvatarLetter || (document.getElementById("nav-user-initial")?.textContent || "U");
-  const initColor = currentAvatarColor || (document.getElementById("nav-user-initial")?.style?.backgroundColor || "#7C3AED");
-  letterEl.value = initLetter;
-  colorEl.value = (initColor.startsWith("#") ? initColor : "#7C3AED");
-  preview.textContent = initLetter;
-  preview.style.backgroundColor = (initColor || "#7C3AED");
-
-  const refreshPreview = () => {
-    const l = (letterEl.value || "U").trim().toUpperCase().charAt(0) || "U";
-    preview.textContent = l;
-    preview.style.backgroundColor = colorEl.value || "#7C3AED";
-  };
-
-  letterEl.addEventListener("input", refreshPreview);
-  colorEl.addEventListener("input", refreshPreview);
-
-  saveBtn.addEventListener("click", async () => {
-    if (msgEl) msgEl.textContent = "";
-    const res = await updateAvatarSettings(letterEl.value, colorEl.value);
-    if (msgEl) msgEl.textContent = res.msg;
-    refreshPreview();
-  });
-}
-
-function disableLogoNavigation() {
-  document.querySelectorAll("a.logo").forEach((a) => {
-    a.addEventListener("click", (e) => {
-      e.preventDefault();
-    });
-  });
-}
-
-
 document.addEventListener("DOMContentLoaded", () => {
   try { setupMaintenanceMode(); } catch(e) {}
 
@@ -2116,8 +2022,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Navbar/Footer artık sayfalara gömülü: sadece etkileşimleri bağla
   setupNavbar();
-  disableLogoNavigation();
-  setupAvatarSettingsUI();
   normalizeNavbarLinks();
   applyTheme(localStorage.getItem(THEME_KEY) || "light");
 

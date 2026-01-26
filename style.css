@@ -1196,39 +1196,3 @@ body.theme-dark .maintenance-banner{background:#2a1607;color:#fed7aa;border-bott
   border: 0;
   background: #000;
 }
-
-
-/* === Avatar Ayarları (Profil) === */
-.avatar-settings-row{
-  display:flex;
-  gap:16px;
-  align-items:flex-start;
-  flex-wrap:wrap;
-  margin-top:12px;
-}
-.avatar-preview{
-  width:54px;height:54px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:700;
-  background:#7C3AED;
-  color:#fff;
-  user-select:none;
-}
-.avatar-fields{
-  min-width:220px;
-  display:flex;
-  flex-direction:column;
-}
-.avatar-fields input[type="text"]{
-  max-width:80px;
-  padding:10px 12px;
-  border-radius:12px;
-}
-
-/* === Logo: tıklanmaz, sadece hover büyüme === */
-a.logo { cursor: default; }
-a.logo img { transition: transform .25s ease; }
-a.logo:hover img { transform: scale(1.06); }
